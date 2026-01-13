@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" width="200" height="50">
+  <!-- Icon (left side) -->
+  <circle cx="25" cy="25" r="18" fill="#00A4DC" stroke="#0077B6" stroke-width="2"/>
+  
+  <!-- Film strip -->
+  <rect x="14" y="18" width="22" height="14" fill="white" rx="1.5"/>
+  <rect x="15.5" y="19.5" width="5.5" height="4" fill="#00A4DC"/>
+  <rect x="22" y="19.5" width="5.5" height="4" fill="#00A4DC"/>
+  <rect x="28.5" y="19.5" width="5.5" height="4" fill="#00A4DC"/>
+  <rect x="15.5" y="24.5" width="5.5" height="4" fill="#00A4DC"/>
+  <rect x="22" y="24.5" width="5.5" height="4" fill="#00A4DC"/>
+  <rect x="28.5" y="24.5" width="5.5" height="4" fill="#00A4DC"/>
+  
+  <!-- Lock/shield -->
+  <circle cx="32" cy="14" r="2" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+  <path d="M 30 16 L 34 16 L 34 19 L 32 20 L 30 19 Z" fill="#FFD700" stroke="#FFA500" stroke-width="0.8"/>
+  <circle cx="32" cy="17.5" r="1" fill="#FFA500"/>
+  
+  <!-- Text "JellySSO" -->
+  <text x="55" y="35" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1a1a1a">
+    Jelly<tspan fill="#00A4DC">SSO</tspan>
+  </text>
+</svg>

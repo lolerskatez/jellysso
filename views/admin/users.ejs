@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="User Management - Jellyfin Companion Admin">
+    <title>User Management - Jellyfin Companion</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <style>
+        .page-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-icon.primary { background: rgba(0, 102, 204, 0.1); color: var(--primary); }
+        .stat-icon.success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .stat-icon.warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .stat-icon.danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        .stat-content h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--gray-900);
+        }
+
+        .stat-content p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.9375rem;
+            background: white;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .view-toggle {
+            display: flex;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .view-toggle button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            background: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            transition: all var(--transition);
+        }
+
+        .view-toggle button:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .view-toggle button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .view-toggle button:hover:not(.active) {
+            background: var(--bg-secondary);
+        }
+
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .user-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition);
+        }
+
+        .user-card:hover {
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .user-card-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .user-avatar {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .user-card-info h3 {
+            margin: 0 0 var(--spacing-xs) 0;
+            font-size: 1rem;
+            color: var(--gray-900);
+        }
+
+        .user-card-info .user-id {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        .user-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) 0;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            margin: var(--spacing-md) 0;
+        }
+
+        .user-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .user-detail-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .user-detail-value {
+            font-size: 0.875rem;
+            color: var(--gray-900);
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-disabled {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .status-admin {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .user-actions .btn {
+            flex: 1;
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.8125rem;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .table-list {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-list th {
+            background: var(--bg-secondary);
+            color: var(--gray-900);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-list td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9375rem;
+        }
+
+        .table-list tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-list tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .table-user {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .table-user .user-avatar {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            color: var(--gray-400);
+        }
+
+        .empty-state h2 {
+            margin: 0 0 var(--spacing-sm) 0;
+            color: var(--gray-900);
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+
+            .user-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-details {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--gray-900);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--gray-900);
+        }
+
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 500;
+            color: var(--gray-900);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.9375rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: var(--spacing-xs);
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-users' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">User Management
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn btn-primary btn-sm" id="addUserBtn">
+            <i class="fas fa-user-plus"></i>
+            Add User
+          </button>
+          <button class="btn btn-secondary btn-sm" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Stats Cards -->
+        <div class="page-stats">
+          <div class="stat-card">
+            <div class="stat-icon primary">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+              <h3><%= users.length %></h3>
+              <p>Total Users</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon success">
+              <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="stat-content">
+              <h3><%= users.filter(u => u.Policy && u.Policy.IsAdministrator).length %></h3>
+              <p>Administrators</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon warning">
+              <i class="fas fa-lock"></i>
+            </div>
+            <div class="stat-content">
+              <h3><%= users.filter(u => u.HasPassword).length %></h3>
+              <p>Password Protected</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon danger">
+              <i class="fas fa-user-clock"></i>
+            </div>
+            <div class="stat-content">
+              <h3><%= users.filter(u => u.Policy && u.Policy.IsDisabled).length %></h3>
+              <p>Disabled</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search by name or ID...">
+            <button class="btn btn-primary" id="searchBtn">
+              <i class="fas fa-search"></i> Search
+            </button>
+          </div>
+          <div class="view-toggle">
+            <button class="active" id="gridViewBtn"><i class="fas fa-th-large"></i> Grid</button>
+            <button id="listViewBtn"><i class="fas fa-list"></i> List</button>
+          </div>
+        </div>
+
+        <!-- Grid View -->
+        <div id="gridView">
+          <% if (users && users.length > 0) { %>
+            <div class="user-grid">
+              <% users.forEach(function(u) { %>
+                <div class="user-card" data-name="<%= u.Name ? u.Name.toLowerCase() : '' %>" data-id="<%= u.Id %>">
+                  <div class="user-card-header">
+                    <div class="user-avatar"><%= u.Name ? u.Name.charAt(0).toUpperCase() : '?' %></div>
+                    <div class="user-card-info">
+                      <h3><%= u.Name %></h3>
+                      <div class="user-id"><%= u.Id.substring(0, 12) %>...</div>
+                    </div>
+                  </div>
+                  <div class="user-details">
+                    <div class="user-detail">
+                      <span class="user-detail-label">Role</span>
+                      <span class="user-detail-value">
+                        <% if (u.Policy && u.Policy.IsAdministrator) { %>
+                          <span class="status-badge status-admin">Admin</span>
+                        <% } else { %>
+                          User
+                        <% } %>
+                      </span>
+                    </div>
+                    <div class="user-detail">
+                      <span class="user-detail-label">Password</span>
+                      <span class="user-detail-value"><%= u.HasPassword ? 'Protected' : 'None' %></span>
+                    </div>
+                    <div class="user-detail">
+                      <span class="user-detail-label">Status</span>
+                      <span class="user-detail-value">
+                        <% if (u.Policy && u.Policy.IsDisabled) { %>
+                          <span class="status-badge status-disabled">Disabled</span>
+                        <% } else { %>
+                          <span class="status-badge status-active">Active</span>
+                        <% } %>
+                      </span>
+                    </div>
+                    <div class="user-detail">
+                      <span class="user-detail-label">Profile Image</span>
+                      <span class="user-detail-value"><%= u.PrimaryImageTag ? 'Yes' : 'No' %></span>
+                    </div>
+                  </div>
+                  <div class="user-actions">
+                    <button class="btn btn-secondary" data-action="edit" data-user-id="<%= u.Id %>">
+                      <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-danger" data-action="delete" data-user-id="<%= u.Id %>" data-user-name="<%= u.Name %>">
+                      <i class="fas fa-trash"></i> Delete
+                    </button>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          <% } else { %>
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <h2>No users found</h2>
+              <p>No users matching your search criteria</p>
+            </div>
+          <% } %>
+        </div>
+
+        <!-- List View -->
+        <div id="listView" style="display: none;">
+          <% if (users && users.length > 0) { %>
+            <div class="table-container">
+              <table class="table-list">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Password</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% users.forEach(function(u) { %>
+                    <tr data-name="<%= u.Name ? u.Name.toLowerCase() : '' %>" data-id="<%= u.Id %>">
+                      <td>
+                        <div class="table-user">
+                          <div class="user-avatar"><%= u.Name ? u.Name.charAt(0).toUpperCase() : '?' %></div>
+                          <div>
+                            <strong><%= u.Name %></strong>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;"><%= u.Id.substring(0, 12) %>...</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <% if (u.Policy && u.Policy.IsAdministrator) { %>
+                          <span class="status-badge status-admin">Admin</span>
+                        <% } else { %>
+                          User
+                        <% } %>
+                      </td>
+                      <td><%= u.HasPassword ? 'Yes' : 'No' %></td>
+                      <td>
+                        <% if (u.Policy && u.Policy.IsDisabled) { %>
+                          <span class="status-badge status-disabled">Disabled</span>
+                        <% } else { %>
+                          <span class="status-badge status-active">Active</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <button class="btn btn-secondary btn-sm" data-action="edit" data-user-id="<%= u.Id %>">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" data-action="delete" data-user-id="<%= u.Id %>" data-user-name="<%= u.Name %>">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <h2>No users found</h2>
+              <p>No users matching your search criteria</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add User Modal -->
+  <div class="modal-overlay" id="addUserModal">
+    <div class="modal" style="max-width: 550px;">
+      <div class="modal-header">
+        <h2><i class="fas fa-user-plus"></i> Add New User</h2>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addUserForm">
+          <h4 style="margin: 0 0 var(--spacing-md) 0; color: var(--gray-900); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">Jellyfin Account</h4>
+          
+          <div class="form-group">
+            <label for="newUsername">Username *</label>
+            <input type="text" id="newUsername" name="username" required placeholder="Enter username">
+          </div>
+          <div class="form-group">
+            <label for="newPassword">Password</label>
+            <input type="password" id="newPassword" name="password" placeholder="Enter password (optional)">
+            <small>Leave blank to create user without password</small>
+          </div>
+
+          <h4 style="margin: var(--spacing-lg) 0 var(--spacing-md) 0; color: var(--gray-900); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; padding-top: var(--spacing-md); border-top: 1px solid var(--border-color);">Extended Profile (SSO)</h4>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+            <div class="form-group" style="margin-bottom: var(--spacing-md);">
+              <label for="newFirstName">First Name</label>
+              <input type="text" id="newFirstName" name="firstName" placeholder="First name">
+            </div>
+            <div class="form-group" style="margin-bottom: var(--spacing-md);">
+              <label for="newLastName">Last Name</label>
+              <input type="text" id="newLastName" name="lastName" placeholder="Last name">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="newEmail">Email Address</label>
+            <input type="email" id="newEmail" name="email" placeholder="user@example.com">
+            <small>Used for SSO authentication</small>
+          </div>
+          <div class="form-group">
+            <label for="newDisplayName">Display Name</label>
+            <input type="text" id="newDisplayName" name="displayName" placeholder="Display name">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
+        <button class="btn btn-primary" id="submitUserBtn">
+          <i class="fas fa-plus"></i> Create User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div class="modal-overlay" id="editUserModal">
+    <div class="modal" style="max-width: 550px;">
+      <div class="modal-header">
+        <h2><i class="fas fa-user-edit"></i> Edit User</h2>
+        <button class="modal-close" id="closeEditModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editUserForm">
+          <input type="hidden" id="editUserId">
+          
+          <h4 style="margin: 0 0 var(--spacing-md) 0; color: var(--gray-900); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">Jellyfin Account</h4>
+          
+          <div class="form-group">
+            <label for="editUsername">Username</label>
+            <input type="text" id="editUsername" name="username" placeholder="Enter new username">
+            <small>Leave blank to keep current username</small>
+          </div>
+          <div class="form-group">
+            <label for="editPassword">New Password</label>
+            <input type="password" id="editPassword" name="password" placeholder="Enter new password">
+            <small>Leave blank to keep current password</small>
+          </div>
+
+          <h4 style="margin: var(--spacing-lg) 0 var(--spacing-md) 0; color: var(--gray-900); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; padding-top: var(--spacing-md); border-top: 1px solid var(--border-color);">Extended Profile (SSO)</h4>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+            <div class="form-group" style="margin-bottom: var(--spacing-md);">
+              <label for="editFirstName">First Name</label>
+              <input type="text" id="editFirstName" name="firstName" placeholder="First name">
+            </div>
+            <div class="form-group" style="margin-bottom: var(--spacing-md);">
+              <label for="editLastName">Last Name</label>
+              <input type="text" id="editLastName" name="lastName" placeholder="Last name">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="editEmail">Email Address</label>
+            <input type="email" id="editEmail" name="email" placeholder="user@example.com">
+            <small>Used for SSO authentication</small>
+          </div>
+          <div class="form-group">
+            <label for="editDisplayName">Display Name</label>
+            <input type="text" id="editDisplayName" name="displayName" placeholder="Display name">
+            <small>How the user's name appears in the system</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelEditModalBtn">Cancel</button>
+        <button class="btn btn-primary" id="submitEditBtn">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/admin-users.js"></script>
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

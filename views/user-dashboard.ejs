@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Jellyfin Companion - User Dashboard">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .sidebar-header h2 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .sidebar-header h2 i {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+
+    .user-welcome {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      margin-bottom: var(--spacing-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .user-welcome h1 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 2rem;
+      font-weight: 600;
+    }
+
+    .user-welcome p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    .user-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .user-stat-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+      text-align: center;
+    }
+
+    .user-stat-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-4px);
+      border-color: var(--primary);
+    }
+
+    .user-stat-icon {
+      font-size: 2.5rem;
+      color: var(--primary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .user-stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .user-stat-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .quick-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+      text-decoration: none;
+      color: var(--text-primary);
+      min-height: 120px;
+    }
+
+    .quick-action-btn:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-4px);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .quick-action-btn i {
+      font-size: 2rem;
+      margin-bottom: var(--spacing-md);
+      color: var(--primary);
+    }
+
+    .quick-action-btn span {
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .recent-activity {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-title {
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .activity-time {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .server-status {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .status-dot.offline {
+      background: var(--danger);
+    }
+
+    .system-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .system-info-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .system-info-card h3 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 1rem;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .system-info-card i {
+      color: var(--primary);
+      font-size: 1.25rem;
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .status-indicator.offline {
+      background: var(--danger);
+    }
+
+    .url-display {
+      background: var(--bg-secondary);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      font-family: monospace;
+      font-size: 0.875rem;
+      word-break: break-all;
+      color: var(--text-primary);
+    }
+
+    .profile-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .profile-info h2 {
+      margin: 0 0 var(--spacing-xs) 0;
+      font-size: 1.5rem;
+      color: var(--gray-900);
+    }
+
+    .profile-info p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+    }
+
+    .profile-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+    }
+
+    .detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .detail-label {
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+      font-weight: 500;
+    }
+
+    .detail-value {
+      color: var(--gray-900);
+      font-weight: 600;
+      font-size: 0.9375rem;
+    }
+
+    @media (max-width: 768px) {
+      .user-welcome h1 {
+        font-size: 1.5rem;
+      }
+
+      .user-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .quick-action-btn {
+        min-height: 100px;
+        padding: var(--spacing-md);
+      }
+
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .profile-avatar {
+        width: 64px;
+        height: 64px;
+        font-size: 1.5rem;
+      }
+
+      .profile-info h2 {
+        font-size: 1.25rem;
+      }
+
+      .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'dashboard' }) %>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">My Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <% if (typeof user !== 'undefined' && user) { %>
+            <div class="user-info">
+              <div class="user-avatar">
+                <%= user.Name.charAt(0).toUpperCase() %>
+              </div>
+              <div>
+                <div style="font-weight: 600; font-size: 0.9375rem;"><%= user.Name %></div>
+                <div style="font-size: 0.8125rem; color: var(--text-secondary);">
+                  <%= user.Policy?.IsAdministrator ? 'Administrator' : 'User' %>
+                </div>
+              </div>
+            </div>
+          <% } else { %>
+            <a href="/login" class="btn btn-primary btn-sm">
+              <i class="fas fa-sign-in-alt"></i>
+              Login
+            </a>
+          <% } %>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <% if (typeof user !== 'undefined' && user) { %>
+          <!-- System Info Grid -->
+          <div class="system-info-grid">
+            <!-- System Status Card -->
+            <div class="system-info-card">
+              <h3>
+                <i class="fas fa-server"></i>
+                System Status
+              </h3>
+              <div class="system-status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <div>
+                  <div style="font-weight: 600; font-size: 0.9375rem;" id="statusText">Online</div>
+                  <div style="font-size: 0.8125rem; color: var(--text-secondary);" id="statusTime">Just now</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Published URL Card -->
+            <div class="system-info-card">
+              <h3>
+                <i class="fas fa-link"></i>
+                Published System URL
+              </h3>
+              <div class="url-display" id="publishedUrl">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Profile Card -->
+          <div class="profile-card">
+            <div class="profile-header">
+              <div class="profile-avatar">
+                <%= user.Name.charAt(0).toUpperCase() %>
+              </div>
+              <div class="profile-info">
+                <h2><%= user.Name %></h2>
+                <p><%= user.Policy?.IsAdministrator ? 'Administrator' : 'Regular User' %></p>
+              </div>
+            </div>
+
+            <div class="profile-details">
+              <div class="detail-row">
+                <span class="detail-label">User ID</span>
+                <span class="detail-value"><%= user.Id.substring(0, 12) %>...</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Account Status</span>
+                <span class="detail-value" style="color: var(--success);">Active</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Last Login</span>
+                <span class="detail-value" id="lastLogin">Loading...</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Account Created</span>
+                <span class="detail-value" id="accountCreated">Loading...</span>
+              </div>
+            </div>
+          </div>
+
+        <% } else { %>
+        <!-- Not Logged In -->
+        <div class="empty-state" style="padding: 4rem 2rem;">
+          <div class="empty-state-icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h2 class="empty-state-title">Access Restricted</h2>
+          <p class="empty-state-text">
+            Please sign in to access your Jellyfin Companion dashboard and manage your media experience.
+          </p>
+          <a href="/login" class="btn btn-primary btn-lg">
+            <i class="fas fa-sign-in-alt"></i>
+            Sign In
+          </a>
+        </div>
+      <% } %>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/user-dashboard.js"></script>
+</body>
+</html>

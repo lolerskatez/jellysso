@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  jellyfin-companion:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: jellyfin-companion-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JELLYFIN_BASE_URL=${JELLYFIN_BASE_URL}
+      - PORT=3000
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - SHARED_SECRET=${SHARED_SECRET}
+      - EXTERNAL_OIDC_CLIENTS=${EXTERNAL_OIDC_CLIENTS:-[]}
+    restart: unless-stopped
+    networks:
+      - jellyfin-network
+    depends_on:
+      - jellyfin
+    volumes:
+      - logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin-prod
+    ports:
+      - "8096:8096"
+    volumes:
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
+      - media:/media
+    environment:
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLIC_URL}
+    restart: unless-stopped
+    networks:
+      - jellyfin-network
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: jellyfin-companion-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - jellyfin-companion
+    networks:
+      - jellyfin-network
+    restart: unless-stopped
+
+volumes:
+  jellyfin-config:
+  jellyfin-cache:
+  media:
+  logs:
+
+networks:
+  jellyfin-network:
+    driver: bridge

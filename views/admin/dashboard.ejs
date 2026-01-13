@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Admin Dashboard - Jellyfin Companion">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Admin Dashboard - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <script src="/js/chart.min.js"></script>
+  <style>
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: var(--spacing-lg);
+    }
+    .col-3 { grid-column: span 3; }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+    .stat-card {
+      background: white;
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--border-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .stat-icon.primary { background: rgba(0, 102, 204, 0.1); color: var(--primary); }
+    .stat-icon.success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .stat-icon.warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .stat-icon.danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+    .stat-icon.cyan { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+    .stat-content h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: var(--gray-900);
+      font-weight: 700;
+    }
+    .stat-content p {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Widget Card */
+    .widget {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .widget-header h3 {
+      margin: 0;
+      font-size: 0.9375rem;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .widget-header h3 i {
+      color: var(--primary);
+    }
+    .widget-header a {
+      font-size: 0.8125rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .widget-header a:hover {
+      text-decoration: underline;
+    }
+    .widget-body {
+      padding: var(--spacing-lg);
+    }
+    .widget-body.no-padding {
+      padding: 0;
+    }
+
+    /* Mini Chart */
+    .mini-chart {
+      height: 80px;
+      margin-top: var(--spacing-md);
+    }
+
+    /* Activity Table */
+    .activity-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .activity-table td {
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.875rem;
+    }
+    .activity-table tr:last-child td {
+      border-bottom: none;
+    }
+    .activity-table tr:hover {
+      background: var(--bg-secondary);
+    }
+    .action-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(0, 102, 204, 0.1);
+      color: var(--primary);
+      border-radius: var(--border-radius);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      font-family: monospace;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 0.6875rem;
+    }
+    .status-success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    .status-failure {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+    .time-ago {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+    .no-data {
+      text-align: center;
+      padding: var(--spacing-lg);
+      color: var(--text-secondary);
+    }
+
+    /* Backup Widget */
+    .backup-status {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+    .backup-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    .backup-info h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: var(--gray-900);
+    }
+    .backup-info p {
+      margin: 4px 0 0;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+    .backup-actions {
+      margin-top: var(--spacing-md);
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    /* Quick Links */
+    .quick-links {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-sm);
+    }
+    .quick-link {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      text-decoration: none;
+      color: var(--gray-900);
+      transition: all var(--transition);
+    }
+    .quick-link:hover {
+      background: var(--primary);
+      color: white;
+    }
+    .quick-link:hover i {
+      color: white;
+    }
+    .quick-link i {
+      color: var(--primary);
+      font-size: 1rem;
+    }
+    .quick-link span {
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    /* System Health */
+    .health-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-sm) 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .health-item:last-child {
+      border-bottom: none;
+    }
+    .health-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    .health-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+    .health-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .health-good {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    .health-warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+    }
+
+    /* Last Update */
+    .last-update {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Notification */
+    .notification {
+      position: fixed;
+      top: var(--spacing-lg);
+      right: var(--spacing-lg);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-lg);
+      z-index: 1001;
+      transform: translateX(150%);
+      transition: transform 0.3s ease;
+    }
+    .notification.show {
+      transform: translateX(0);
+    }
+    .notification.success { background: var(--success); color: white; }
+    .notification.error { background: var(--danger); color: white; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .col-3, .col-4 { grid-column: span 6; }
+      .col-8 { grid-column: span 12; }
+    }
+    @media (max-width: 768px) {
+      .col-3, .col-4, .col-6 { grid-column: span 12; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .quick-links { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-dashboard' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Admin Dashboard
+          </h1>
+          <span class="last-update">Last updated: <span id="lastUpdate"><%= new Date().toLocaleTimeString() %></span></span>
+        </div>
+        <div class="header-right">
+          <button class="btn btn-secondary btn-sm" id="refreshDashboard" title="Refresh">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Notification -->
+        <div id="notification" class="notification"></div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon primary">
+              <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statTotalRequests"><%= stats.total || 0 %></h3>
+              <p>Total Requests</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon success">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statSuccessRate"><%= ((stats.byStatus?.success || 0) / (stats.total || 1) * 100).toFixed(0) %>%</h3>
+              <p>Success Rate</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon danger">
+              <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statFailedRequests"><%= stats.byStatus?.failure || 0 %></h3>
+              <p>Failed</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statTotalUsers"><%= userCount || 0 %></h3>
+              <p>Users</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon cyan">
+              <i class="fas fa-sign-in-alt"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statUserLogins"><%= stats.last24h || 0 %></h3>
+              <p>24h Activity</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon warning">
+              <i class="fas fa-database"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statDbSize"><%= stats.dbSize || '~16KB' %></h3>
+              <p>DB Size</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+          <!-- Recent Activity Widget -->
+          <div class="widget col-8">
+            <div class="widget-header">
+              <h3><i class="fas fa-history"></i> Recent Activity</h3>
+              <a href="/admin/audit-logs">View All <i class="fas fa-arrow-right"></i></a>
+            </div>
+            <div class="widget-body no-padding">
+              <table class="activity-table">
+                <tbody id="recentActivityTable">
+                  <% if (recentLogs && recentLogs.length > 0) { %>
+                    <% recentLogs.slice(0, 5).forEach(log => { %>
+                      <tr>
+                        <td><span class="action-badge"><%= log.action %></span></td>
+                        <td><strong><%= log.username || log.userId || 'System' %></strong></td>
+                        <td>
+                          <span class="status-badge status-<%= log.status %>">
+                            <i class="fas fa-<%= log.status === 'success' ? 'check' : 'times' %>"></i>
+                          </span>
+                        </td>
+                        <td class="time-ago"><%= new Date(log.timestamp).toLocaleTimeString() %></td>
+                      </tr>
+                    <% }); %>
+                  <% } else { %>
+                    <tr><td colspan="4" class="no-data">No recent activity</td></tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Backup Status Widget -->
+          <div class="widget col-4">
+            <div class="widget-header">
+              <h3><i class="fas fa-database"></i> Backup Status</h3>
+              <a href="/admin/backups">Manage</a>
+            </div>
+            <div class="widget-body">
+              <div class="backup-status">
+                <div class="backup-icon">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="backup-info">
+                  <h4 id="backupCount"><%= typeof backupCount !== 'undefined' ? backupCount : 0 %> Backups</h4>
+                  <p>Last: <span id="lastBackupDate"><%= typeof latestBackup !== 'undefined' && latestBackup ? new Date(latestBackup).toLocaleDateString() : 'Never' %></span></p>
+                </div>
+              </div>
+              <div class="backup-actions">
+                <button class="btn btn-primary btn-sm" id="createBackupBtn">
+                  <i class="fas fa-plus"></i> Create Backup
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics Summary Widget -->
+          <div class="widget col-4">
+            <div class="widget-header">
+              <h3><i class="fas fa-chart-line"></i> Analytics</h3>
+              <a href="/admin/analytics">Details</a>
+            </div>
+            <div class="widget-body">
+              <div class="health-item">
+                <span class="health-label">Activities (7d)</span>
+                <span class="health-value" id="analyticsActivities"><%= stats.total || 0 %></span>
+              </div>
+              <div class="health-item">
+                <span class="health-label">Failed Logins</span>
+                <span class="health-value" id="analyticsFailedLogins"><%= stats.byAction?.FAILED_LOGIN || 0 %></span>
+              </div>
+              <div class="health-item">
+                <span class="health-label">New Users</span>
+                <span class="health-value" id="analyticsNewUsers">0</span>
+              </div>
+              <div class="mini-chart">
+                <canvas id="miniActivityChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Links Widget -->
+          <div class="widget col-4">
+            <div class="widget-header">
+              <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            </div>
+            <div class="widget-body">
+              <div class="quick-links">
+                <a href="/admin/users" class="quick-link">
+                  <i class="fas fa-users"></i>
+                  <span>Manage Users</span>
+                </a>
+                <a href="/admin/statistics" class="quick-link">
+                  <i class="fas fa-chart-pie"></i>
+                  <span>Statistics</span>
+                </a>
+                <a href="/admin/settings" class="quick-link">
+                  <i class="fas fa-cog"></i>
+                  <span>Settings</span>
+                </a>
+                <a href="/admin/provisioning" class="quick-link">
+                  <i class="fas fa-file-upload"></i>
+                  <span>Import Users</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Health Widget -->
+          <div class="widget col-4">
+            <div class="widget-header">
+              <h3><i class="fas fa-heartbeat"></i> System Health</h3>
+              <a href="/admin/system">Details</a>
+            </div>
+            <div class="widget-body">
+              <div class="health-item">
+                <span class="health-label">Jellyfin Status</span>
+                <span class="health-status health-good">
+                  <i class="fas fa-check-circle"></i> Connected
+                </span>
+              </div>
+              <div class="health-item">
+                <span class="health-label">Database</span>
+                <span class="health-status health-good">
+                  <i class="fas fa-check-circle"></i> Healthy
+                </span>
+              </div>
+              <div class="health-item">
+                <span class="health-label">Memory</span>
+                <span class="health-value"><%= Math.round(process.memoryUsage?.heapUsed / 1024 / 1024 || 0) %> MB</span>
+              </div>
+              <div class="health-item">
+                <span class="health-label">Uptime</span>
+                <span class="health-value"><%= Math.floor(process.uptime?.() / 3600 || 0) %>h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/admin-dashboard-page.js"></script>
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

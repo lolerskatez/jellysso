@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="JellySSO - Single Sign-On for Jellyfin">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <title>Sign In - JellySSO</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-page-wrapper {
+      width: 100%;
+      max-width: 420px;
+      padding: var(--spacing-md);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+      color: white;
+    }
+
+    .login-logo {
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .login-logo i {
+      font-size: 2rem;
+      color: white;
+    }
+
+    .login-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+      display: block;
+    }
+
+    .login-header h1 {
+      margin-bottom: var(--spacing-xs);
+      color: white;
+      font-size: 2rem;
+    }
+
+    .login-header p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9375rem;
+    }
+
+    .login-card {
+      background: white;
+      border-radius: var(--border-radius-lg);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .login-body {
+      padding: var(--spacing-xl);
+    }
+
+    .login-form .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .login-form .form-label {
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      font-weight: 500;
+      color: var(--gray-700);
+      font-size: 0.875rem;
+    }
+
+    .login-form .form-control {
+      width: 100%;
+      padding: var(--spacing-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      transition: all var(--transition);
+      box-sizing: border-box;
+    }
+
+    .login-form .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .login-form .form-control::placeholder {
+      color: var(--gray-400);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+    }
+
+    .login-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .login-btn .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .login-options {
+      display: flex;
+      align-items: center;
+      margin: var(--spacing-lg) 0;
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+    }
+
+    .login-options::before,
+    .login-options::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-color);
+    }
+
+    .login-options span {
+      padding: 0 var(--spacing-md);
+    }
+
+    .login-links {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .login-link {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      color: var(--gray-700);
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all var(--transition);
+    }
+
+    .login-link:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .login-link:hover i {
+      color: white;
+    }
+
+    .login-link i {
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    /* Alert Styles */
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.875rem;
+      animation: slideIn 0.3s ease;
+    }
+
+    .alert.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+
+    .alert.success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+
+    .alert i {
+      margin-top: 2px;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .login-page-wrapper {
+        max-width: 100%;
+      }
+
+      .login-body {
+        padding: var(--spacing-lg);
+      }
+
+      .login-header h1 {
+        font-size: 1.5rem;
+      }
+
+      .login-links {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-page-wrapper">
+    <div class="login-header">
+      <div class="login-logo">
+        <i class="fas fa-film"></i>
+      </div>
+      <h1>Jellyfin Companion</h1>
+      <p>Sign in to manage your media server</p>
+    </div>
+
+    <div class="login-card">
+      <div class="login-body">
+        <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+          <div class="alert error">
+            <i class="fas fa-exclamation-circle"></i>
+            <div><%= errorMessage %></div>
+          </div>
+        <% } %>
+        <div id="message" class="alert" style="display: none;"></div>
+        
+        <form id="loginForm" class="login-form" method="post" action="/api/auth/login">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input 
+              type="text" 
+              id="username" 
+              name="username" 
+              class="form-control" 
+              placeholder="Enter your Jellyfin username" 
+              required
+              autocomplete="username"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              class="form-control" 
+              placeholder="Enter your password" 
+              required
+              autocomplete="current-password"
+            >
+          </div>
+
+          <button type="submit" class="login-btn" id="loginBtn">
+            <span id="loginLoading" style="display: none;">
+              <div class="spinner"></div>
+              Signing in...
+            </span>
+            <span id="loginText">
+              <i class="fas fa-sign-in-alt"></i>
+              Sign In
+            </span>
+          </button>
+        </form>
+
+        <% if (typeof oidcEnabled !== 'undefined' && oidcEnabled) { %>
+        <div class="login-options">
+          <span>or continue with</span>
+        </div>
+
+        <div class="login-links">
+          <a href="/api/auth/oidc/login" class="login-link">
+            <i class="fas fa-key"></i>
+            <span>Login with SSO</span>
+          </a>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/login.js"></script>
+</body>
+</html>

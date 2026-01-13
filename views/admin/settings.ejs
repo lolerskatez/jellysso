@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Settings - Jellyfin Companion Admin">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <title>Settings - Jellyfin Companion</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <style>
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.success {
+            background: var(--success);
+        }
+        .notification.error {
+            background: var(--danger);
+        }
+
+        /* Settings Tabs */
+        .settings-tabs {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-xl);
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+        }
+        .settings-tab-btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            font-weight: 500;
+            transition: all var(--transition);
+            white-space: nowrap;
+            margin-bottom: -2px;
+        }
+        .settings-tab-btn:hover {
+            color: var(--primary);
+        }
+        .settings-tab-btn.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+        }
+        .settings-tab-btn i {
+            margin-right: var(--spacing-sm);
+        }
+
+        /* Settings Panels */
+        .settings-panel {
+            display: none;
+        }
+        .settings-panel.active {
+            display: block;
+        }
+
+        /* Settings Section */
+        .settings-section {
+            background: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: var(--spacing-xl);
+        }
+        .settings-section h3 {
+            margin: 0 0 var(--spacing-lg) 0;
+            color: var(--gray-900);
+            font-size: 1.125rem;
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .settings-section h3 i {
+            color: var(--primary);
+        }
+
+        /* Setting Row */
+        .setting-row {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: var(--spacing-xl);
+            padding: var(--spacing-md) 0;
+            align-items: start;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+        .setting-label {
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 0.9375rem;
+        }
+        .setting-description {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        /* Form Controls */
+        .settings-section input[type="text"],
+        .settings-section input[type="email"],
+        .settings-section input[type="url"],
+        .settings-section input[type="number"],
+        .settings-section input[type="time"],
+        .settings-section input[type="password"],
+        .settings-section select,
+        .settings-section textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.9375rem;
+            font-family: inherit;
+            background: white;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+        .settings-section input:focus,
+        .settings-section select:focus,
+        .settings-section textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        .settings-section textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--gray-300);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+        .toggle-switch.active {
+            background: var(--success);
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left var(--transition);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.active::after {
+            left: 26px;
+        }
+
+        /* Button Group */
+        .button-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(0, 102, 204, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+            font-size: 0.875rem;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+        }
+        .warning-box strong {
+            color: var(--warning);
+        }
+        .warning-box ul {
+            margin: var(--spacing-sm) 0 0 0;
+            padding-left: var(--spacing-lg);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* History Box */
+        .history-box {
+            background: var(--bg-secondary);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            margin: var(--spacing-lg) 0;
+        }
+        .history-box strong {
+            color: var(--gray-900);
+            display: block;
+            margin-bottom: var(--spacing-md);
+        }
+        .history-item {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            padding: var(--spacing-xs) 0;
+        }
+
+        /* Inline Controls */
+        .inline-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .inline-controls span {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .setting-row {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+            }
+            .settings-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+            .settings-tab-btn {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-settings' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">System Settings
+          </h1>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Notification -->
+        <div id="notification" class="notification"></div>
+
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+          <button class="settings-tab-btn active" data-tab="app"><i class="fas fa-cogs"></i> Application</button>
+          <button class="settings-tab-btn" data-tab="jellyfin"><i class="fas fa-play"></i> Jellyfin</button>
+          <button class="settings-tab-btn" data-tab="security"><i class="fas fa-shield-alt"></i> Security</button>
+          <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
+          <button class="settings-tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Maintenance</button>
+        </div>
+
+        <!-- Application Settings -->
+        <div id="app" class="settings-panel active">
+          <div class="settings-section">
+            <h3><i class="fas fa-info-circle"></i> Application Configuration</h3>
+            
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Application Name</div>
+                <div class="setting-description">Display name for the application</div>
+              </div>
+              <div>
+                <input type="text" name="appName" value="<%= settings.appName || 'JellySSO' %>" placeholder="Application name">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Application Port</div>
+                <div class="setting-description">Server port number (default: 3000)</div>
+              </div>
+              <div>
+                <input type="number" name="port" value="<%= settings.port || 3000 %>" min="1" max="65535">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Session Timeout (minutes)</div>
+                <div class="setting-description">How long before idle sessions expire</div>
+              </div>
+              <div>
+                <input type="number" name="sessionTimeout" value="<%= settings.sessionTimeout || 30 %>" min="5" max="1440">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Public URL</div>
+                <div class="setting-description">Public URL for this application (used for OIDC SSO callbacks)</div>
+              </div>
+              <div>
+                <input type="url" name="webAppPublicUrl" value="<%= jellyfinSettings.webAppPublicUrl || '' %>" placeholder="https://sso.example.com">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Enable HTTPS</div>
+                <div class="setting-description">Use SSL/TLS encryption</div>
+              </div>
+              <div>
+                <div class="toggle-switch <%= settings.httpsEnabled ? 'active' : '' %>" data-name="httpsEnabled"></div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Theme</div>
+                <div class="setting-description">UI color scheme</div>
+              </div>
+              <div>
+                <select name="theme">
+                  <option value="light" <%= settings.theme === 'light' ? 'selected' : '' %>>Light</option>
+                  <option value="dark" <%= settings.theme === 'dark' ? 'selected' : '' %>>Dark</option>
+                  <option value="auto" <%= settings.theme === 'auto' ? 'selected' : '' %>>Auto</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button class="btn btn-primary" data-action="save" data-section="app"><i class="fas fa-save"></i> Save Changes</button>
+            <button class="btn btn-secondary" data-action="reset" data-section="app"><i class="fas fa-undo"></i> Reset to Defaults</button>
+          </div>
+        </div>
+
+        <!-- Jellyfin Settings -->
+        <div id="jellyfin" class="settings-panel">
+          <div class="settings-section">
+            <h3><i class="fas fa-play"></i> Jellyfin Server Configuration</h3>
+            
+            <div class="info-box">
+              <i class="fas fa-info-circle"></i> These settings control how the app connects to your Jellyfin server. Changes require a server restart.
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Jellyfin Server URL (Internal)</div>
+                <div class="setting-description">Internal URL used by the server to connect to Jellyfin</div>
+              </div>
+              <div>
+                <input type="url" name="jellyfinUrl" value="<%= jellyfinSettings.jellyfinUrl || '' %>" placeholder="http://jellyfin.local:8096">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Jellyfin Public URL</div>
+                <div class="setting-description">Public URL users use to access Jellyfin</div>
+              </div>
+              <div>
+                <input type="url" name="jellyfinPublicUrl" value="<%= jellyfinSettings.jellyfinPublicUrl || '' %>" placeholder="https://jellyfin.example.com">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">API Key</div>
+                <div class="setting-description">Jellyfin API key for server-to-server communication</div>
+              </div>
+              <div>
+                <div class="inline-controls" style="flex-direction: column; align-items: flex-start; gap: var(--spacing-md);">
+                  <input type="text" name="apiKey" value="<%= jellyfinSettings.apiKey || '' %>" placeholder="Enter or generate API key" style="font-family: monospace; font-size: 0.8125rem;">
+                  <div style="display: flex; gap: var(--spacing-sm);">
+                    <button type="button" class="btn btn-secondary" id="generateApiKeyBtn" style="padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem;">
+                      <i class="fas fa-refresh"></i> Generate New Key
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="copyApiKeyBtn" style="padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem;">
+                      <i class="fas fa-copy"></i> Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Connection Status</div>
+                <div class="setting-description">Current connection to Jellyfin server</div>
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                  <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Connected</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Setup Completed</div>
+                <div class="setting-description">Initial setup status</div>
+              </div>
+              <div>
+                <span style="color: var(--success); font-weight: 500;">
+                  <i class="fas fa-check"></i> <%= jellyfinSettings.setupComplete ? 'Yes' : 'No' %>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button class="btn btn-primary" data-action="save" data-section="jellyfin"><i class="fas fa-save"></i> Save Changes</button>
+            <button class="btn btn-secondary" data-action="reset" data-section="jellyfin"><i class="fas fa-undo"></i> Reset to Defaults</button>
+          </div>
+
+          <div class="info-box" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning);">
+            <i class="fas fa-exclamation-triangle"></i> 
+            Changing Jellyfin URLs requires restarting the server to take effect.
+          </div>
+        </div>
+
+        <!-- Security Settings -->
+        <div id="security" class="settings-panel">
+          <div class="settings-section">
+            <h3><i class="fas fa-shield-alt"></i> Security Configuration</h3>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Enable CSRF Protection</div>
+                <div class="setting-description">Protect against Cross-Site Request Forgery</div>
+              </div>
+              <div>
+                <div class="toggle-switch active" data-name="csrfProtection"></div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Enable Rate Limiting</div>
+                <div class="setting-description">Limit requests per IP address</div>
+              </div>
+              <div>
+                <div class="toggle-switch active" data-name="rateLimitEnabled"></div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Rate Limit (requests/minute)</div>
+                <div class="setting-description">Maximum requests allowed per minute per IP</div>
+              </div>
+              <div>
+                <input type="number" name="rateLimit" value="<%= settings.rateLimit || 60 %>" min="1" max="1000">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Require HTTPS</div>
+                <div class="setting-description">Force all connections to use HTTPS</div>
+              </div>
+              <div>
+                <div class="toggle-switch <%= settings.requireHttps ? 'active' : '' %>" data-name="requireHttps"></div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Session Secret</div>
+                <div class="setting-description">Encryption key for session data</div>
+              </div>
+              <div>
+                <input type="password" value="••••••••••••••••" readonly>
+              </div>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button class="btn btn-primary" data-action="save" data-section="security"><i class="fas fa-save"></i> Save Changes</button>
+            <button class="btn btn-secondary" data-action="reset" data-section="security"><i class="fas fa-undo"></i> Reset to Defaults</button>
+          </div>
+        </div>
+
+        <!-- Logging Settings -->
+        <div id="logging" class="settings-panel">
+          <div class="settings-section">
+            <h3><i class="fas fa-file-alt"></i> Logging Configuration</h3>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Log Level</div>
+                <div class="setting-description">Verbosity of log output</div>
+              </div>
+              <div>
+                <select name="logLevel">
+                  <option value="error" <%= settings.logLevel === 'error' ? 'selected' : '' %>>Error</option>
+                  <option value="warn" <%= settings.logLevel === 'warn' ? 'selected' : '' %>>Warning</option>
+                  <option value="info" <%= settings.logLevel === 'info' || !settings.logLevel ? 'selected' : '' %>>Info</option>
+                  <option value="debug" <%= settings.logLevel === 'debug' ? 'selected' : '' %>>Debug</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Log to File</div>
+                <div class="setting-description">Write logs to disk</div>
+              </div>
+              <div>
+                <div class="toggle-switch active" data-name="logToFile"></div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Log Retention (days)</div>
+                <div class="setting-description">How long to keep old log files</div>
+              </div>
+              <div>
+                <input type="number" name="logRetention" value="<%= settings.logRetention || 30 %>" min="1" max="365">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Enable Audit Logging</div>
+                <div class="setting-description">Log all user actions to database</div>
+              </div>
+              <div>
+                <div class="toggle-switch active" data-name="auditLogging"></div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Audit Log Retention (days)</div>
+                <div class="setting-description">How long to keep audit logs</div>
+              </div>
+              <div>
+                <input type="number" name="auditLogRetention" value="<%= settings.auditLogRetention || 90 %>" min="7" max="365">
+              </div>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button class="btn btn-primary" data-action="save" data-section="logging"><i class="fas fa-save"></i> Save Changes</button>
+            <button class="btn btn-secondary" data-action="reset" data-section="logging"><i class="fas fa-undo"></i> Reset to Defaults</button>
+          </div>
+        </div>
+
+        <!-- Maintenance Settings -->
+        <div id="maintenance" class="settings-panel">
+          <div class="settings-section">
+            <h3><i class="fas fa-wrench"></i> Database Maintenance Schedule</h3>
+
+            <div class="info-box">
+              <i class="fas fa-info-circle"></i> Configure when automatic database maintenance tasks run. The server must be running for tasks to execute.
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Daily Cleanup</div>
+                <div class="setting-description">Time to remove old audit logs</div>
+              </div>
+              <div>
+                <div class="inline-controls">
+                  <input type="time" name="dailyCleanupTime" value="02:00">
+                  <span>(Daily)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Weekly Optimization</div>
+                <div class="setting-description">Day and time to run VACUUM and ANALYZE</div>
+              </div>
+              <div>
+                <div class="inline-controls">
+                  <select name="weeklyOptimizationDay">
+                    <option value="0">Sunday</option>
+                    <option value="1">Monday</option>
+                    <option value="2">Tuesday</option>
+                    <option value="3">Wednesday</option>
+                    <option value="4">Thursday</option>
+                    <option value="5">Friday</option>
+                    <option value="6" selected>Saturday</option>
+                  </select>
+                  <input type="time" name="weeklyOptimizationTime" value="03:00">
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Monthly Backup</div>
+                <div class="setting-description">Day of month and time to create database backup</div>
+              </div>
+              <div>
+                <div class="inline-controls">
+                  <select name="monthlyBackupDay">
+                    <% for (let i = 1; i <= 31; i++) { %>
+                      <option value="<%= i %>" <%= i === 1 ? 'selected' : '' %>><%= i %></option>
+                    <% } %>
+                  </select>
+                  <input type="time" name="monthlyBackupTime" value="04:00">
+                </div>
+              </div>
+            </div>
+
+            <div class="history-box">
+              <strong><i class="fas fa-history"></i> Maintenance History</strong>
+              <div class="history-item">Last Daily Cleanup: <strong>Today at 2:00 AM</strong></div>
+              <div class="history-item">Last Weekly Optimization: <strong>Last Saturday at 3:00 AM</strong></div>
+              <div class="history-item">Last Monthly Backup: <strong>January 1 at 4:00 AM</strong></div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Backup Retention</div>
+                <div class="setting-description">Number of monthly backups to keep</div>
+              </div>
+              <div>
+                <input type="number" name="backupRetention" value="<%= settings.backupRetention || 12 %>" min="3" max="24">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Cleanup Threshold (days)</div>
+                <div class="setting-description">Delete audit logs older than this many days</div>
+              </div>
+              <div>
+                <input type="number" name="cleanupThreshold" value="<%= settings.cleanupThreshold || 90 %>" min="7" max="365">
+              </div>
+            </div>
+          </div>
+
+          <div class="warning-box">
+            <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong>
+            <ul>
+              <li>Maintenance tasks require the application server to be running</li>
+              <li>Tasks run in the background and do not affect application performance</li>
+              <li>Database backups are stored in the <code>backups/</code> directory</li>
+              <li>All maintenance actions are logged in the audit log</li>
+            </ul>
+          </div>
+
+          <div class="button-group">
+            <button class="btn btn-primary" data-action="save" data-section="maintenance"><i class="fas fa-save"></i> Save Schedule</button>
+            <button class="btn btn-secondary" id="runMaintenanceBtn"><i class="fas fa-play"></i> Run Now</button>
+            <button class="btn btn-secondary" data-action="reset" data-section="maintenance"><i class="fas fa-undo"></i> Reset to Defaults</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/admin-settings.js"></script>
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

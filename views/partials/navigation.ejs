@@ -1,0 +1,104 @@
+<!-- Base Navigation Component -->
+<!-- Pass user and currentPage variables when including this partial -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+      <img src="/logo-icon.svg" alt="JellySSO" style="width: 40px; height: 40px;">
+      <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">JellySSO</h2>
+    </div>
+    <p><%= user?.Policy?.IsAdministrator ? 'Admin Dashboard' : 'User Dashboard' %></p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- Primary Navigation -->
+    <div class="nav-item">
+      <a href="/" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">
+        <i class="fas fa-home"></i>
+        Dashboard
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="/quickconnect" class="nav-link <%= currentPage === 'quickconnect' ? 'active' : '' %>">
+        <i class="fas fa-mobile-alt"></i>
+        QuickConnect
+      </a>
+    </div>
+
+    <!-- Admin Tools Section (only for admins) -->
+    <% if (user?.Policy?.IsAdministrator) { %>
+      <div style="margin: var(--spacing-lg) 0; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: var(--spacing-md);">
+        <div style="padding: 0 var(--spacing-lg); font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); font-weight: 600; letter-spacing: 0.5px;">Admin Tools</div>
+      </div>
+
+      <div class="nav-item">
+        <a href="/admin/" class="nav-link <%= currentPage === 'admin-dashboard' ? 'active' : '' %>">
+          <i class="fas fa-chart-bar"></i>
+          Admin Dashboard
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/users" class="nav-link <%= currentPage === 'admin-users' ? 'active' : '' %>">
+          <i class="fas fa-users"></i>
+          User Management
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/settings" class="nav-link <%= currentPage === 'admin-settings' ? 'active' : '' %>">
+          <i class="fas fa-cog"></i>
+          Settings
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/analytics" class="nav-link <%= currentPage === 'admin-analytics' ? 'active' : '' %>">
+          <i class="fas fa-chart-line"></i>
+          Analytics
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/audit-logs" class="nav-link <%= currentPage === 'admin-audit-logs' ? 'active' : '' %>">
+          <i class="fas fa-file-alt"></i>
+          Audit Logs
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/statistics" class="nav-link <%= currentPage === 'admin-statistics' ? 'active' : '' %>">
+          <i class="fas fa-chart-pie"></i>
+          Statistics
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/backups" class="nav-link <%= currentPage === 'admin-backups' ? 'active' : '' %>">
+          <i class="fas fa-database"></i>
+          Backups
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/provisioning" class="nav-link <%= currentPage === 'admin-provisioning' ? 'active' : '' %>">
+          <i class="fas fa-cogs"></i>
+          Provisioning
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/oidc" class="nav-link <%= currentPage === 'admin-oidc' ? 'active' : '' %>">
+          <i class="fas fa-key"></i>
+          OIDC SSO
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/plugins" class="nav-link <%= currentPage === 'admin-plugins' ? 'active' : '' %>">
+          <i class="fas fa-puzzle-piece"></i>
+          Plugin Management
+        </a>
+      </div>
+    <% } %>
+  </nav>
+
+  <!-- Bottom Navigation (Logout) -->
+  <div style="margin-top: auto; padding-top: var(--spacing-lg); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+    <button id="logoutBtn" class="nav-link" style="justify-content: center; width: 100%; border: none; background: none; cursor: pointer; color: rgba(255, 255, 255, 0.8); margin-bottom: var(--spacing-lg);">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Logout</span>
+    </button>
+  </div>
+</aside>

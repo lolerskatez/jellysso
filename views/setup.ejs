@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+</head>
+<body>
+  <div class="setup-container">
+    <div class="setup-header">
+      <h1>JellySSO Setup</h1>
+      <p>Configure your JellySSO application</p>
+    </div>
+
+    <div class="setup-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 50%"></div>
+      </div>
+      <div class="progress-steps">
+        <div class="step active" data-step="1">
+          <span class="step-number">1</span>
+          <span class="step-label">Server Config</span>
+        </div>
+        <div class="step" data-step="2">
+          <span class="step-number">2</span>
+          <span class="step-label">Admin Setup</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-content">
+      <!-- Step 1: Server Configuration -->
+      <div class="setup-step active" id="step1">
+        <h2>Server Configuration</h2>
+        <p>Configure the connection to your Jellyfin server and web application URLs.</p>
+
+        <form id="step1Form">
+          <div class="form-group">
+            <label for="jellyfinUrl">Jellyfin Server URL</label>
+            <input type="url" id="jellyfinUrl" name="jellyfinUrl" required
+                   placeholder="http://localhost:8096" autocomplete="url">
+            <small>The internal URL of your Jellyfin server</small>
+          </div>
+
+          <div class="form-group">
+            <label for="jellyfinPublicUrl">Jellyfin Public URL</label>
+            <input type="url" id="jellyfinPublicUrl" name="jellyfinPublicUrl" required
+                   placeholder="https://jellyfin.example.com" autocomplete="url">
+            <small>The public URL that external clients use to access Jellyfin</small>
+          </div>
+
+          <div class="form-group">
+            <label for="webAppPublicUrl">Web App Public URL</label>
+            <input type="url" id="webAppPublicUrl" name="webAppPublicUrl" required
+                   placeholder="https://companion.example.com" autocomplete="url">
+            <small>The public URL of this companion application</small>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Next</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2: Admin Setup -->
+      <div class="setup-step" id="step2">
+        <h2>Administrator Setup</h2>
+        <p>Configure the administrator account for this companion application.</p>
+
+        <form id="step2Form">
+          <div class="form-group">
+            <label for="adminUsername">Admin Username</label>
+            <input type="text" id="adminUsername" name="adminUsername" required
+                   placeholder="Enter Jellyfin admin username" autocomplete="username">
+            <small>Must be an administrator in your Jellyfin server</small>
+          </div>
+
+          <div class="form-group">
+            <label for="adminPassword">Admin Password</label>
+            <input type="password" id="adminPassword" name="adminPassword" required
+                   placeholder="Enter Jellyfin admin password" minlength="8" autocomplete="current-password">
+            <small>Password for the admin user (min 8 characters)</small>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" data-action="prev">Back</button>
+            <button type="submit" class="btn btn-primary">Complete Setup</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Setup Complete -->
+      <div class="setup-step" id="stepComplete">
+        <div class="success-message">
+          <h2>Setup Complete!</h2>
+          <p>Your Jellyfin Companion application has been successfully configured.</p>
+          <div class="setup-summary">
+            <h3>Configuration Summary:</h3>
+            <ul id="configSummary"></ul>
+          </div>
+          <div class="form-actions">
+            <a href="/login" class="btn btn-primary">Continue to Login</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-footer">
+      <p>Jellyfin Companion v<%= version %></p>
+    </div>
+  </div>
+
+  <script src="/js/setup.js"></script>
+</body>
+</html>

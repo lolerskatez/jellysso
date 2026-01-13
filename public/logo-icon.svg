@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50" height="50">
+  <!-- Icon only version -->
+  <circle cx="25" cy="25" r="23" fill="#00A4DC" stroke="#0077B6" stroke-width="2"/>
+  
+  <!-- Film strip -->
+  <rect x="11" y="16" width="28" height="18" fill="white" rx="2"/>
+  <rect x="13" y="18.5" width="7" height="5" fill="#00A4DC"/>
+  <rect x="21.5" y="18.5" width="7" height="5" fill="#00A4DC"/>
+  <rect x="30" y="18.5" width="7" height="5" fill="#00A4DC"/>
+  <rect x="13" y="25.5" width="7" height="5" fill="#00A4DC"/>
+  <rect x="21.5" y="25.5" width="7" height="5" fill="#00A4DC"/>
+  <rect x="30" y="25.5" width="7" height="5" fill="#00A4DC"/>
+  
+  <!-- Lock/shield -->
+  <circle cx="36" cy="13" r="3" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <path d="M 33 16 L 39 16 L 39 21 L 36 23 L 33 21 Z" fill="#FFD700" stroke="#FFA500" stroke-width="1"/>
+  <circle cx="36" cy="18.5" r="1.5" fill="#FFA500"/>
+</svg>

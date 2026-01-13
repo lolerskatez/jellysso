@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Jellyfin Companion - Admin Dashboard">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .admin-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .admin-badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .admin-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .admin-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+
+    .admin-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-4px);
+      border-color: var(--primary);
+    }
+
+    .admin-card-icon {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .admin-card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .admin-card-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .admin-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .admin-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-lg);
+      text-decoration: none;
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      background: white;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+      text-align: center;
+    }
+
+    .admin-action-btn:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+      color: var(--primary);
+    }
+
+    .admin-action-btn i {
+      font-size: 1.5rem;
+    }
+
+    .admin-action-btn span {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .page-section {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .page-section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .page-section-title i {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    @media (max-width: 768px) {
+      .admin-stats {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      .admin-actions {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .admin-action-btn {
+        min-width: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'admin-dashboard' }) %>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="btn btn-secondary btn-sm" id="sidebarToggle" style="display: none;">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-crown" style="margin-right: var(--spacing-sm); color: var(--primary);"></i>
+            Admin Dashboard
+          </h1>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <% if (typeof user !== 'undefined' && user && user.Policy?.IsAdministrator) { %>
+          <!-- Admin Welcome -->
+          <div class="admin-header">
+            <div>
+              <h2 style="margin: 0; color: var(--primary);">Administrative Console</h2>
+              <p style="margin: var(--spacing-sm) 0 0 0; color: var(--text-secondary);">System management and monitoring tools</p>
+            </div>
+            <span class="admin-badge">Admin</span>
+          </div>
+
+          <!-- Admin Statistics -->
+          <div class="page-section">
+            <h3 class="page-section-title">
+              <i class="fas fa-chart-pie"></i>
+              System Overview
+            </h3>
+            <div class="admin-stats">
+              <div class="admin-card">
+                <div class="admin-card-icon">
+                  <i class="fas fa-users"></i>
+                </div>
+                <div class="admin-card-value" id="totalUsers">-</div>
+                <div class="admin-card-label">Total Users</div>
+              </div>
+              <div class="admin-card">
+                <div class="admin-card-icon">
+                  <i class="fas fa-sign-in-alt"></i>
+                </div>
+                <div class="admin-card-value" id="activeUsers">-</div>
+                <div class="admin-card-label">Active Users</div>
+              </div>
+              <div class="admin-card">
+                <div class="admin-card-icon">
+                  <i class="fas fa-server"></i>
+                </div>
+                <div class="admin-card-value">
+                  <i class="fas fa-circle" style="color: var(--success); font-size: 1rem;"></i>
+                </div>
+                <div class="admin-card-label">Server Status</div>
+              </div>
+              <div class="admin-card">
+                <div class="admin-card-icon">
+                  <i class="fas fa-database"></i>
+                </div>
+                <div class="admin-card-value" id="dbSize">-</div>
+                <div class="admin-card-label">Database Size</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Quick Actions -->
+          <div class="page-section">
+            <h3 class="page-section-title">
+              <i class="fas fa-lightning-bolt"></i>
+              Quick Actions
+            </h3>
+            <div class="admin-actions">
+              <a href="/users" class="admin-action-btn">
+                <i class="fas fa-user-plus"></i>
+                <span>Manage Users</span>
+              </a>
+              <a href="/settings" class="admin-action-btn">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+              </a>
+              <a href="/admin/analytics" class="admin-action-btn">
+                <i class="fas fa-chart-line"></i>
+                <span>Analytics</span>
+              </a>
+              <a href="/admin/backups" class="admin-action-btn">
+                <i class="fas fa-save"></i>
+                <span>Backups</span>
+              </a>
+              <a href="/admin/system" class="admin-action-btn">
+                <i class="fas fa-wrench"></i>
+                <span>System</span>
+              </a>
+              <a href="/" class="admin-action-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to User</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- System Information -->
+          <div class="page-section">
+            <h3 class="page-section-title">
+              <i class="fas fa-info-circle"></i>
+              System Information
+            </h3>
+            <div class="two-column">
+              <div class="card">
+                <div class="card-body">
+                  <h4 style="margin-top: 0;">Server Information</h4>
+                  <div style="display: grid; gap: var(--spacing-md);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                      <span style="color: var(--text-secondary);">Version</span>
+                      <strong id="serverVersion">Loading...</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                      <span style="color: var(--text-secondary);">Status</span>
+                      <span class="badge badge-success">Online</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                      <span style="color: var(--text-secondary);">Node Version</span>
+                      <strong id="nodeVersion">Loading...</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="color: var(--text-secondary);">Uptime</span>
+                      <strong id="serverUptime">Loading...</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-body">
+                  <h4 style="margin-top: 0;">Your Account</h4>
+                  <div style="display: grid; gap: var(--spacing-md);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                      <span style="color: var(--text-secondary);">Username</span>
+                      <strong><%= user.Name %></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                      <span style="color: var(--text-secondary);">Role</span>
+                      <strong>Administrator</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                      <span style="color: var(--text-secondary);">User ID</span>
+                      <code style="background: var(--bg-secondary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;"><%= user.Id.substring(0, 8) %>...</code>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="color: var(--text-secondary);">Permissions</span>
+                      <span class="badge badge-primary">Full Access</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        <% } else { %>
+          <!-- Not Authorized -->
+          <div class="empty-state" style="padding: 4rem 2rem;">
+            <div class="empty-state-icon">
+              <i class="fas fa-lock"></i>
+            </div>
+            <h2 class="empty-state-title">Access Denied</h2>
+            <p class="empty-state-text">
+              You do not have permission to access the admin dashboard. Please contact an administrator.
+            </p>
+            <a href="/" class="btn btn-primary btn-lg">
+              <i class="fas fa-home"></i>
+              Back to Dashboard
+            </a>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# Binaries and build outputs
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+*.vscode/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# Release files
+release/
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Old backups
+*.old.*
+*.bak

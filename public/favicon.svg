@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#00A4DC" stroke="#0077B6" stroke-width="2"/>
+  
+  <!-- Film strip icon (representing Jellyfin) -->
+  <rect x="8" y="11" width="16" height="10" fill="white" rx="1"/>
+  <rect x="9.5" y="12.5" width="4" height="3" fill="#00A4DC"/>
+  <rect x="14.5" y="12.5" width="4" height="3" fill="#00A4DC"/>
+  <rect x="19.5" y="12.5" width="4" height="3" fill="#00A4DC"/>
+  <rect x="9.5" y="16.5" width="4" height="3" fill="#00A4DC"/>
+  <rect x="14.5" y="16.5" width="4" height="3" fill="#00A4DC"/>
+  <rect x="19.5" y="16.5" width="4" height="3" fill="#00A4DC"/>
+  
+  <!-- Lock/shield icon (representing SSO/Security) -->
+  <path d="M 22 8 L 24 8 L 24 10 L 22 10 Z" fill="#FFD700" stroke="#FFA500" stroke-width="0.5"/>
+  <path d="M 23 10 L 23 12 L 21 13 L 21 10 Z" fill="#FFD700" stroke="#FFA500" stroke-width="0.5"/>
+  <circle cx="23" cy="7" r="1.5" fill="none" stroke="#FFD700" stroke-width="1"/>
+</svg>

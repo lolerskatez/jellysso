@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Analytics - Jellyfin Companion Admin">
+  <title>Analytics - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <script src="/js/chart.min.js"></script>
+  <style>
+    /* Period Selector */
+    .period-selector {
+      display: flex;
+      gap: var(--spacing-xs);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+    .period-btn {
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border: none;
+      background: white;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all var(--transition);
+    }
+    .period-btn:not(:last-child) {
+      border-right: 1px solid var(--border-color);
+    }
+    .period-btn:hover {
+      background: var(--bg-secondary);
+    }
+    .period-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+    .stat-card {
+      background: white;
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--border-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .stat-icon.primary { background: rgba(0, 102, 204, 0.1); color: var(--primary); }
+    .stat-icon.success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .stat-icon.warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .stat-icon.danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+    .stat-icon.cyan { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+    .stat-content h3 {
+      margin: 0;
+      font-size: 1.75rem;
+      color: var(--gray-900);
+      font-weight: 700;
+    }
+    .stat-content p {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+
+    /* Chart Container */
+    .chart-container {
+      background: white;
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+    .chart-container h3 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 1rem;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .chart-container h3 i {
+      color: var(--primary);
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    /* Table Container */
+    .table-container {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-lg);
+      overflow: hidden;
+    }
+    .table-container h3 {
+      margin: 0;
+      padding: var(--spacing-lg);
+      font-size: 1rem;
+      color: var(--gray-900);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .table-container h3 i {
+      color: var(--primary);
+    }
+    .analytics-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .analytics-table th {
+      background: var(--bg-secondary);
+      padding: var(--spacing-md);
+      text-align: left;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--gray-900);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .analytics-table td {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.9375rem;
+    }
+    .analytics-table tr:last-child td {
+      border-bottom: none;
+    }
+    .analytics-table tr:hover {
+      background: var(--bg-secondary);
+    }
+    .analytics-table code {
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.8125rem;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* No Data */
+    .no-data {
+      text-align: center;
+      padding: var(--spacing-xl);
+      color: var(--text-secondary);
+    }
+
+    /* Export Section */
+    .export-section {
+      display: flex;
+      justify-content: center;
+      padding: var(--spacing-xl) 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-analytics' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Analytics
+          </h1>
+        </div>
+        <div class="header-right">
+          <div class="period-selector">
+            <button class="period-btn active" data-period="7">7 days</button>
+            <button class="period-btn" data-period="30">30 days</button>
+            <button class="period-btn" data-period="90">90 days</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Key Statistics -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon primary">
+              <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="totalActivities">0</h3>
+              <p>Total Activities (<span id="periodDays">7</span> days)</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon danger">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="failedLogins">0</h3>
+              <p>Failed Logins</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon success">
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="newUsers">0</h3>
+              <p>New Users Created</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <i class="fas fa-plug"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="apiCalls">0</h3>
+              <p>API Calls</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon cyan">
+              <i class="fas fa-desktop"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="activeSessions">0</h3>
+              <p>Active Sessions</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon warning">
+              <i class="fas fa-qrcode"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="quickConnects">0</h3>
+              <p>QuickConnect Uses</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Timeline Chart -->
+        <div class="chart-container">
+          <h3><i class="fas fa-chart-area"></i> Activity Timeline</h3>
+          <div class="chart-wrapper">
+            <canvas id="activityTimelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+          <div class="chart-container">
+            <h3><i class="fas fa-key"></i> Authentication Methods</h3>
+            <div class="chart-wrapper">
+              <canvas id="authMethodsChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-container">
+            <h3><i class="fas fa-tasks"></i> Top Actions</h3>
+            <div class="chart-wrapper">
+              <canvas id="actionsChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-container">
+            <h3><i class="fas fa-shield-alt"></i> Failed Login Trends</h3>
+            <div class="chart-wrapper" style="height: 200px;">
+              <canvas id="failedLoginsChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-container">
+            <h3><i class="fas fa-user-check"></i> User Creation Trends</h3>
+            <div class="chart-wrapper" style="height: 200px;">
+              <canvas id="userCreationChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Users Table -->
+        <div class="table-container">
+          <h3><i class="fas fa-users"></i> Top Users by Activity</h3>
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Activities</th>
+                <th>Activity Rate</th>
+              </tr>
+            </thead>
+            <tbody id="topUsersTable">
+              <tr><td colspan="3" class="no-data">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Top API Endpoints Table -->
+        <div class="table-container">
+          <h3><i class="fas fa-code"></i> Most Used API Endpoints</h3>
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Calls</th>
+                <th>Usage</th>
+              </tr>
+            </thead>
+            <tbody id="topEndpointsTable">
+              <tr><td colspan="3" class="no-data">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Export Section -->
+        <div class="export-section">
+          <button class="btn btn-primary" id="exportReportBtn">
+            <i class="fas fa-download"></i> Export Report
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/admin-analytics.js"></script>
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

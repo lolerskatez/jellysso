@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>QuickConnect - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .sidebar-header h2 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .sidebar-header h2 i {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+  </style>
+  <style>
+    .quickconnect-container {
+      max-width: 435px;
+      margin: 0 auto;
+      padding: 1.4rem;
+    }
+    .quickconnect-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 1.4rem;
+      text-align: center;
+      margin-bottom: 1.4rem;
+    }
+    .session-item {
+      background: #f5f7fa;
+      border: 1px solid #e1e5e9;
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 0.72rem;
+      text-align: left;
+    }
+    .session-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .session-device {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .session-code {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: monospace;
+    }
+    .session-details {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.72rem;
+    }
+    .session-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .approve-btn, .reject-btn {
+      flex: 1;
+      padding: 0.5rem 0.72rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .approve-btn {
+      background: #10b981;
+      color: white;
+    }
+    .approve-btn:hover:not(:disabled) {
+      background: #059669;
+    }
+    .reject-btn {
+      background: #ef4444;
+      color: white;
+    }
+    .reject-btn:hover:not(:disabled) {
+      background: #dc2626;
+    }
+    .approve-btn:disabled, .reject-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-secondary);
+    }
+    .empty-state-icon {
+      font-size: 2rem;
+      margin-bottom: 0.72rem;
+      opacity: 0.5;
+    }
+    .code-input-container {
+      margin: 1.4rem 0;
+    }
+    .code-input {
+      font-size: 1.5rem;
+      font-weight: bold;
+      letter-spacing: 0.3rem;
+      text-align: center;
+      border: 2px solid #e1e5e9;
+      border-radius: 6px;
+      padding: 0.75rem;
+      width: 100%;
+      max-width: 200px;
+      margin: 0 auto;
+      transition: border-color 0.3s ease;
+    }
+    .code-input::placeholder {
+      font-size: 1rem;
+      font-weight: normal;
+      letter-spacing: normal;
+      color: #aaa;
+    }
+    .code-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+    .connect-btn {
+      background: var(--primary);
+      border: none;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-top: var(--spacing-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+    }
+    .connect-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+    }
+    .connect-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .status-message {
+      margin-top: 1.08rem;
+      padding: 0.72rem;
+      border-radius: 6px;
+    }
+    .status-info {
+      background: #e7f3ff;
+      color: var(--info-color);
+      border: 1px solid #b3d9ff;
+    }
+    .status-success {
+      background: #e8f5e8;
+      color: var(--success-color);
+      border: 1px solid #b8e6b8;
+    }
+    .status-error {
+      background: #ffeaea;
+      color: var(--error-color);
+      border: 1px solid #ffb3b3;
+    }
+    .instructions {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 1.08rem;
+      margin-bottom: 1.4rem;
+      text-align: left;
+    }
+    .instructions ol {
+      margin: 0;
+      padding-left: 1.08rem;
+    }
+    .instructions li {
+      margin-bottom: 0.36rem;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 0.36rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .code-display-container {
+      margin: 1.5rem 0;
+    }
+    .code-display {
+      font-size: 2.5rem;
+      font-weight: bold;
+      letter-spacing: 0.5rem;
+      color: var(--primary);
+      background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+      border: 3px solid var(--primary);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      display: inline-block;
+      font-family: 'Courier New', monospace;
+    }
+    .authorize-btn {
+      background: var(--primary);
+      border: none;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md) var(--spacing-xl);
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-top: var(--spacing-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+    }
+    .authorize-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+    }
+    .authorize-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'quickconnect' }) %>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">QuickConnect</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn btn-secondary" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <div class="quickconnect-container">
+          <!-- QuickConnect Form -->
+            <div class="quickconnect-card">
+              <div style="margin-bottom: 1.4rem;">
+                <i class="fas fa-mobile-alt" style="font-size: 2.165rem; color: var(--primary); margin-bottom: 0.72rem; display: block;"></i>
+                <h2 style="margin: 0; color: var(--text-primary); font-size: 1.445rem;">Authorize Device</h2>
+                <p style="color: var(--text-secondary); margin: 0.36rem 0 0 0; font-size: 0.8rem;">Enter the QuickConnect code from your TV or device</p>
+              </div>
+
+              <div class="instructions">
+                <h4 style="margin-top: 0; color: var(--text-primary); font-size: 0.935rem;"><i class="fas fa-info-circle"></i> How to authorize:</h4>
+                <ol>
+                  <li>On your TV or device, select "Quick Connect" on the login screen</li>
+                  <li>Note the code displayed on your device</li>
+                  <li>Enter that code below and click Authorize</li>
+                  <li>Your device will automatically log in</li>
+                </ol>
+              </div>
+
+              <form id="quickConnectForm">
+                <div class="code-input-container">
+                  <input type="text" 
+                         id="quickConnectCode" 
+                         name="code" 
+                         class="code-input"
+                         placeholder="Enter code" 
+                         maxlength="10" 
+                         required 
+                         autocomplete="off"
+                         autofocus>
+                </div>
+                <button type="submit" class="authorize-btn" id="authorizeBtn">
+                  <span id="btnText">
+                    <i class="fas fa-check-circle"></i>
+                    Authorize Device
+                  </span>
+                  <span id="btnLoading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Authorizing...
+                  </span>
+                </button>
+              </form>
+
+              <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+          <!-- About Section -->
+          <div class="quickconnect-card">
+            <h3 style="color: var(--text-primary); margin-bottom: 0.72rem; font-size: 1.08rem;">
+              <i class="fas fa-question-circle"></i>
+              About QuickConnect
+            </h3>
+            <p style="color: var(--text-secondary); margin-bottom: 0.72rem; font-size: 0.8rem;">
+              QuickConnect allows you to easily authenticate with your Jellyfin server using a temporary code from your Jellyfin app, without needing to remember passwords.
+            </p>
+            <div class="status-message status-info">
+              <i class="fas fa-info-circle"></i>
+              <strong>Note:</strong> QuickConnect must be enabled in your Jellyfin server settings for this feature to work.
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/quickconnect.js"></script>
+</body>
+</html>

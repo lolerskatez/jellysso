@@ -1,0 +1,9 @@
+{
+  "isSetupComplete": true,
+  "jellyfinUrl": "http://192.168.1.183:8096",
+  "jellyfinPublicUrl": "https://j.tanjiro.one",
+  "webAppPublicUrl": "https://jcii.tanjiro.one",
+  "apiKey": "d20b571fb5b44687aa86c3d829b5d15a",
+  "adminUser": "media_admin",
+  "setupCompletedAt": "2026-01-11T08:20:58.547Z"
+}

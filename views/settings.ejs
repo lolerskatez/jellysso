@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Settings - Jellyfin Companion">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Settings - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .sidebar-header h2 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .sidebar-header h2 i {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+  </style>
+  <style>
+    .settings-container {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: var(--spacing-lg);
+    }
+
+    .settings-sidebar {
+      background: white;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      height: fit-content;
+      position: sticky;
+      top: var(--spacing-lg);
+    }
+
+    .settings-nav {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-nav-item {
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition);
+      color: var(--text-primary);
+      text-decoration: none;
+      display: block;
+    }
+
+    .settings-nav-item:hover {
+      background: var(--bg-light);
+      border-left-color: var(--primary);
+    }
+
+    .settings-nav-item.active {
+      background: var(--bg-light);
+      border-left-color: var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .settings-section {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-lg);
+      display: none;
+    }
+
+    .settings-section.active {
+      display: block;
+    }
+
+    .settings-section h2 {
+      margin-top: 0;
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .settings-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .settings-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    @media (max-width: 768px) {
+      .settings-container {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-sidebar {
+        display: flex;
+        position: static;
+      }
+
+      .settings-nav {
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .settings-nav-item {
+        white-space: nowrap;
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-left: none;
+        border-bottom: 3px solid transparent;
+      }
+
+      .settings-nav-item:hover,
+      .settings-nav-item.active {
+        border-left: none;
+        border-bottom-color: var(--primary);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'settings' }) %>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="btn btn-secondary" id="sidebarToggle" style="display: none;">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="page-title">Settings</h1>
+        </div>
+        <div class="header-right">
+          <% if (typeof user !== 'undefined' && user) { %>
+          <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-left: var(--spacing-lg);">
+            <span style="color: var(--text-secondary);">
+              <strong><%= user.Name %></strong> 
+              <% if (user.Policy && user.Policy.IsAdministrator) { %>
+              <span style="margin-left: var(--spacing-sm);">👑 Administrator</span>
+              <% } %>
+            </span>
+            <button id="logoutBtn" class="btn btn-sm btn-secondary">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+          <% } %>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <div class="settings-container">
+          <!-- Settings Navigation -->
+          <div class="settings-sidebar">
+            <nav class="settings-nav">
+              <a class="settings-nav-item active" data-section="general">
+                <i class="fas fa-sliders-h" style="margin-right: var(--spacing-sm);"></i>
+                General
+              </a>
+              <a class="settings-nav-item" data-section="security">
+                <i class="fas fa-lock" style="margin-right: var(--spacing-sm);"></i>
+                Security
+              </a>
+              <a class="settings-nav-item" data-section="notifications">
+                <i class="fas fa-bell" style="margin-right: var(--spacing-sm);"></i>
+                Notifications
+              </a>
+              <a class="settings-nav-item" data-section="about">
+                <i class="fas fa-info-circle" style="margin-right: var(--spacing-sm);"></i>
+                About
+              </a>
+            </nav>
+          </div>
+
+          <!-- Settings Content -->
+          <div style="flex: 1;">
+            <!-- General Settings -->
+            <div id="general-section" class="settings-section active">
+              <h2>General Settings</h2>
+              <form id="generalForm">
+                <div class="settings-group">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Server Name</label>
+                      <input type="text" class="form-control" id="serverNameOld" placeholder="My Jellyfin Server">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Server URL</label>
+                      <input type="url" class="form-control" id="serverUrl" placeholder="https://jellyfin.example.com">
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-group">
+                  <label class="form-label">Auto-Save Interval (minutes)</label>
+                  <input type="number" class="form-control" id="autoSaveInterval" min="1" max="60" value="5">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i> Save General Settings
+                </button>
+              </form>
+            </div>
+
+            <!-- Security Settings -->
+            <div id="security-section" class="settings-section">
+              <h2>Security Settings</h2>
+              <div class="settings-group">
+                <label class="form-label">Session Timeout (minutes)</label>
+                <input type="number" class="form-control" id="sessionTimeout" min="5" max="480" value="30">
+              </div>
+              <div class="settings-group">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" id="enableSSL">
+                  Enable SSL/TLS for connections
+                </label>
+              </div>
+              <div class="settings-group">
+                <label class="form-label">Password Requirements</label>
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" id="requireStrongPassword">
+                  Require strong passwords (minimum 8 characters)
+                </label>
+              </div>
+              <button data-save="security" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Security Settings
+              </button>
+            </div>
+
+            <!-- Notification Settings -->
+            <div id="notifications-section" class="settings-section">
+              <h2>Notification Settings</h2>
+              <div class="settings-group">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" id="enableNotifications" checked>
+                  Enable notifications
+                </label>
+              </div>
+              <div class="settings-group">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" id="notifyOnUserLogin" checked>
+                  Notify on user login
+                </label>
+              </div>
+              <div class="settings-group">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" id="notifyOnError" checked>
+                  Notify on errors
+                </label>
+              </div>
+              <button data-save="notification" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Notification Settings
+              </button>
+            </div>
+
+            <!-- About -->
+            <div id="about-section" class="settings-section">
+              <h2>About Jellyfin Companion</h2>
+              <div class="card" style="background: var(--bg-light);">
+                <div class="card-body">
+                  <p><strong>Version:</strong> 1.0.0</p>
+                  <p><strong>Last Updated:</strong> <span id="lastUpdated">Loading...</span></p>
+                  <p><strong>Server Information:</strong></p>
+                  <ul style="margin: var(--spacing-md) 0; padding-left: var(--spacing-lg);">
+                    <li>Jellyfin Server: <span id="jellyfinVersion">Loading...</span></li>
+                    <li>API Version: <span id="apiVersion">v1.0</span></li>
+                  </ul>
+                  <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: var(--spacing-lg);">
+                    Jellyfin Companion is a professional management dashboard for your Jellyfin media server.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/settings.js"></script>
+</body>
+</html>

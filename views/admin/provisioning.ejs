@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Provisioning - Jellyfin Companion Admin">
+  <title>Provisioning - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: var(--spacing-lg);
+    }
+    .tab-btn {
+      padding: var(--spacing-md) var(--spacing-lg);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-btn i {
+      font-size: 1rem;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Card */
+    .card {
+      background: white;
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+    .card h3 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 1rem;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .card h3 i {
+      color: var(--primary);
+    }
+
+    /* Upload Area */
+    .upload-area {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--bg-secondary);
+    }
+    .upload-area:hover {
+      border-color: var(--primary);
+      background: rgba(0, 102, 204, 0.05);
+    }
+    .upload-area.dragover {
+      border-color: var(--primary);
+      background: rgba(0, 102, 204, 0.1);
+    }
+    .upload-area i {
+      font-size: 3rem;
+      color: var(--primary);
+      margin-bottom: var(--spacing-md);
+      display: block;
+    }
+    .upload-area h4 {
+      margin: 0 0 var(--spacing-xs) 0;
+      color: var(--gray-900);
+    }
+    .upload-area p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+    #csvFile {
+      display: none;
+    }
+
+    /* File Info */
+    .file-info {
+      display: none;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: var(--border-radius);
+      margin: var(--spacing-md) 0;
+    }
+    .file-info i {
+      color: var(--success);
+      font-size: 1.25rem;
+    }
+    .file-info span {
+      font-weight: 500;
+    }
+
+    /* CSV Preview */
+    .csv-preview {
+      display: none;
+      max-height: 350px;
+      overflow: auto;
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      margin: var(--spacing-lg) 0;
+    }
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+    .preview-table th {
+      background: var(--gray-900);
+      color: white;
+      padding: var(--spacing-sm) var(--spacing-md);
+      text-align: left;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    .preview-table td {
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+      background: white;
+    }
+
+    /* Info Box */
+    .info-box {
+      background: rgba(0, 102, 204, 0.05);
+      border-left: 3px solid var(--primary);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    .info-box i {
+      color: var(--primary);
+      margin-right: var(--spacing-xs);
+    }
+
+    /* Button Group */
+    .button-group {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin: var(--spacing-lg) 0;
+      flex-wrap: wrap;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      display: none;
+      margin: var(--spacing-lg) 0;
+    }
+    .progress-container.active {
+      display: block;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--success), #059669);
+      width: 0%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: width 0.3s;
+    }
+
+    /* Results */
+    .results {
+      display: none;
+      margin-top: var(--spacing-lg);
+    }
+    .results h4 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 0.9375rem;
+      color: var(--gray-900);
+    }
+    .result-item {
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-xs);
+      font-size: 0.8125rem;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .result-item.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    .result-item.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    /* Template Section */
+    .template-section {
+      background: var(--bg-secondary);
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin: var(--spacing-lg) 0;
+    }
+    .template-section h4 {
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 0.9375rem;
+      color: var(--gray-900);
+    }
+    .template-code {
+      background: white;
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      font-family: monospace;
+      font-size: 0.8125rem;
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+    }
+
+    /* History Table */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .history-table th {
+      background: var(--bg-secondary);
+      padding: var(--spacing-md);
+      text-align: left;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--gray-900);
+      text-transform: uppercase;
+    }
+    .history-table td {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.9375rem;
+    }
+    .history-table tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-complete {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    .status-partial {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-xl);
+      color: var(--text-secondary);
+    }
+
+    /* Notification */
+    .notification {
+      position: fixed;
+      top: var(--spacing-lg);
+      right: var(--spacing-lg);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-lg);
+      z-index: 1001;
+      transform: translateX(150%);
+      transition: transform 0.3s ease;
+    }
+    .notification.show {
+      transform: translateX(0);
+    }
+    .notification.success { background: var(--success); color: white; }
+    .notification.error { background: var(--danger); color: white; }
+    .notification.warning { background: var(--warning); color: white; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-provisioning' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Provisioning
+          </h1>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Notification -->
+        <div id="notification" class="notification"></div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="import">
+            <i class="fas fa-file-upload"></i> Import CSV
+          </button>
+          <button class="tab-btn" data-tab="template">
+            <i class="fas fa-file-alt"></i> Template
+          </button>
+          <button class="tab-btn" data-tab="history">
+            <i class="fas fa-history"></i> History
+          </button>
+        </div>
+
+        <!-- Import Tab -->
+        <div id="import" class="tab-content active">
+          <div class="card">
+            <h3><i class="fas fa-upload"></i> CSV File Upload</h3>
+            
+            <div class="info-box">
+              <i class="fas fa-info-circle"></i>
+              Import users in bulk by uploading a CSV file. The file must contain columns for Username, Email, and optionally Password.
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <h4>Drag and drop your CSV file here</h4>
+              <p>or click to select a file</p>
+              <input type="file" id="csvFile" accept=".csv" />
+            </div>
+
+            <div class="file-info" id="fileInfo">
+              <i class="fas fa-file-csv"></i>
+              <span>Selected: <strong id="fileName"></strong></span>
+            </div>
+
+            <div class="csv-preview" id="csvPreview">
+              <table class="preview-table" id="previewTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="button-group">
+              <button class="btn btn-success" id="importBtn" style="display: none;">
+                <i class="fas fa-play"></i> Start Import
+              </button>
+              <button class="btn btn-secondary" id="cancelBtn" style="display: none;">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+            </div>
+
+            <div class="progress-container" id="progressBar">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+              </div>
+            </div>
+
+            <div class="results" id="results">
+              <h4>Import Results</h4>
+              <div id="resultsList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template Tab -->
+        <div id="template" class="tab-content">
+          <div class="card">
+            <h3><i class="fas fa-file-csv"></i> CSV Template</h3>
+            
+            <div class="info-box">
+              <i class="fas fa-info-circle"></i>
+              Use this template as a guide for your CSV file. Save with .csv extension and follow the column structure exactly.
+            </div>
+
+            <div class="template-section">
+              <h4>Required Columns</h4>
+              <table class="preview-table">
+                <thead>
+                  <tr>
+                    <th>Column Name</th>
+                    <th>Required</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Username</strong></td>
+                    <td><span class="status-badge status-complete">Required</span></td>
+                    <td>Unique username for the Jellyfin user</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Email</strong></td>
+                    <td><span class="status-badge status-complete">Required</span></td>
+                    <td>Valid email address</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Password</strong></td>
+                    <td><span class="status-badge status-partial">Optional</span></td>
+                    <td>User password (random generated if empty)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Admin</strong></td>
+                    <td><span class="status-badge status-partial">Optional</span></td>
+                    <td>true/false - whether user is admin</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="template-section">
+              <h4>Example CSV</h4>
+              <div class="template-code">
+Username,Email,Password,Admin<br>
+john.doe,john@example.com,SecurePass123,false<br>
+jane.smith,jane@example.com,SecurePass456,true<br>
+bob.johnson,bob@example.com,,false
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button class="btn btn-primary" id="downloadTemplateBtn">
+                <i class="fas fa-download"></i> Download Template
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+          <div class="card">
+            <h3><i class="fas fa-history"></i> Import History</h3>
+            
+            <% if (typeof importHistory !== 'undefined' && importHistory && importHistory.length > 0) { %>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Successful</th>
+                    <th>Failed</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% importHistory.forEach(item => { %>
+                    <tr>
+                      <td><%= new Date(item.date).toLocaleString() %></td>
+                      <td><%= item.total %></td>
+                      <td style="color: var(--success);"><%= item.success %></td>
+                      <td style="color: var(--danger);"><%= item.failed %></td>
+                      <td>
+                        <% if (item.failed === 0) { %>
+                          <span class="status-badge status-complete">
+                            <i class="fas fa-check"></i> Complete
+                          </span>
+                        <% } else { %>
+                          <span class="status-badge status-partial">
+                            <i class="fas fa-exclamation"></i> Partial
+                          </span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } else { %>
+              <div class="empty-state">
+                <i class="fas fa-inbox" style="font-size: 2.5rem; color: var(--gray-300); margin-bottom: var(--spacing-md);"></i>
+                <p>No import history yet</p>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/admin-provisioning.js"></script>
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

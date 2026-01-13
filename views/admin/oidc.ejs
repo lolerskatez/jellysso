@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="OIDC SSO Configuration - Jellyfin Companion Admin">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>OIDC SSO - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .oidc-container {
+      max-width: 900px;
+    }
+
+    .info-card {
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+      border: 1px solid #7dd3fc;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .info-card h3 {
+      color: #0369a1;
+      margin: 0 0 var(--spacing-md) 0;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .info-card p {
+      color: #0c4a6e;
+      margin: 0;
+      font-size: 0.9375rem;
+    }
+
+    .uri-display {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .uri-display h3 {
+      margin: 0 0 var(--spacing-lg) 0;
+      font-size: 1.125rem;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .uri-display h3 i {
+      color: var(--primary);
+    }
+
+    .uri-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .uri-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .uri-label {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .uri-value {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      background: var(--bg-secondary);
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--border-radius);
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    .uri-value button {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: var(--spacing-xs);
+      border-radius: var(--border-radius);
+      transition: all var(--transition);
+    }
+
+    .uri-value button:hover {
+      background: var(--primary-lighter);
+    }
+
+    .settings-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .settings-card h3 {
+      margin: 0 0 var(--spacing-lg) 0;
+      font-size: 1.125rem;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .settings-card h3 i {
+      color: var(--primary);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm);
+      color: var(--gray-900);
+    }
+
+    .form-label .required {
+      color: var(--danger);
+    }
+
+    .form-hint {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: var(--spacing-xs);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: var(--spacing-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 0.9375rem;
+      transition: all var(--transition);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .form-input::placeholder {
+      color: var(--gray-400);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+    }
+
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .toggle-label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .toggle-label strong {
+      color: var(--gray-900);
+    }
+
+    .toggle-label span {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--gray-300);
+      transition: 0.3s;
+      border-radius: 26px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--success);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+
+    .button-group {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: 20px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .status-badge.enabled {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+
+    .status-badge.disabled {
+      background: rgba(107, 114, 128, 0.1);
+      color: var(--gray-500);
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+    }
+
+    .notification.show {
+      transform: translateX(0);
+    }
+
+    .notification.success {
+      background: var(--success);
+    }
+
+    .notification.error {
+      background: var(--danger);
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .button-group .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-oidc' }) %>
+
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">OIDC SSO</h1>
+        </div>
+        <div class="header-right">
+          <span class="status-badge" id="oidcStatus">
+            <i class="fas fa-circle"></i>
+            <span>Loading...</span>
+          </span>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="oidc-container">
+          <!-- Notification -->
+          <div id="notification" class="notification"></div>
+
+          <!-- Info Card -->
+          <div class="info-card">
+            <h3><i class="fas fa-info-circle"></i> About OIDC SSO</h3>
+            <p>
+              OpenID Connect (OIDC) enables Single Sign-On (SSO) with identity providers like 
+              Authentik, Keycloak, Okta, Azure AD, Google, and others. Users can log in using 
+              their existing identity provider credentials.
+            </p>
+          </div>
+
+          <!-- URIs Display -->
+          <div class="uri-display">
+            <h3><i class="fas fa-link"></i> Application URIs</h3>
+            <p style="margin-bottom: var(--spacing-lg); color: var(--text-secondary); font-size: 0.875rem;">
+              Configure these URIs in your identity provider's OIDC client settings.
+            </p>
+            
+            <div class="uri-item">
+              <span class="uri-label">Callback / Redirect URI</span>
+              <div class="uri-value">
+                <span id="callbackUri"><%= baseUrl %>/api/auth/oidc/callback</span>
+                <button onclick="copyToClipboard('callbackUri')" title="Copy to clipboard">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="uri-item">
+              <span class="uri-label">Post-Logout Redirect URI</span>
+              <div class="uri-value">
+                <span id="logoutUri"><%= baseUrl %>/login</span>
+                <button onclick="copyToClipboard('logoutUri')" title="Copy to clipboard">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="uri-item">
+              <span class="uri-label">Application Base URL</span>
+              <div class="uri-value">
+                <span id="baseUri"><%= baseUrl %></span>
+                <button onclick="copyToClipboard('baseUri')" title="Copy to clipboard">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- OIDC Settings Form -->
+          <div class="settings-card">
+            <h3><i class="fas fa-key"></i> OIDC Configuration</h3>
+
+            <form id="oidcForm">
+              <!-- Enable Toggle -->
+              <div class="toggle-group">
+                <div class="toggle-label">
+                  <strong>Enable OIDC SSO</strong>
+                  <span>Allow users to sign in with their identity provider</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="oidcEnabled" name="enabled">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <!-- Provider Info -->
+              <div class="form-group">
+                <label class="form-label">
+                  Provider Name
+                </label>
+                <input type="text" class="form-input" id="providerName" name="providerName" 
+                       placeholder="e.g., Authentik, Keycloak, Okta">
+                <p class="form-hint">Display name shown on the login button</p>
+              </div>
+
+              <!-- Discovery URL or Manual Config -->
+              <div class="form-group">
+                <label class="form-label">
+                  Discovery URL (Issuer) <span class="required">*</span>
+                </label>
+                <input type="url" class="form-input" id="issuerUrl" name="issuerUrl" 
+                       placeholder="https://auth.example.com/application/o/jellyfin/.well-known/openid-configuration">
+                <p class="form-hint">The OpenID Connect discovery endpoint URL (usually ends with /.well-known/openid-configuration)</p>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">
+                    Client ID <span class="required">*</span>
+                  </label>
+                  <input type="text" class="form-input" id="clientId" name="clientId" 
+                         placeholder="your-client-id">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    Client Secret <span class="required">*</span>
+                  </label>
+                  <input type="password" class="form-input" id="clientSecret" name="clientSecret" 
+                         placeholder="your-client-secret">
+                </div>
+              </div>
+
+              <!-- Scopes -->
+              <div class="form-group">
+                <label class="form-label">Scopes</label>
+                <input type="text" class="form-input" id="scopes" name="scopes" 
+                       placeholder="openid profile email" value="openid profile email">
+                <p class="form-hint">Space-separated list of OAuth scopes to request</p>
+              </div>
+
+              <!-- Auto-create Users Toggle -->
+              <div class="toggle-group">
+                <div class="toggle-label">
+                  <strong>Auto-create Jellyfin Users</strong>
+                  <span>Automatically create Jellyfin accounts for new SSO users</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="autoCreateUsers" name="autoCreateUsers">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <!-- Username Claim -->
+              <div class="form-group">
+                <label class="form-label">Username Claim</label>
+                <input type="text" class="form-input" id="usernameClaim" name="usernameClaim" 
+                       placeholder="preferred_username" value="preferred_username">
+                <p class="form-hint">The OIDC claim to use as the Jellyfin username</p>
+              </div>
+
+              <!-- Admin Group (optional) -->
+              <div class="form-group">
+                <label class="form-label">Admin Group (Optional)</label>
+                <input type="text" class="form-input" id="adminGroup" name="adminGroup" 
+                       placeholder="jellyfin-admins">
+                <p class="form-hint">Users in this group will be granted admin privileges in Jellyfin</p>
+              </div>
+
+              <!-- Buttons -->
+              <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i> Save Configuration
+                </button>
+                <button type="button" class="btn btn-secondary" id="testConnectionBtn">
+                  <i class="fas fa-plug"></i> Test Connection
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/admin-oidc.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="User Management - Jellyfin Companion">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>User Management - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .sidebar-header h2 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .sidebar-header h2 i {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+  </style>
+  <style>
+    .users-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .user-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-4px);
+      border-color: var(--primary);
+    }
+
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .user-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .user-role {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-md);
+      width: fit-content;
+    }
+
+    .user-details {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-md);
+      flex-grow: 1;
+    }
+
+    .user-details p {
+      margin: var(--spacing-xs) 0;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+      border-top: 1px solid var(--border-color);
+      padding-top: var(--spacing-md);
+      margin-top: auto;
+    }
+
+    .user-actions .btn {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+
+    .search-filters {
+      background: white;
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr 200px 150px;
+      gap: var(--spacing-md);
+      align-items: end;
+    }
+
+    @media (max-width: 768px) {
+      .filter-row {
+        grid-template-columns: 1fr;
+      }
+
+      .users-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'users' }) %>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="btn btn-secondary" id="sidebarToggle" style="display: none;">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="page-title">User Management</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn btn-primary" id="createUserBtn">
+            <i class="fas fa-plus"></i>
+            Create User
+          </button>
+          <button class="btn btn-secondary" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <% if (typeof user !== 'undefined' && user) { %>
+          <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-left: var(--spacing-lg);">
+            <span style="color: var(--text-secondary);">
+              <strong><%= user.Name %></strong> 
+              <% if (user.Policy && user.Policy.IsAdministrator) { %>
+              <span style="margin-left: var(--spacing-sm);">👑 Administrator</span>
+              <% } %>
+            </span>
+            <button class="btn btn-sm btn-secondary" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+          <% } %>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Search and Filters -->
+        <div class="search-filters">
+          <div class="filter-row">
+            <div class="form-group mb-0">
+              <input type="text" id="searchInput" class="form-control" placeholder="Search users by name or email...">
+            </div>
+            <div class="form-group mb-0">
+              <select id="filterSelect" class="form-select">
+                <option value="">All Users</option>
+                <option value="admin">Admins</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+            <button class="btn btn-info" id="activityBtn" style="width: 100%;">
+              <i class="fas fa-history"></i>
+              Activity
+            </button>
+          </div>
+        </div>
+
+        <!-- Users Grid -->
+        <div id="usersList" class="users-grid">
+          <!-- Users will be loaded here -->
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center" style="display: none; padding: var(--spacing-2xl);">
+          <div style="display: inline-block;">
+            <div class="spinner" style="border-width: 4px; width: 40px; height: 40px;"></div>
+            <p style="margin-top: var(--spacing-md); color: var(--text-secondary);">Loading users...</p>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" style="display: none; text-align: center; padding: var(--spacing-2xl);">
+          <i class="fas fa-users" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: var(--spacing-lg); display: block;"></i>
+          <h3 style="color: var(--text-primary);">No users found</h3>
+          <p style="color: var(--text-secondary);">Try adjusting your search or filter criteria.</p>
+        </div>
+
+        <!-- Users Grid -->
+        <div id="usersList" class="users-grid"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Create User Modal -->
+  <div id="createUserModal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Create New User</h3>
+        <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="createUserForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="userName">Username *</label>
+            <input type="text" id="userName" name="Name" class="form-control" placeholder="Enter username" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="userPassword">Password</label>
+            <input type="password" id="userPassword" name="Password" class="form-control" placeholder="Leave empty for passwordless accounts" autocomplete="new-password">
+            <small style="color: var(--text-secondary); display: block; margin-top: var(--spacing-sm);">Optional - leave empty for passwordless accounts</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="create">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="createUserSubmitBtn">
+            <span id="createText"><i class="fas fa-plus"></i> Create User</span>
+            <span class="loading" id="createLoading" style="display: none; gap: var(--spacing-sm);">
+              <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+              Creating...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Activity Logs Modal -->
+  <div id="activityModal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 class="modal-title">Activity Logs</h3>
+        <button type="button" class="modal-close" data-close-modal="activity">&times;</button>
+      </div>
+      <div class="modal-body" id="activityLogs">
+        <!-- Activity logs will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="activity">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/users.js"></script>
+</body>
+</html>

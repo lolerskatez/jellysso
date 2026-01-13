@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin-test
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./test-data/jellyfin/config:/config
+      - ./test-data/jellyfin/cache:/cache
+      - ./test-data/jellyfin/media:/media
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://localhost:8096
+    restart: unless-stopped
+    networks:
+      - jellyfin-test
+
+  companion-app:
+    build: .
+    container_name: jellyfin-companion-test
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - JELLYFIN_BASE_URL=http://jellyfin:8096
+      - PORT=3000
+      - SESSION_SECRET=test-session-secret
+      - JWT_SECRET=test-jwt-secret
+      - SHARED_SECRET=test-shared-secret
+    depends_on:
+      - jellyfin
+    networks:
+      - jellyfin-test
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+networks:
+  jellyfin-test:
+    driver: bridge

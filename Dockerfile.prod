@@ -1,41 +1,56 @@
-# Production Dockerfile
-FROM node:18-alpine
+# Production Dockerfile - JellySSO
+# Multi-stage build for optimized production image
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Production stage
+FROM node:20-alpine
+
+LABEL maintainer="JellySSO Team"
+LABEL description="JellySSO - Single Sign-On companion application for Jellyfin"
+LABEL version="1.0.0"
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init curl
 
 # Create app directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy application code
+COPY package*.json ./
 COPY src/ ./src/
 COPY views/ ./views/
 COPY public/ ./public/
-COPY jellyfin-plugin/ ./jellyfin-plugin/
 
-# Create non-root user
+# Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S jellyfin -u 1001
+    adduser -S jellyfin -u 1001 -G nodejs
 
-# Change ownership
-RUN chown -R jellyfin:nodejs /app
+# Create necessary directories with proper permissions
+RUN mkdir -p logs backups && \
+    chown -R jellyfin:nodejs /app
+
+# Switch to non-root user
 USER jellyfin
 
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { \
-    process.exit(res.statusCode === 200 ? 0 : 1) \
-  }).on('error', () => process.exit(1))"
+# Health check with improved reliability
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start application
-ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]

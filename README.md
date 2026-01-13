@@ -1,9 +1,10 @@
 # JellySSO - Single Sign-On for Jellyfin
 
-**Status:** ✅ All Features Complete & Production Ready  
-**Last Updated:** January 13, 2026
+**Status:** ✅ Production Ready - Live Deployment Enabled  
+**Last Updated:** January 13, 2026  
+**Version:** 1.0.0
 
-JellySSO is a powerful Single Sign-On (SSO) companion application for Jellyfin, enabling seamless authentication via OIDC providers and advanced user management.
+JellySSO is a powerful Single Sign-On (SSO) companion application for Jellyfin, enabling seamless authentication via OIDC providers and advanced user management. Fully containerized and optimized for production environments.
 
 ---
 
@@ -180,18 +181,53 @@ npm test
 
 ## Deployment
 
-### Docker
+### Production Docker Compose (Recommended)
 ```bash
-docker build -f Dockerfile.prod -t jellyfin-companion:latest .
-docker run -p 3000:3000 -e JELLYFIN_URL=http://jellyfin:8096 jellyfin-companion:latest
-```
+# Copy environment template
+cp .env.example .env
 
-### Docker Compose
-```bash
+# Edit .env with your production values
+nano .env
+
+# Deploy with Docker Compose
 docker-compose -f docker-compose.prod.yml up -d
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f jellyfin-companion
 ```
 
-See `DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
+### Docker Build & Run
+```bash
+# Build production image
+docker build -f Dockerfile.prod -t jellysso:latest .
+
+# Run container
+docker run -d \
+  --name jellysso-prod \
+  -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e JELLYFIN_URL=http://jellyfin:8096 \
+  -e JELLYFIN_API_KEY=your_api_key \
+  -e SESSION_SECRET=your_strong_secret \
+  -v jellysso-logs:/app/logs \
+  jellysso:latest
+```
+
+### Environment Setup for Production
+Create a `.env` file with production values:
+```bash
+NODE_ENV=production
+JELLYFIN_URL=http://jellyfin:8096
+JELLYFIN_API_KEY=your_jellyfin_api_key
+SESSION_SECRET=generate_strong_random_secret
+JWT_SECRET=generate_strong_random_secret
+SHARED_SECRET=generate_strong_random_secret
+OIDC_ENABLED=false
+USE_HTTPS=false
+LOG_LEVEL=info
+```
+
+See `DEPLOYMENT_GUIDE.md` for comprehensive production deployment instructions.
 
 ---
 
@@ -227,11 +263,47 @@ See `DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 
 ## Documentation
 
-- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Production deployment
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Production deployment instructions
 - [INFRASTRUCTURE_QUICK_REFERENCE.md](INFRASTRUCTURE_QUICK_REFERENCE.md) - Infrastructure reference
 - [TESTING_AND_BENCHMARKS.md](TESTING_AND_BENCHMARKS.md) - Testing documentation
+- [SECURITY.md](SECURITY.md) - Security policies and best practices
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) - System design details
+- [AUTHENTICATION_INFRASTRUCTURE.md](AUTHENTICATION_INFRASTRUCTURE.md) - Authentication details
 
 ---
 
-**Status:** ✅ Production Ready  
-**Next Step:** Deploy to production or run locally for testing
+## Production Deployment
+
+### Quick Deploy with Docker Compose
+```bash
+# 1. Clone repository
+git clone <repository-url>
+cd jellysso
+
+# 2. Setup environment
+cp .env.example .env
+# Edit .env with your production values
+
+# 3. Deploy
+docker-compose -f docker-compose.prod.yml up -d
+
+# 4. Verify
+docker-compose -f docker-compose.prod.yml logs -f jellyfin-companion
+```
+
+### What's Included
+- ✅ Multi-stage Docker build for optimized images
+- ✅ Health checks on all services
+- ✅ Nginx reverse proxy for HTTPS termination
+- ✅ Non-root user execution for security
+- ✅ Persistent volumes for data
+- ✅ Comprehensive logging
+- ✅ Production-grade configuration
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.
+
+---
+
+**Status:** ✅ Production Ready - Live Deployment Enabled  
+**Next Step:** Deploy to production using Docker Compose or run locally for testing

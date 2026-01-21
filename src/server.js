@@ -140,19 +140,27 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Setup check middleware - redirect to setup if not configured
-// app.use((req, res, next) => {
-//   // Skip setup check for setup routes, health check, and static files
-//   if (req.path.startsWith('/setup') || req.path === '/api/health' || req.path.startsWith('/css') || req.path.startsWith('/js') || req.path === '/login') {
-//     return next();
-//   }
+app.use((req, res, next) => {
+  // Skip setup check for setup routes, health check, and static files
+  if (req.path.startsWith('/setup') || 
+      req.path === '/api/health' || 
+      req.path.startsWith('/css/') ||
+      req.path.startsWith('/js/') ||
+      req.path.startsWith('/webfonts/') ||
+      req.path.startsWith('/images/') ||
+      req.path === '/favicon.svg' ||
+      req.path === '/login') {
+    return next();
+  }
 
-//   // If setup is not complete, redirect to setup
-//   if (!SetupManager.isSetupComplete()) {
-//     return res.redirect('/setup');
-//   }
+  // If setup is not complete, redirect to setup
+  if (!SetupManager.isSetupComplete()) {
+    return res.redirect('/setup');
+  }
 
-//   next();
-// });
+  next();
+});
+
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Set view engine

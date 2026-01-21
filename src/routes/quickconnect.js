@@ -6,6 +6,18 @@ const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
 const { validateQuickConnectParams } = require('../middleware/validation');
 
+// Middleware to require setup to be complete
+const requireSetupComplete = (req, res, next) => {
+  if (!SetupManager.isSetupComplete()) {
+    const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
+    if (isAjax) {
+      return res.status(503).json({ success: false, message: 'System not configured. Please complete setup.' });
+    }
+    return res.redirect('/setup');
+  }
+  next();
+};
+
 // In-memory store for pending quick connect sessions
 // Format: { code: { secret, code, deviceName, deviceType, initiatedAt, userId } }
 const pendingSessions = new Map();
@@ -34,7 +46,7 @@ router.get('/enabled', async (req, res) => {
 });
 
 // Initiate QuickConnect - tracks the new pending session
-router.post('/initiate', csrfProtection, async (req, res) => {
+router.post('/initiate', requireSetupComplete, csrfProtection, async (req, res) => {
   try {
     const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
     const result = await jellyfin.initiateQuickConnect();
@@ -59,7 +71,7 @@ router.post('/initiate', csrfProtection, async (req, res) => {
 });
 
 // Get QuickConnect state
-router.post('/connect', csrfProtection, async (req, res) => {
+router.post('/connect', requireSetupComplete, csrfProtection, async (req, res) => {
   const { secret } = req.body;
   
   // Validate input
@@ -78,7 +90,7 @@ router.post('/connect', csrfProtection, async (req, res) => {
 });
 
 // Authorize QuickConnect - authorizes a device code using the logged-in user's session
-router.post('/authorize', csrfProtection, async (req, res) => {
+router.post('/authorize', requireSetupComplete, csrfProtection, async (req, res) => {
   const { code } = req.body;
   
   if (!code) {
@@ -126,7 +138,7 @@ router.post('/authorize', csrfProtection, async (req, res) => {
 });
 
 // Authenticate with QuickConnect
-router.post('/authenticate', csrfProtection, async (req, res) => {
+router.post('/authenticate', requireSetupComplete, csrfProtection, async (req, res) => {
   const { secret } = req.body;
   
   // Validate input
@@ -182,7 +194,7 @@ router.get('/sessions', async (req, res) => {
 });
 
 // Approve a quick connect session
-router.post('/sessions/:code/approve', csrfProtection, async (req, res) => {
+router.post('/sessions/:code/approve', requireSetupComplete, csrfProtection, async (req, res) => {
   // Must be logged in to approve sessions
   if (!req.session?.user?.Id) {
     return res.status(401).json({ success: false, message: 'You must be logged in' });
@@ -218,7 +230,7 @@ router.post('/sessions/:code/approve', csrfProtection, async (req, res) => {
 });
 
 // Reject a quick connect session
-router.post('/sessions/:code/reject', csrfProtection, async (req, res) => {
+router.post('/sessions/:code/reject', requireSetupComplete, csrfProtection, async (req, res) => {
   // Must be logged in to reject sessions
   if (!req.session?.user?.Id) {
     return res.status(401).json({ success: false, message: 'You must be logged in' });
@@ -248,7 +260,7 @@ router.post('/sessions/:code/reject', csrfProtection, async (req, res) => {
 });
 
 // Check QuickConnect status (poll for authorization)
-router.post('/status', csrfProtection, async (req, res) => {
+router.post('/status', requireSetupComplete, csrfProtection, async (req, res) => {
   const { secret } = req.body;
   
   if (!secret) {

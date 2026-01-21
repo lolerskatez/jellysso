@@ -10,8 +10,20 @@ const jwt = require('jsonwebtoken');
 
 const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
 
+// Middleware to require setup to be complete
+const requireSetupComplete = (req, res, next) => {
+  if (!SetupManager.isSetupComplete()) {
+    const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
+    if (isAjax) {
+      return res.status(503).json({ success: false, message: 'System not configured. Please complete setup.' });
+    }
+    return res.redirect('/setup');
+  }
+  next();
+};
+
 // Login route - CSRF validated by global middleware
-router.post('/login', async (req, res) => {
+router.post('/login', requireSetupComplete, async (req, res) => {
   console.log('Login request headers:', JSON.stringify(req.headers, null, 2));
   console.log('Login request body:', JSON.stringify(req.body, null, 2));
   const { username, password } = req.body;

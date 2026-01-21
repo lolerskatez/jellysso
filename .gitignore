@@ -47,6 +47,16 @@ tmp/
 temp/
 *.tmp
 
+# Configuration and secrets
+src/config/setup.json
+src/config/*.json
+
+# Certificates
+certs/
+*.pem
+*.key
+*.crt
+
 # Docker
 .dockerignore
 docker-compose.override.yml

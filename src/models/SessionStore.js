@@ -22,8 +22,8 @@ class SessionStore extends session.Store {
    * Initialize sessions table in database
    */
   initializeTable() {
-    // Wait a tick to ensure database is ready
-    setImmediate(() => {
+    // Wait for DatabaseManager to be ready
+    DatabaseManager.onReady(() => {
       // Create sessions table
       DatabaseManager.db.run(`
         CREATE TABLE IF NOT EXISTS sessions (

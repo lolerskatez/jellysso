@@ -6,7 +6,17 @@ class DatabaseManager {
   constructor() {
     this.dbPath = path.join(__dirname, '../config/companion.db');
     this.db = null;
+    this.isReady = false;
+    this.readyCallbacks = [];
     this.ensureDatabase();
+  }
+
+  onReady(callback) {
+    if (this.isReady) {
+      callback();
+    } else {
+      this.readyCallbacks.push(callback);
+    }
   }
 
   ensureDatabase() {
@@ -122,6 +132,11 @@ class DatabaseManager {
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email)', (err) => {
         if (err) console.error('Error creating index idx_user_profiles_email:', err.message);
+        
+        // Mark database as ready after all tables are created
+        this.isReady = true;
+        this.readyCallbacks.forEach(cb => cb());
+        this.readyCallbacks = [];
       });
     });
   }

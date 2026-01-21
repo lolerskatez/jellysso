@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (result.success) {
           showMessage('Login successful! Redirecting...', 'success');
           setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/quickconnect';
           }, 1000);
         } else {
           showMessage(result.message || 'Login failed');

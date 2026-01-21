@@ -69,7 +69,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Configure Helmet with proper CSP for both HTTP and HTTPS
 const isProduction = process.env.NODE_ENV === 'production';
-const useHttps = process.env.USE_HTTPS === 'true';
+const useHttps = false; // Force HTTP even if environment variable is set
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -83,13 +83,12 @@ app.use(helmet({
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       formAction: ["'self'"],
-      // Only upgrade to HTTPS in production when HTTPS is enabled
-      ...(isProduction && useHttps ? { upgradeInsecureRequests: [] } : {})
+      // Do not upgrade to HTTPS
     }
   },
   crossOriginOpenerPolicy: false, // Disable for compatibility
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  strictTransportSecurity: useHttps ? { maxAge: 31536000, includeSubDomains: true } : false,
+  strictTransportSecurity: false,
   crossOriginEmbedderPolicy: false
 }));
 
@@ -107,7 +106,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: useHttps, // Use secure cookies only in HTTPS production
+    secure: false, // Force non-secure cookies
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'
@@ -373,24 +372,6 @@ app.listen(PORT, () => {
     console.log(`⚠️  Running in HTTP mode (development)`);
   }
 });
-
-// Optional HTTPS server for production or testing
-if (useHttps || process.env.ENABLE_HTTPS === 'true') {
-  const keyPath = path.join(__dirname, '../certs/key.pem');
-  const certPath = path.join(__dirname, '../certs/cert.pem');
-  
-  if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-    const https = require('https');
-    const key = fs.readFileSync(keyPath);
-    const cert = fs.readFileSync(certPath);
-    https.createServer({ key, cert }, app).listen(HTTPS_PORT, () => {
-      console.log(`🔒 HTTPS server running on port ${HTTPS_PORT}`);
-    });
-  } else if (useHttps) {
-    console.error('⚠️  HTTPS enabled but certificates not found in certs/ directory');
-    console.error('   Generate certificates with: openssl req -x509 -newkey rsa:4096 -keyout certs/key.pem -out certs/cert.pem -days 365 -nodes');
-  }
-}
 
 // Start maintenance scheduler
 MaintenanceScheduler.start();

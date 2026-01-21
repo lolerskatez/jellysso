@@ -38,7 +38,9 @@ class DatabaseManager {
           type TEXT DEFAULT 'string',
           updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, (err) => {
+        if (err) console.error('Error creating settings table:', err.message);
+      });
 
       // Audit logs table
       this.db.run(`
@@ -52,12 +54,20 @@ class DatabaseManager {
           ip TEXT,
           details TEXT
         )
-      `);
+      `, (err) => {
+        if (err) console.error('Error creating audit_logs table:', err.message);
+      });
 
       // Create indexes for audit_logs
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)');
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_userId ON audit_logs(userId)');
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)', (err) => {
+        if (err) console.error('Error creating index idx_audit_action:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_userId ON audit_logs(userId)', (err) => {
+        if (err) console.error('Error creating index idx_audit_userId:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)', (err) => {
+        if (err) console.error('Error creating index idx_audit_timestamp:', err.message);
+      });
 
       // Sessions table (optional, for session store)
       this.db.run(`
@@ -66,9 +76,13 @@ class DatabaseManager {
           sess TEXT NOT NULL,
           expires DATETIME NOT NULL
         )
-      `);
+      `, (err) => {
+        if (err) console.error('Error creating sessions table:', err.message);
+      });
 
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_session_expires ON sessions(expires)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_session_expires ON sessions(expires)', (err) => {
+        if (err) console.error('Error creating index idx_session_expires:', err.message);
+      });
 
       // Import history table
       this.db.run(`
@@ -79,9 +93,13 @@ class DatabaseManager {
           failed INTEGER NOT NULL,
           date DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, (err) => {
+        if (err) console.error('Error creating import_history table:', err.message);
+      });
 
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_import_date ON import_history(date)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_import_date ON import_history(date)', (err) => {
+        if (err) console.error('Error creating index idx_import_date:', err.message);
+      });
 
       // Extended user profiles table - links to Jellyfin user IDs
       this.db.run(`
@@ -95,10 +113,16 @@ class DatabaseManager {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, (err) => {
+        if (err) console.error('Error creating user_profiles table:', err.message);
+      });
 
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_jellyfin_id ON user_profiles(jellyfin_user_id)');
-      this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_jellyfin_id ON user_profiles(jellyfin_user_id)', (err) => {
+        if (err) console.error('Error creating index idx_user_profiles_jellyfin_id:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email)', (err) => {
+        if (err) console.error('Error creating index idx_user_profiles_email:', err.message);
+      });
     });
   }
 

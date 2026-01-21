@@ -31,7 +31,11 @@ class SessionStore extends session.Store {
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    `, (err) => {
+      if (err) {
+        console.error('Error creating sessions table:', err.message);
+      }
+    });
 
     // Migrate existing table if needed (add updatedAt column)
     DatabaseManager.db.run(`
@@ -46,7 +50,11 @@ class SessionStore extends session.Store {
     // Create index for expiration cleanup
     DatabaseManager.db.run(`
       CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)
-    `);
+    `, (err) => {
+      if (err) {
+        console.error('Error creating index on sessions table:', err.message);
+      }
+    });
   }
 
   /**

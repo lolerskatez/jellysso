@@ -30,7 +30,7 @@ services:
     volumes:
       - logs:/app/logs
       - backups:/app/backups
-      - database:/app/config
+      - database:/app/data
     logging:
       driver: "json-file"
       options:

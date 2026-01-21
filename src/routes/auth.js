@@ -63,8 +63,8 @@ router.post('/login', requireSetupComplete, async (req, res) => {
       if (isAjax) {
         res.json({ success: true, user: authResult.User });
       } else {
-        // Normal form submission - redirect to dashboard
-        res.redirect('/');
+        // Normal form submission - redirect to quickconnect
+        res.redirect('/quickconnect');
       }
     });
   } catch (error) {

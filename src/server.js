@@ -306,9 +306,9 @@ app.get('/', requireWebAuth, (req, res) => {
 });
 
 app.get('/login', csrfProtection, async (req, res) => {
-  // If already logged in, redirect to dashboard
+  // If already logged in, redirect to quickconnect
   if (req.session && req.session.user) {
-    return res.redirect('/');
+    return res.redirect('/quickconnect');
   }
   
   // Get and clear any error message

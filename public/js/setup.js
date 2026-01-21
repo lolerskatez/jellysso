@@ -5,12 +5,6 @@
 let currentStep = 1;
 const totalSteps = 2;
 
-// Get CSRF token from meta tag
-function getCsrfToken() {
-  const token = document.querySelector('meta[name="csrf-token"]');
-  return token ? token.getAttribute('content') : '';
-}
-
 // Load existing config if available
 async function loadConfig() {
   try {
@@ -110,10 +104,7 @@ async function completeSetup() {
   try {
     await fetch('/setup/complete', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'csrf-token': getCsrfToken()
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.log('Setup completion failed:', error);
@@ -168,10 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const response = await fetch('/setup/step1', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'csrf-token': getCsrfToken()
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
 
@@ -199,10 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const response = await fetch('/setup/step2', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'csrf-token': getCsrfToken()
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
 

@@ -46,7 +46,7 @@ router.get('/config', requireSetupIncomplete, (req, res) => {
 });
 
 // Step 1: Basic configuration
-router.post('/step1', requireSetupIncomplete, csrfProtection, (req, res) => {
+router.post('/step1', requireSetupIncomplete, (req, res) => {
   const { jellyfinUrl, jellyfinPublicUrl, webAppPublicUrl } = req.body;
 
   // Validate URLs
@@ -71,7 +71,7 @@ router.post('/step1', requireSetupIncomplete, csrfProtection, (req, res) => {
 });
 
 // Step 2: Admin user setup
-router.post('/step2', requireSetupIncomplete, csrfProtection, async (req, res) => {
+router.post('/step2', requireSetupIncomplete, async (req, res) => {
   const { adminUsername, adminPassword } = req.body;
 
   if (!adminUsername || !adminPassword) {
@@ -122,7 +122,7 @@ router.post('/step2', requireSetupIncomplete, csrfProtection, async (req, res) =
 });
 
 // Complete setup (called after API key generation)
-router.post('/complete', requireSetupIncomplete, csrfProtection, (req, res) => {
+router.post('/complete', requireSetupIncomplete, (req, res) => {
   try {
     const config = SetupManager.getConfig();
     

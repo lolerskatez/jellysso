@@ -91,8 +91,11 @@ app.use(helmet({
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       formAction: ["'self'"],
-      // Do not upgrade to HTTPS
-    }
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"],
+      scriptSrcAttr: ["'none'"]
+    },
+    useDefaults: false // Disable default directives including upgrade-insecure-requests
   },
   crossOriginOpenerPolicy: false, // Disable for compatibility
   crossOriginResourcePolicy: { policy: 'cross-origin' },

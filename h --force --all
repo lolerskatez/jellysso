@@ -1,0 +1,22 @@
+[33mcommit 93532e925c9a27295a4086b2a20ed107247d6c37[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: JellySSO Developer <dev@jellysso.local>
+Date:   Wed Jan 21 01:00:34 2026 -0600
+
+    Remove setup.json - contains sensitive credentials
+
+[33mcommit df141d7e7a087b8ebdf64fa463e8d11d10456cc5[m
+Author: JellySSO Developer <dev@jellysso.local>
+Date:   Tue Jan 20 23:44:24 2026 -0600
+
+    Change webAppPublicUrl from HTTPS to HTTP with local IP address in setup configuration
+
+[33mcommit 0955ac7f38aeb090e79ce4c70245946b4ea1b1c4[m
+Author: JellySSO Developer <dev@jellysso.local>
+Date:   Tue Jan 13 00:00:21 2026 -0600
+
+    Add views for settings, setup, user dashboard, and user management
+    
+    - Implement settings page with general, security, notifications, and about sections.
+    - Create setup page for JellySSO configuration with server and admin setup steps.
+    - Develop user dashboard with system status, user profile, and recent activity.
+    - Introduce user management page with user search, filters, and create user functionality.

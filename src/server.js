@@ -186,12 +186,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize CSRF protection for all requests EXCEPT logout and admin APIs
+// Initialize CSRF protection for all requests EXCEPT logout, admin APIs, and setup
+// Setup routes are excluded because they run before authentication
 // Logout is safe (idempotent, only affects current user)
 // Admin APIs are protected by requireAdmin middleware which requires authentication
 app.use((req, res, next) => {
-  // Skip CSRF for logout endpoint and admin routes (protected by auth)
-  if ((req.path === '/api/auth/logout' && req.method === 'POST') || 
+  // Skip CSRF for setup routes (unauthenticated), logout endpoint, and admin routes (protected by auth)
+  if (req.path.startsWith('/setup') ||
+      (req.path === '/api/auth/logout' && req.method === 'POST') || 
       req.path.startsWith('/admin/') ||
       req.path.startsWith('/admin/api/') ||
       req.path.startsWith('/api/admin/')) {

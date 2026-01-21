@@ -27,9 +27,6 @@ services:
     restart: unless-stopped
     networks:
       - jellyfin-network
-    depends_on:
-      jellyfin:
-        condition: service_healthy
     volumes:
       - logs:/app/logs
       - backups:/app/backups
@@ -47,41 +44,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  jellyfin:
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin-prod
-    ports:
-      - "8096:8096"
-      - "8920:8920"
-    volumes:
-      - jellyfin-config:/config
-      - jellyfin-cache:/cache
-      - media:/media
-    environment:
-      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLIC_URL:-http://localhost:8096}
-      - JELLYFIN_LOG_DIR=/config/logs
-    restart: unless-stopped
-    networks:
-      - jellyfin-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    security_opt:
-      - no-new-privileges:true
-
-  # Nginx reverse proxy for HTTPS termination
-  # Removed to allow admin to set up separate Nginx instance if needed
-
 volumes:
-  jellyfin-config:
-    driver: local
-  jellyfin-cache:
-    driver: local
-  media:
-    driver: local
   logs:
     driver: local
   backups:

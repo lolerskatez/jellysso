@@ -22,7 +22,7 @@ services:
       - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-${OIDC_CLIENT_ID}}
       - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-${OIDC_CLIENT_SECRET}}
       - EXTERNAL_OIDC_CLIENTS=${EXTERNAL_OIDC_CLIENTS:-${EXTERNAL_OIDC_CLIENTS}}
-      - USE_HTTPS=${USE_HTTPS:-false}
+      - USE_HTTPS=false
       - LOG_LEVEL=${LOG_LEVEL:-info}
     restart: unless-stopped
     networks:
@@ -30,6 +30,7 @@ services:
     volumes:
       - logs:/app/logs
       - backups:/app/backups
+      - database:/app/config
     logging:
       driver: "json-file"
       options:
@@ -48,6 +49,8 @@ volumes:
   logs:
     driver: local
   backups:
+    driver: local
+  database:
     driver: local
 
 networks:

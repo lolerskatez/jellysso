@@ -73,28 +73,7 @@ services:
       - no-new-privileges:true
 
   # Nginx reverse proxy for HTTPS termination
-  nginx:
-    image: nginx:alpine
-    container_name: jellyfin-companion-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - jellyfin-companion
-    networks:
-      - jellyfin-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    security_opt:
-      - no-new-privileges:true
+  # Removed to allow admin to set up separate Nginx instance if needed
 
 volumes:
   jellyfin-config:

@@ -8,7 +8,7 @@ services:
     container_name: jellysso
     image: jellysso:latest
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - NODE_ENV=production
       - JELLYFIN_URL=${JELLYFIN_URL:-http://jellyfin:8096}

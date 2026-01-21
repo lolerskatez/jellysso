@@ -22,38 +22,41 @@ class SessionStore extends session.Store {
    * Initialize sessions table in database
    */
   initializeTable() {
-    // Create sessions table
-    DatabaseManager.db.run(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        sid TEXT PRIMARY KEY,
-        sess TEXT NOT NULL,
-        expires DATETIME NOT NULL,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, (err) => {
-      if (err) {
-        console.error('Error creating sessions table:', err.message);
-      }
-    });
+    // Wait a tick to ensure database is ready
+    setImmediate(() => {
+      // Create sessions table
+      DatabaseManager.db.run(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          sid TEXT PRIMARY KEY,
+          sess TEXT NOT NULL,
+          expires DATETIME NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating sessions table:', err.message);
+        }
+      });
 
-    // Migrate existing table if needed (add updatedAt column)
-    DatabaseManager.db.run(`
-      ALTER TABLE sessions ADD COLUMN updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-    `, (err) => {
-      // Ignore error if column already exists
-      if (err && !err.message.includes('duplicate column')) {
-        console.error('Session table migration error:', err.message);
-      }
-    });
+      // Migrate existing table if needed (add updatedAt column)
+      DatabaseManager.db.run(`
+        ALTER TABLE sessions ADD COLUMN updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      `, (err) => {
+        // Ignore error if column already exists
+        if (err && !err.message.includes('duplicate column')) {
+          console.error('Session table migration error:', err.message);
+        }
+      });
 
-    // Create index for expiration cleanup
-    DatabaseManager.db.run(`
-      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)
-    `, (err) => {
-      if (err) {
-        console.error('Error creating index on sessions table:', err.message);
-      }
+      // Create index for expiration cleanup
+      DatabaseManager.db.run(`
+        CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)
+      `, (err) => {
+        if (err) {
+          console.error('Error creating index on sessions table:', err.message);
+        }
+      });
     });
   }
 

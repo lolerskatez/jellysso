@@ -271,9 +271,8 @@ body {
 
 .btn-primary:hover {
   background: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  opacity: 0.95;
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
 }
 
 .btn-primary:active {

@@ -24,14 +24,6 @@ const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
 // Trust proxy for proper IP detection and protocol handling
 app.set('trust proxy', 1);
 
-// Force HTTP by redirecting any HTTPS requests to HTTP
-app.use((req, res, next) => {
-  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
-    return res.redirect(301, `http://${req.headers.host}${req.url}`);
-  }
-  next();
-});
-
 // Logging setup
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',

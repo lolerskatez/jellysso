@@ -457,6 +457,13 @@ router.get('/oidc/callback', async (req, res) => {
 
     // Try to find or create user in Jellyfin
     const jellyfinConfig = SetupManager.getConfig();
+    
+    // Verify API key is configured
+    if (!jellyfinConfig.apiKey) {
+      console.warn('Warning: Jellyfin API key is not configured. User auto-creation and group mapping may not work.');
+      // Continue anyway - local auth should still work
+    }
+    
     const jellyfinApi = new JellyfinAPI(jellyfinConfig.jellyfinUrl, jellyfinConfig.apiKey);
 
     let jellyfinUser = null;
@@ -465,110 +472,115 @@ router.get('/oidc/callback', async (req, res) => {
       jellyfinUser = users.find(u => u.Name.toLowerCase() === username.toLowerCase());
     } catch (err) {
       console.error('Error fetching Jellyfin users:', err);
+      // Don't fail - the user authenticated via OIDC, we'll try to sync later
     }
 
     // Auto-create user if enabled and user doesn't exist
-    if (!jellyfinUser && oidcConfig.autoCreateUsers) {
+    if (!jellyfinUser && oidcConfig.autoCreateUsers && jellyfinConfig.apiKey) {
       try {
         jellyfinUser = await jellyfinApi.createUser(username);
         console.log(`Created new Jellyfin user via SSO: ${username}`);
       } catch (err) {
         console.error('Error creating Jellyfin user:', err);
-        return res.redirect('/login?error=user_creation_failed');
+        // Don't fail - OIDC authentication succeeded, just continue without the Jellyfin user
+        console.log(`Continuing with OIDC session for user ${username} without Jellyfin user creation`);
       }
     }
 
+    // If user doesn't exist in Jellyfin and auto-create is disabled, continue anyway
+    // The user is authenticated via OIDC
     if (!jellyfinUser) {
-      await AuditLogger.log({
-        action: 'OIDC_USER_NOT_FOUND',
-        userId: 'anonymous',
-        resource: `user:${username}`,
-        status: 'failure',
-        ip: req.ip
-      });
-      return res.redirect('/login?error=user_not_found');
+      console.log(`User '${username}' not found in Jellyfin. Auto-creation is ${oidcConfig.autoCreateUsers ? 'enabled' : 'disabled'}. Continuing with OIDC authentication.`);
     }
 
     // Apply group/role mapping for both new and existing users
-    try {
-      // Extract groups from multiple possible sources for Authentik compatibility
-      let userGroups = [];
-      
-      // First, try to get groups from userinfo/JWT claims (standard locations)
-      if (userInfoPayload.groups && Array.isArray(userInfoPayload.groups)) {
-        userGroups = userInfoPayload.groups;
-        console.log(`Groups extracted from userinfo/JWT 'groups' claim: ${userGroups.join(', ')}`);
-      } else if (userInfoPayload.roles && Array.isArray(userInfoPayload.roles)) {
-        userGroups = userInfoPayload.roles;
-        console.log(`Groups extracted from userinfo/JWT 'roles' claim: ${userGroups.join(', ')}`);
-      } else if (userInfoPayload.group && typeof userInfoPayload.group === 'string') {
-        userGroups = [userInfoPayload.group];
-        console.log(`Groups extracted from userinfo/JWT 'group' claim: ${userGroups.join(', ')}`);
-      } else if (userInfoPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/groups']) {
-        // Some IdPs use SAML-style claim names
-        const groups = userInfoPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/groups'];
-        userGroups = Array.isArray(groups) ? groups : [groups];
-        console.log(`Groups extracted from SAML-style claim: ${userGroups.join(', ')}`);
-      } else {
-        // Log what we're getting from the payload for debugging
-        console.log(`No standard groups claim found. Available claims: ${Object.keys(userInfoPayload).join(', ')}`);
-        console.log(`Full userinfo/JWT payload for ${username}:`, JSON.stringify(userInfoPayload, null, 2));
-      }
-      
-      const adminGroupMapping = oidcConfig.adminGroupMapping || oidcConfig.adminGroup || [];
-      const adminGroups = Array.isArray(adminGroupMapping) ? adminGroupMapping : [adminGroupMapping];
-      
-      console.log(`Admin group configuration: ${JSON.stringify(adminGroups)}`);
-      console.log(`User groups extracted: ${JSON.stringify(userGroups)}`);
-      
-      // Check if user is in admin group
-      const isAdmin = adminGroups && adminGroups.length > 0 && 
-        adminGroups.some(adminGroup => 
-          userGroups.some(userGroup => 
-            String(userGroup).toLowerCase() === String(adminGroup).toLowerCase()
-          )
-        );
-      
-      console.log(`Admin check result: isAdmin=${isAdmin}`);
-      
-      // Get current user policy
-      const currentUser = await jellyfinApi.getUser(jellyfinUser.Id);
-      const currentPolicy = currentUser?.Policy || {};
-      
-      // Update policy if admin status needs to change
-      const needsUpdate = isAdmin !== currentPolicy.IsAdministrator;
-      console.log(`Current admin status: ${currentPolicy.IsAdministrator}, needs update: ${needsUpdate}`);
-      
-      if (needsUpdate) {
-        const updateResult = await jellyfinApi.updateUserPolicy(jellyfinUser.Id, { IsAdministrator: isAdmin });
-        console.log(`Policy update result:`, updateResult);
-        if (isAdmin) {
-          console.log(`User ${username} granted admin privileges via group mapping: ${adminGroups.join(', ')}`);
+    // Only attempt this if we have a valid jellyfinUser and API key
+    if (jellyfinUser && jellyfinConfig.apiKey) {
+      try {
+        // Extract groups from multiple possible sources for Authentik compatibility
+        let userGroups = [];
+        
+        // First, try to get groups from userinfo/JWT claims (standard locations)
+        if (userInfoPayload.groups && Array.isArray(userInfoPayload.groups)) {
+          userGroups = userInfoPayload.groups;
+          console.log(`Groups extracted from userinfo/JWT 'groups' claim: ${userGroups.join(', ')}`);
+        } else if (userInfoPayload.roles && Array.isArray(userInfoPayload.roles)) {
+          userGroups = userInfoPayload.roles;
+          console.log(`Groups extracted from userinfo/JWT 'roles' claim: ${userGroups.join(', ')}`);
+        } else if (userInfoPayload.group && typeof userInfoPayload.group === 'string') {
+          userGroups = [userInfoPayload.group];
+          console.log(`Groups extracted from userinfo/JWT 'group' claim: ${userGroups.join(', ')}`);
+        } else if (userInfoPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/groups']) {
+          // Some IdPs use SAML-style claim names
+          const groups = userInfoPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/groups'];
+          userGroups = Array.isArray(groups) ? groups : [groups];
+          console.log(`Groups extracted from SAML-style claim: ${userGroups.join(', ')}`);
         } else {
-          console.log(`User ${username} admin privileges revoked (not in admin groups: ${adminGroups.join(', ')})`);
+          // Log what we're getting from the payload for debugging
+          console.log(`No standard groups claim found. Available claims: ${Object.keys(userInfoPayload).join(', ')}`);
+          console.log(`Full userinfo/JWT payload for ${username}:`, JSON.stringify(userInfoPayload, null, 2));
         }
+        
+        const adminGroupMapping = oidcConfig.adminGroupMapping || oidcConfig.adminGroup || [];
+        const adminGroups = Array.isArray(adminGroupMapping) ? adminGroupMapping : [adminGroupMapping];
+        
+        console.log(`Admin group configuration: ${JSON.stringify(adminGroups)}`);
+        console.log(`User groups extracted: ${JSON.stringify(userGroups)}`);
+        
+        // Check if user is in admin group
+        const isAdmin = adminGroups && adminGroups.length > 0 && 
+          adminGroups.some(adminGroup => 
+            userGroups.some(userGroup => 
+              String(userGroup).toLowerCase() === String(adminGroup).toLowerCase()
+            )
+          );
+        
+        console.log(`Admin check result: isAdmin=${isAdmin}`);
+        
+        // Get current user policy
+        const currentUser = await jellyfinApi.getUser(jellyfinUser.Id);
+        const currentPolicy = currentUser?.Policy || {};
+        
+        // Update policy if admin status needs to change
+        const needsUpdate = isAdmin !== currentPolicy.IsAdministrator;
+        console.log(`Current admin status: ${currentPolicy.IsAdministrator}, needs update: ${needsUpdate}`);
+        
+        if (needsUpdate) {
+          const updateResult = await jellyfinApi.updateUserPolicy(jellyfinUser.Id, { IsAdministrator: isAdmin });
+          console.log(`Policy update result:`, updateResult);
+          if (isAdmin) {
+            console.log(`User ${username} granted admin privileges via group mapping: ${adminGroups.join(', ')}`);
+          } else {
+            console.log(`User ${username} admin privileges revoked (not in admin groups: ${adminGroups.join(', ')})`);
+          }
+        }
+        
+        // Refresh user data to get updated policy
+        jellyfinUser = await jellyfinApi.getUser(jellyfinUser.Id);
+        
+        await AuditLogger.log({
+          action: 'OIDC_GROUP_MAPPING',
+          userId: jellyfinUser.Id,
+          resource: `user:${username}`,
+          details: { 
+            isAdmin, 
+            groups: userGroups,
+            adminGroups: adminGroups,
+            updated: needsUpdate,
+            finalAdminStatus: jellyfinUser.Policy?.IsAdministrator
+          },
+          status: 'success',
+          ip: req.ip
+        });
+      } catch (err) {
+        console.error(`Error applying group mapping to user ${username}:`, err);
+        // Don't fail the login, just log the error
       }
-      
-      // Refresh user data to get updated policy
-      jellyfinUser = await jellyfinApi.getUser(jellyfinUser.Id);
-      
-      await AuditLogger.log({
-        action: 'OIDC_GROUP_MAPPING',
-        userId: jellyfinUser.Id,
-        resource: `user:${username}`,
-        details: { 
-          isAdmin, 
-          groups: userGroups,
-          adminGroups: adminGroups,
-          updated: needsUpdate,
-          finalAdminStatus: jellyfinUser.Policy?.IsAdministrator
-        },
-        status: 'success',
-        ip: req.ip
-      });
-    } catch (err) {
-      console.error(`Error applying group mapping to user ${username}:`, err);
-      // Don't fail the login, just log the error
+    } else {
+      console.log(`Skipping group mapping: jellyfinUser=${!!jellyfinUser}, apiKey=${!!jellyfinConfig.apiKey}`);
+    }
+
+    try {
       await AuditLogger.log({
         action: 'OIDC_GROUP_MAPPING_ERROR',
         userId: jellyfinUser.Id,
@@ -580,16 +592,34 @@ router.get('/oidc/callback', async (req, res) => {
     }
 
     // Set session with user info
-    req.session.user = jellyfinUser;
-    req.session.accessToken = jellyfinConfig.apiKey; // Use API key for SSO users
+    // If jellyfinUser is not available, create a minimal session object from OIDC claims
+    let sessionUser = jellyfinUser;
+    if (!sessionUser) {
+      console.log(`Creating minimal session user from OIDC claims for ${username}`);
+      sessionUser = {
+        Name: username,
+        Id: `oidc_${username}`,
+        serverId: 'oidc',
+        Policy: {
+          IsAdministrator: false,
+          IsDisabled: false
+        }
+      };
+    }
+
+    req.session.user = sessionUser;
+    req.session.accessToken = jellyfinConfig.apiKey || null;
     req.session.authMethod = 'oidc';
     req.session.oidcClaims = userInfoPayload;
 
     await AuditLogger.log({
       action: 'OIDC_LOGIN_SUCCESS',
-      userId: jellyfinUser.Id,
+      userId: sessionUser.Id,
       resource: `user:${username}`,
-      details: { provider: oidcConfig.providerName },
+      details: { 
+        provider: oidcConfig.providerName,
+        fromJellyfin: !!jellyfinUser
+      },
       status: 'success',
       ip: req.ip
     });

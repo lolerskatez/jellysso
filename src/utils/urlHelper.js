@@ -4,7 +4,7 @@
 
 /**
  * Get the base URL for the application
- * Respects reverse proxy headers (X-Forwarded-Proto, X-Forwarded-Host)
+ * Respects reverse proxy headers (X-Forwarded-Proto, X-Forwarded-Host, CF-Visitor)
  * Falls back to configured baseUrl if available
  * 
  * @param {Object} req - Express request object
@@ -17,8 +17,29 @@ function getBaseUrl(req, config = {}) {
     return config.baseUrl;
   }
 
-  // Get protocol - check X-Forwarded-Proto first (set by reverse proxy)
-  const protocol = req.get('X-Forwarded-Proto') || req.protocol;
+  // Get protocol - check multiple headers for reverse proxy scenarios
+  let protocol = req.protocol;
+
+  // Check for Cloudflare CF-Visitor header first (highest priority)
+  const cfVisitor = req.get('CF-Visitor');
+  if (cfVisitor) {
+    try {
+      const cfData = JSON.parse(cfVisitor);
+      if (cfData.scheme) {
+        protocol = cfData.scheme;
+      }
+    } catch (e) {
+      // Continue if CF-Visitor is not valid JSON
+    }
+  }
+
+  // Fall back to X-Forwarded-Proto (set by reverse proxies)
+  if (protocol === req.protocol) {
+    const forwardedProto = req.get('X-Forwarded-Proto');
+    if (forwardedProto) {
+      protocol = forwardedProto.split(',')[0].trim();
+    }
+  }
 
   // Get host - check X-Forwarded-Host first (set by reverse proxy)
   const host = req.get('X-Forwarded-Host') || req.get('host');

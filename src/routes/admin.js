@@ -1283,7 +1283,20 @@ router.get('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => 
     const settings = await DatabaseManager.getSetting('oidc_config');
     res.json({ 
       success: true, 
-      settings: settings ? JSON.parse(settings) : null 
+      settings: settings || null 
+    });
+  } catch (error) {
+    console.error('Error getting OIDC settings:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/admin/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const settings = await DatabaseManager.getSetting('oidc_config');
+    res.json({ 
+      success: true, 
+      settings: settings || null 
     });
   } catch (error) {
     console.error('Error getting OIDC settings:', error);
@@ -1293,6 +1306,7 @@ router.get('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => 
 
 // Save OIDC settings
 router.post('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => {
+router.post('/admin/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => {
   try {
     const settings = {
       enabled: req.body.enabled || false,

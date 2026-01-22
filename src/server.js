@@ -145,6 +145,11 @@ app.use((req, res, next) => {
     return next();
   }
 
+  // Handle favicon.ico requests
+  if (req.path === '/favicon.ico') {
+    return res.redirect('/favicon.svg');
+  }
+
   // If setup is not complete, redirect to setup
   if (!SetupManager.isSetupComplete()) {
     return res.redirect('/setup');

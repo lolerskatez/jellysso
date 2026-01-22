@@ -8,6 +8,7 @@ const PerformanceMonitor = require('../models/PerformanceMonitor');
 const AnalyticsManager = require('../models/AnalyticsManager');
 const fs = require('fs').promises;
 const path = require('path');
+const { getBaseUrl } = require('../utils/urlHelper');
 
 // Middleware: Require authentication
 const requireAuth = (req, res, next) => {
@@ -1264,7 +1265,7 @@ router.get('/api/analytics/security', requireAuth, requireAdmin, async (req, res
 router.get('/oidc', requireAuth, requireAdmin, async (req, res) => {
   try {
     const config = SetupManager.getConfig();
-    const baseUrl = config.baseUrl || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req, config);
     
     res.render('admin/oidc', {
       user: req.session.user,

@@ -7,6 +7,7 @@ const AuditLogger = require('../models/AuditLogger');
 const TokenManager = require('../models/TokenManager');
 const { csrfProtection } = require('../middleware/csrf');
 const jwt = require('jsonwebtoken');
+const { getBaseUrl } = require('../utils/urlHelper');
 
 const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
 
@@ -312,9 +313,9 @@ router.get('/oidc/login', async (req, res) => {
     req.session.oidcState = state;
     req.session.oidcNonce = nonce;
 
-    // Get base URL for callback (use webAppPublicUrl from app settings for reverse proxy support)
+    // Get base URL for callback (respects reverse proxy headers)
     const appConfig = SetupManager.getConfig();
-    const baseUrl = appConfig.webAppPublicUrl || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req, appConfig);
     const redirectUri = `${baseUrl}/api/auth/oidc/callback`;
 
     // Build authorization URL
@@ -400,9 +401,9 @@ router.get('/oidc/callback', async (req, res) => {
     const discoveryResponse = await axios.get(discoveryUrl);
     const discovery = discoveryResponse.data;
 
-    // Get base URL for callback (use webAppPublicUrl from SetupManager for reverse proxy support)
+    // Get base URL for callback (respects reverse proxy headers)
     const appConfig = SetupManager.getConfig();
-    const baseUrl = appConfig.webAppPublicUrl || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req, appConfig);
     const redirectUri = `${baseUrl}/api/auth/oidc/callback`;
 
     // Exchange code for tokens

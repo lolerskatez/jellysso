@@ -1306,6 +1306,37 @@ router.get('/admin/api/oidc/settings', requireAuth, requireAdmin, async (req, re
 
 // Save OIDC settings
 router.post('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const settings = {
+      enabled: req.body.enabled || false,
+      providerName: req.body.providerName || 'SSO',
+      issuerUrl: req.body.issuerUrl || '',
+      clientId: req.body.clientId || '',
+      clientSecret: req.body.clientSecret || '',
+      scopes: req.body.scopes || 'openid profile email',
+      autoCreateUsers: req.body.autoCreateUsers || false,
+      usernameClaim: req.body.usernameClaim || 'preferred_username',
+      adminGroup: req.body.adminGroup || ''
+    };
+
+    await DatabaseManager.setSetting('oidc_config', settings, 'json');
+
+    await AuditLogger.log({
+      action: 'OIDC_CONFIG_UPDATE',
+      userId: req.session.user?.Id,
+      resource: 'oidc:settings',
+      details: { enabled: settings.enabled, providerName: settings.providerName },
+      status: 'success',
+      ip: req.ip
+    });
+
+    res.json({ success: true, message: 'OIDC settings saved' });
+  } catch (error) {
+    console.error('Error saving OIDC settings:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/admin/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => {
   try {
     const settings = {

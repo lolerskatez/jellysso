@@ -580,17 +580,6 @@ router.get('/oidc/callback', async (req, res) => {
       console.log(`Skipping group mapping: jellyfinUser=${!!jellyfinUser}, apiKey=${!!jellyfinConfig.apiKey}`);
     }
 
-    try {
-      await AuditLogger.log({
-        action: 'OIDC_GROUP_MAPPING_ERROR',
-        userId: jellyfinUser.Id,
-        resource: `user:${username}`,
-        details: { error: err.message, stack: err.stack },
-        status: 'failure',
-        ip: req.ip
-      });
-    }
-
     // Set session with user info
     // If jellyfinUser is not available, create a minimal session object from OIDC claims
     let sessionUser = jellyfinUser;

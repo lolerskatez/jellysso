@@ -243,7 +243,9 @@ const requireWebAuth = (req, res, next) => {
 app.get('/api/server-info', requireWebAuth, async (req, res) => {
   try {
     const config = SetupManager.getConfig();
-    const jellyfin = new JellyfinAPI(config.jellyfinUrl, req.session.accessToken);
+    // Use session token if available, fall back to API key for system calls
+    const authToken = req.session.accessToken || config.apiKey;
+    const jellyfin = new JellyfinAPI(config.jellyfinUrl, authToken);
 
     // Get server info
     const serverInfo = await jellyfin.getSystemConfiguration();
@@ -267,7 +269,9 @@ app.get('/api/server-info', requireWebAuth, async (req, res) => {
 app.get('/api/dashboard', requireWebAuth, async (req, res) => {
   try {
     const config = SetupManager.getConfig();
-    const jellyfin = new JellyfinAPI(config.jellyfinUrl, req.session.accessToken);
+    // Use session token if available, fall back to API key for system calls
+    const authToken = req.session.accessToken || config.apiKey;
+    const jellyfin = new JellyfinAPI(config.jellyfinUrl, authToken);
 
     // Get system status
     let systemStatus = 'online';

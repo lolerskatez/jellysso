@@ -6,6 +6,14 @@ class JellyfinAPI {
     this.apiKey = apiKey;
     this.cache = new Map(); // Simple in-memory cache
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    
+    // Log API key info for debugging
+    if (apiKey) {
+      console.log(`🔑 JellyfinAPI initialized with API key (first 16 chars: ${apiKey.substring(0, 16)}...)`);
+    } else {
+      console.log('⚠️  JellyfinAPI initialized WITHOUT API key');
+    }
+    
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 30000, // 30 second timeout
@@ -103,6 +111,12 @@ class JellyfinAPI {
     } catch (error) {
       if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
         throw new Error('Unable to connect to Jellyfin server. Please check the server URL and network connection.');
+      }
+      if (error.response?.status === 401) {
+        console.error('❌ Authentication failed with status 401. The API key may be invalid or expired.');
+        console.error(`   API Key (first 16 chars): ${this.apiKey?.substring(0, 16)}...`);
+        console.error(`   Response: ${error.response?.data || 'No response body'}`);
+        throw new Error('Authentication failed: Invalid or expired API key');
       }
       if (error.response?.status === 503) {
         throw new Error('Jellyfin server is temporarily unavailable. Please try again later.');
@@ -303,6 +317,11 @@ class JellyfinAPI {
       const response = await this.client.get('/System/Configuration');
       return response.data;
     } catch (error) {
+      if (error.response?.status === 401) {
+        console.error('❌ Authentication failed with status 401 on System/Configuration');
+        console.error(`   API Key (first 16 chars): ${this.apiKey?.substring(0, 16)}...`);
+        throw new Error(`Failed to get system configuration: Invalid or expired API key (401)`);
+      }
       throw new Error(`Failed to get system configuration: ${error.message}`);
     }
   }

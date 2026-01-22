@@ -385,6 +385,18 @@ app.get('/download', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`JellySSO running on port ${PORT}`);
+  
+  // Log current configuration
+  const config = SetupManager.getConfig();
+  console.log('📋 Current Configuration:');
+  console.log(`   Setup Complete: ${config.isSetupComplete}`);
+  console.log(`   Jellyfin URL: ${config.jellyfinUrl}`);
+  console.log(`   Has API Key: ${!!config.apiKey}`);
+  if (config.apiKey) {
+    console.log(`   API Key (first 16 chars): ${config.apiKey.substring(0, 16)}...`);
+  }
+  console.log(`   Config File: ${path.join(__dirname, '../src/config/setup.json')}`);
+  
   if (!isProduction) {
     console.log(`🌐 Local access: http://localhost:${PORT}`);
     console.log(`⚠️  Running in HTTP mode (development)`);

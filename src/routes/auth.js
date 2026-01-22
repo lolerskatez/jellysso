@@ -458,10 +458,20 @@ router.get('/oidc/callback', async (req, res) => {
     // Try to find or create user in Jellyfin
     const jellyfinConfig = SetupManager.getConfig();
     
+    // Log config details for debugging
+    console.log('Jellyfin Config loaded:', {
+      jellyfinUrl: jellyfinConfig.jellyfinUrl,
+      hasApiKey: !!jellyfinConfig.apiKey,
+      apiKeyLength: jellyfinConfig.apiKey ? jellyfinConfig.apiKey.length : 0,
+      apiKeyPrefix: jellyfinConfig.apiKey ? jellyfinConfig.apiKey.substring(0, 8) + '...' : 'N/A'
+    });
+    
     // Verify API key is configured
     if (!jellyfinConfig.apiKey) {
-      console.warn('Warning: Jellyfin API key is not configured. User auto-creation and group mapping may not work.');
+      console.warn('⚠️  Warning: Jellyfin API key is not configured. User auto-creation and group mapping may not work.');
       // Continue anyway - local auth should still work
+    } else {
+      console.log('✅ API key is configured and available');
     }
     
     const jellyfinApi = new JellyfinAPI(jellyfinConfig.jellyfinUrl, jellyfinConfig.apiKey);

@@ -490,6 +490,19 @@ router.get('/oidc/callback', async (req, res) => {
       try {
         jellyfinUser = await jellyfinApi.createUser(username);
         console.log(`Created new Jellyfin user via SSO: ${username}`);
+        
+        // SECURITY: Disable password authentication for SSO users
+        // This ensures they can ONLY log in through SSO
+        try {
+          await jellyfinApi.updateUserConfiguration(jellyfinUser.Id, {
+            EnableLocalPassword: false,
+            AuthenticationProviderId: 'SSO'  // Mark as SSO user
+          });
+          console.log(`🔒 Disabled password login for SSO user: ${username}`);
+        } catch (configErr) {
+          console.warn(`Could not disable password login for ${username}:`, configErr.message);
+          // Not critical - the random password is already secure enough
+        }
       } catch (err) {
         console.error('Error creating Jellyfin user:', err);
         // Don't fail - OIDC authentication succeeded, just continue without the Jellyfin user

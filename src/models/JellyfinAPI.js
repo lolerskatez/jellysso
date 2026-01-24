@@ -153,7 +153,16 @@ class JellyfinAPI {
   async createUser(userData) {
     try {
       // Handle both string username and object formats
-      const payload = typeof userData === 'string' ? { Name: userData } : userData;
+      let payload = typeof userData === 'string' ? { Name: userData } : userData;
+      
+      // SECURITY: Always set a strong random password for SSO-created users
+      // This prevents users from bypassing SSO and logging in directly to Jellyfin
+      if (!payload.Password) {
+        const crypto = require('crypto');
+        payload.Password = crypto.randomBytes(32).toString('hex') + crypto.randomBytes(32).toString('base64');
+        console.log(`🔒 Generated secure random password for user: ${payload.Name} (prevents direct Jellyfin login)`);
+      }
+      
       const response = await this.client.post('/Users/New', payload);
       return response.data;
     } catch (error) {
@@ -216,6 +225,26 @@ class JellyfinAPI {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to update user policy: ${error.message}`);
+    }
+  }
+
+  async updateUserConfiguration(userId, configData) {
+    try {
+      // Get current user configuration first to preserve other settings
+      const currentUser = await this.getUser(userId);
+      const currentConfig = currentUser.Configuration || {};
+      
+      // Merge current configuration with updates
+      const mergedConfig = {
+        ...currentConfig,
+        ...configData
+      };
+
+      console.log(`Updating user ${userId} configuration:`, mergedConfig);
+      const response = await this.client.post(`/Users/${userId}/Configuration`, mergedConfig);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to update user configuration: ${error.message}`);
     }
   }
 

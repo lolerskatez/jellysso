@@ -1757,4 +1757,85 @@ router.get('/download', requireAuth, requireAdmin, (req, res) => {
   res.redirect('/api/plugin/download');
 });
 
+// API Key Diagnostic Endpoint
+router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const config = SetupManager.getConfig();
+    
+    // Test 1: Check if API key exists
+    if (!config.apiKey) {
+      return res.json({
+        success: false,
+        error: 'No API key configured',
+        tests: {
+          keyExists: false
+        }
+      });
+    }
+    
+    // Test 2: Validate API key format (should be 32 or 64 chars hex)
+    const keyFormat = /^[a-f0-9]{32,64}$/i.test(config.apiKey);
+    
+    // Test 3: Try to connect to Jellyfin
+    const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+    let connectionTest = false;
+    let authTest = false;
+    let usersTest = false;
+    let errorDetails = null;
+    
+    try {
+      // Test public endpoint (no auth needed)
+      await jellyfin.testConnection();
+      connectionTest = true;
+    } catch (err) {
+      errorDetails = { connection: err.message };
+    }
+    
+    try {
+      // Test authenticated endpoint - System/Info requires auth
+      const response = await jellyfin.client.get('/System/Info');
+      authTest = response.status === 200;
+    } catch (err) {
+      errorDetails = { ...errorDetails, auth: err.response?.status || err.message };
+    }
+    
+    try {
+      // Test Users endpoint
+      await jellyfin.getUsers();
+      usersTest = true;
+    } catch (err) {
+      errorDetails = { ...errorDetails, users: err.message };
+    }
+    
+    res.json({
+      success: authTest && usersTest,
+      config: {
+        jellyfinUrl: config.jellyfinUrl,
+        apiKeyLength: config.apiKey.length,
+        apiKeyPrefix: config.apiKey.substring(0, 16) + '...',
+        apiKeyFormat: keyFormat ? 'valid' : 'invalid'
+      },
+      tests: {
+        keyExists: true,
+        keyFormat: keyFormat,
+        connection: connectionTest,
+        authentication: authTest,
+        users: usersTest
+      },
+      errors: errorDetails,
+      recommendation: !authTest 
+        ? 'API key is invalid. Please regenerate it in Jellyfin Dashboard → API Keys'
+        : usersTest 
+        ? 'All tests passed! API key is working.'
+        : 'API key works but user access failed. Check permissions.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 module.exports = router;

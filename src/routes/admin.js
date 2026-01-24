@@ -1782,6 +1782,7 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
     let authTest = false;
     let usersTest = false;
     let errorDetails = null;
+    let authResponse = null;
     
     try {
       // Test public endpoint (no auth needed)
@@ -1795,7 +1796,14 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
       // Test authenticated endpoint - System/Info requires auth
       const response = await jellyfin.client.get('/System/Info');
       authTest = response.status === 200;
+      authResponse = { status: response.status, authenticated: true };
     } catch (err) {
+      authResponse = { 
+        status: err.response?.status || 'error', 
+        authenticated: false,
+        message: err.message,
+        headers: err.response?.headers 
+      };
       errorDetails = { ...errorDetails, auth: err.response?.status || err.message };
     }
     
@@ -1813,7 +1821,9 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
         jellyfinUrl: config.jellyfinUrl,
         apiKeyLength: config.apiKey.length,
         apiKeyPrefix: config.apiKey.substring(0, 16) + '...',
-        apiKeyFormat: keyFormat ? 'valid' : 'invalid'
+        apiKeySuffix: '...' + config.apiKey.substring(config.apiKey.length - 8),
+        apiKeyFormat: keyFormat ? 'valid' : 'invalid',
+        fullApiKey: config.apiKey // TEMPORARY - for debugging only
       },
       tests: {
         keyExists: true,
@@ -1822,12 +1832,23 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
         authentication: authTest,
         users: usersTest
       },
+      authResponse,
       errors: errorDetails,
       recommendation: !authTest 
-        ? 'API key is invalid. Please regenerate it in Jellyfin Dashboard → API Keys'
+        ? 'API key is invalid. Please regenerate it in Jellyfin Dashboard → API Keys and copy the EXACT key value'
         : usersTest 
         ? 'All tests passed! API key is working.'
-        : 'API key works but user access failed. Check permissions.'
+        : 'API key works but user access failed. Check permissions.',
+      instructions: !authTest 
+        ? [
+          '1. Go to Jellyfin: http://192.168.1.183:8096',
+          '2. Dashboard → API Keys',
+          '3. Find "JellySSO" key (or create new one)',
+          '4. Copy the ENTIRE key value (should be 64 characters)',
+          '5. Visit /setup page and paste the key',
+          '6. Save and restart JellySSO'
+        ]
+        : null
     });
   } catch (error) {
     res.status(500).json({

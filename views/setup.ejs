@@ -87,6 +87,21 @@
             <small>Password for the admin user (min 8 characters)</small>
           </div>
 
+          <div class="form-group">
+            <label for="apiKey">Jellyfin API Key</label>
+            <input type="text" id="apiKey" name="apiKey" required
+                   placeholder="Enter Jellyfin API key" pattern="[a-f0-9]{32,64}" autocomplete="off">
+            <small>Create an API key in Jellyfin Dashboard → API Keys and paste it here</small>
+            <div style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-left: 3px solid #0066cc; font-size: 0.9em;">
+              <strong>How to get an API Key:</strong><br>
+              1. Go to your Jellyfin server → Dashboard<br>
+              2. Click "API Keys" in the Advanced section<br>
+              3. Click "+ New API Key"<br>
+              4. Enter "JellySSO" as the app name<br>
+              5. Copy the generated key and paste it here
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" data-action="prev">Back</button>
             <button type="submit" class="btn btn-primary">Complete Setup</button>

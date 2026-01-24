@@ -72,10 +72,14 @@ router.post('/step1', requireSetupIncomplete, (req, res) => {
 
 // Step 2: Admin user setup
 router.post('/step2', requireSetupIncomplete, async (req, res) => {
-  const { adminUsername, adminPassword } = req.body;
+  const { adminUsername, adminPassword, apiKey } = req.body;
 
   if (!adminUsername || !adminPassword) {
     return res.json({ success: false, error: 'Admin username and password are required' });
+  }
+
+  if (!apiKey) {
+    return res.json({ success: false, error: 'Jellyfin API key is required. Please create one in Jellyfin Dashboard → API Keys' });
   }
 
   if (adminPassword.length < 8) {
@@ -93,11 +97,18 @@ router.post('/step2', requireSetupIncomplete, async (req, res) => {
       return res.json({ success: false, error: 'User is not an administrator in Jellyfin' });
     }
 
-    // Generate API key after successful admin authentication
-    const crypto = require('crypto');
-    const apiKey = crypto.randomBytes(32).toString('hex');
+    // Validate the provided API key works
+    const jellyfinWithKey = new JellyfinAPI(config.jellyfinUrl, apiKey);
+    try {
+      await jellyfinWithKey.getUsers();
+    } catch (err) {
+      return res.json({ 
+        success: false, 
+        error: 'The provided API key is invalid. Please check it in Jellyfin Dashboard → API Keys' 
+      });
+    }
 
-    // Update config with admin user and API key
+    // Update config with admin user and the provided API key
     SetupManager.updateConfig({
       adminUser: adminUsername,
       apiKey: apiKey
@@ -105,8 +116,7 @@ router.post('/step2', requireSetupIncomplete, async (req, res) => {
 
     res.json({
       success: true,
-      apiKey: apiKey,
-      message: 'Admin credentials validated. API key generated successfully.'
+      message: 'Admin credentials and API key validated successfully.'
     });
   } catch (error) {
     console.error('Admin authentication error:', error.message);

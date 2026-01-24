@@ -50,9 +50,11 @@ class SetupManager {
   completeSetup(config) {
     const currentConfig = this.getConfig();
 
-    // Generate API key if it doesn't exist
-    let apiKey = currentConfig.apiKey;
+    // Use the provided API key from config, don't generate a new one
+    // Only generate if explicitly not provided (backwards compatibility)
+    let apiKey = config.apiKey || currentConfig.apiKey;
     if (!apiKey) {
+      console.warn('⚠️  No API key provided. Generating a random one (this will NOT work with Jellyfin)');
       const crypto = require('crypto');
       apiKey = crypto.randomBytes(32).toString('hex');
     }

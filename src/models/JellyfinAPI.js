@@ -248,6 +248,19 @@ class JellyfinAPI {
     }
   }
 
+  async resetUserPassword(userId, newPassword) {
+    try {
+      const response = await this.client.post(`/Users/${userId}/Password`, {
+        Id: userId,
+        NewPw: newPassword,
+        ResetPassword: false
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to reset user password: ${error.message}`);
+    }
+  }
+
   async deleteUser(userId) {
     try {
       // Jellyfin API returns 204 No Content on success

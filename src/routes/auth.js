@@ -501,13 +501,21 @@ router.get('/oidc/callback', async (req, res) => {
     // This ensures they can ONLY log in through SSO
     if (jellyfinUser && jellyfinConfig.apiKey) {
       try {
+        // Generate a strong random password that the user will never know
+        const crypto = require('crypto');
+        const randomPassword = crypto.randomBytes(32).toString('hex') + crypto.randomBytes(32).toString('base64');
+        
+        // Reset the password to prevent direct Jellyfin login
+        await jellyfinApi.resetUserPassword(jellyfinUser.Id, randomPassword);
+        
+        // Also disable local password preference
         await jellyfinApi.updateUserConfiguration(jellyfinUser.Id, {
           EnableLocalPassword: false,
           AuthenticationProviderId: 'SSO'  // Mark as SSO user
         });
-        console.log(`🔒 Secured SSO user - password login disabled for: ${username}`);
+        console.log(`🔒 Secured SSO user - password reset and login disabled for: ${username}`);
       } catch (configErr) {
-        console.warn(`⚠️  Could not disable password login for ${username}:`, configErr.message);
+        console.warn(`⚠️  Could not secure SSO user ${username}:`, configErr.message);
         // Not critical - continue with login
       }
     }

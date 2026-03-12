@@ -11,13 +11,17 @@
   </div>
 
   <nav class="sidebar-nav">
-    <!-- Primary Navigation -->
-    <div class="nav-item">
-      <a href="/" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">
-        <i class="fas fa-home"></i>
-        Dashboard
-      </a>
-    </div>
+    <!-- Admin Dashboard (at the top for admins only) -->
+    <% if (user?.Policy?.IsAdministrator) { %>
+      <div class="nav-item">
+        <a href="/admin/" class="nav-link <%= currentPage === 'admin-dashboard' ? 'active' : '' %>">
+          <i class="fas fa-chart-bar"></i>
+          Admin Dashboard
+        </a>
+      </div>
+    <% } %>
+    
+    <!-- QuickConnect (for all users) -->
     <div class="nav-item">
       <a href="/quickconnect" class="nav-link <%= currentPage === 'quickconnect' ? 'active' : '' %>">
         <i class="fas fa-mobile-alt"></i>
@@ -31,12 +35,6 @@
         <div style="padding: 0 var(--spacing-lg); font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); font-weight: 600; letter-spacing: 0.5px;">Admin Tools</div>
       </div>
 
-      <div class="nav-item">
-        <a href="/admin/" class="nav-link <%= currentPage === 'admin-dashboard' ? 'active' : '' %>">
-          <i class="fas fa-chart-bar"></i>
-          Admin Dashboard
-        </a>
-      </div>
       <div class="nav-item">
         <a href="/admin/users" class="nav-link <%= currentPage === 'admin-users' ? 'active' : '' %>">
           <i class="fas fa-users"></i>

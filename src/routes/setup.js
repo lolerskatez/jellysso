@@ -51,8 +51,20 @@ router.post('/step1', requireSetupIncomplete, (req, res) => {
 
   // Validate URLs
   const urlRegex = /^https?:\/\/.+/;
-  if (!urlRegex.test(jellyfinUrl) || !urlRegex.test(jellyfinPublicUrl) || !urlRegex.test(webAppPublicUrl)) {
-    return res.json({ success: false, error: 'All URLs must be valid HTTP/HTTPS URLs' });
+  
+  // Jellyfin Server URL is required
+  if (!jellyfinUrl || !urlRegex.test(jellyfinUrl)) {
+    return res.json({ success: false, error: 'Jellyfin Server URL is required and must be a valid HTTP/HTTPS URL' });
+  }
+  
+  // Jellyfin Public URL is optional but must be valid if provided
+  if (jellyfinPublicUrl && jellyfinPublicUrl.trim() && !urlRegex.test(jellyfinPublicUrl)) {
+    return res.json({ success: false, error: 'Jellyfin Public URL must be a valid HTTP/HTTPS URL' });
+  }
+  
+  // Web App Public URL is optional but must be valid if provided
+  if (webAppPublicUrl && webAppPublicUrl.trim() && !urlRegex.test(webAppPublicUrl)) {
+    return res.json({ success: false, error: 'Web App Public URL must be a valid HTTP/HTTPS URL' });
   }
 
   // Test Jellyfin connection
@@ -116,7 +128,9 @@ router.post('/step2', requireSetupIncomplete, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Admin credentials and API key validated successfully.'
+      message: 'Admin credentials and API key validated successfully.',
+      apiKey: apiKey,
+      adminUser: adminUsername
     });
   } catch (error) {
     console.error('Admin authentication error:', error.message);

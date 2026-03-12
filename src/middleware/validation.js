@@ -78,14 +78,16 @@ const validateSetupData = (data, step) => {
   if (step === 1) {
     // Server configuration
     if (!data.jellyfinUrl || typeof data.jellyfinUrl !== 'string' || !isValidUrl(data.jellyfinUrl)) {
-      errors.push('Jellyfin URL must be a valid URL');
+      errors.push('Jellyfin Server URL must be a valid URL');
     }
 
-    if (!data.jellyfinPublicUrl || typeof data.jellyfinPublicUrl !== 'string' || !isValidUrl(data.jellyfinPublicUrl)) {
+    // Jellyfin Public URL is optional, but if provided, must be valid
+    if (data.jellyfinPublicUrl && typeof data.jellyfinPublicUrl === 'string' && data.jellyfinPublicUrl.trim() && !isValidUrl(data.jellyfinPublicUrl)) {
       errors.push('Jellyfin Public URL must be a valid URL');
     }
 
-    if (!data.webAppPublicUrl || typeof data.webAppPublicUrl !== 'string' || !isValidUrl(data.webAppPublicUrl)) {
+    // Web App Public URL is optional, but if provided, must be valid
+    if (data.webAppPublicUrl && typeof data.webAppPublicUrl === 'string' && data.webAppPublicUrl.trim() && !isValidUrl(data.webAppPublicUrl)) {
       errors.push('Web App Public URL must be a valid URL');
     }
   } else if (step === 2) {

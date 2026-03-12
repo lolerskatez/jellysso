@@ -120,10 +120,10 @@ function showCompletion(result) {
       if (configSummary) {
         configSummary.innerHTML = `
           <li>Jellyfin Server: ${config.jellyfinUrl}</li>
-          <li>Jellyfin Public URL: ${config.jellyfinPublicUrl}</li>
-          <li>Web App Public URL: ${config.webAppPublicUrl}</li>
-          <li>Admin User: ${config.adminUser}</li>
-          <li>API Key: <code style="word-break: break-all;">${result.apiKey}</code></li>
+          <li>Jellyfin Public URL: ${config.jellyfinPublicUrl || '(Not configured)'}</li>
+          <li>Web App Public URL: ${config.webAppPublicUrl || '(Not configured)'}</li>
+          <li>Admin User: ${result.adminUser || 'Configured'}</li>
+          <li>API Key: <code>${result.apiKey}</code></li>
           <li>Setup completed: ${new Date().toLocaleString()}</li>
         `;
       }
@@ -134,8 +134,8 @@ function showCompletion(result) {
       const configSummary = document.getElementById('configSummary');
       if (configSummary) {
         configSummary.innerHTML = `
-          <li>Admin User: Configured</li>
-          <li>API Key: <code style="word-break: break-all;">${result.apiKey}</code></li>
+          <li>Admin User: ${result.adminUser || 'Configured'}</li>
+          <li>API Key: <code>${result.apiKey}</code></li>
           <li>Setup completed: ${new Date().toLocaleString()}</li>
         `;
       }

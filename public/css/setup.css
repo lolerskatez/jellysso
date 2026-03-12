@@ -213,6 +213,12 @@ body {
   color: var(--text-primary);
 }
 
+.form-group label .optional {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .form-control {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -336,6 +342,18 @@ body {
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.setup-summary li code {
+  word-break: break-word;
+  word-wrap: break-word;
+  white-space: normal;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  flex: 1;
+  margin-left: 1rem;
 }
 
 .setup-summary li:last-child {

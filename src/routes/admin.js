@@ -37,25 +37,36 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const stats = await DatabaseManager.getAuditStats();
     const recentLogs = await AuditLogger.getLogs({ limit: 10 });
-    const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, req.session.accessToken);
-    const users = await jellyfin.getUsers();
     
-    // Create user map for username enrichment
-    const userMap = {};
-    users.forEach(u => {
-      userMap[u.Id] = u.Name;
-      userMap[u.Name] = u.Name;
-    });
+    // Enrich logs with usernames from Jellyfin and get user count
+    let enrichedLogs = recentLogs;
+    let userCount = 0;
+    try {
+      const config = SetupManager.getConfig();
+      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+      const users = await jellyfin.getUsers();
+      userCount = users.length;
+      
+      // Build userId → username map
+      const userMap = {};
+      users.forEach(u => {
+        userMap[u.Id] = u.Name;
+        userMap[u.Name] = u.Name;
+      });
 
-    // Enrich logs with usernames
-    const enrichedLogs = recentLogs.map(log => ({
-      ...log,
-      username: userMap[log.userId] || log.userId || 'System'
-    }));
+      // Enrich logs with usernames
+      enrichedLogs = recentLogs.map(log => ({
+        ...log,
+        username: userMap[log.userId] || log.userId || 'System'
+      }));
+    } catch (enrichError) {
+      console.warn('Could not enrich dashboard logs with usernames:', enrichError.message);
+      enrichedLogs = recentLogs.map(log => ({
+        ...log,
+        username: log.userId || 'System'
+      }));
+    }
 
-    // Get backup info
-    let backupCount = 0;
-    let latestBackup = null;
     try {
       const fs = require('fs');
       const path = require('path');
@@ -80,7 +91,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       csrfToken: res.locals.csrfToken,
       stats: stats,
       recentLogs: enrichedLogs,
-      userCount: users.length,
+      userCount: userCount,
       backupCount: backupCount,
       latestBackup: latestBackup,
       dbFile: 'src/config/companion.db'
@@ -120,7 +131,8 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
     // Enrich logs with usernames from Jellyfin
     let enrichedLogs = paginatedLogs;
     try {
-      const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, req.session.accessToken);
+      const config = SetupManager.getConfig();
+      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
       const jellyfinUsers = await jellyfin.getUsers();
       
       // Create a map of userId to username

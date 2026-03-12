@@ -3,7 +3,7 @@ const DatabaseManager = require('./DatabaseManager');
 class AuditLogger {
   /**
    * Log an audit event
-   * @param {string} action - The action performed (e.g., 'USER_CREATE', 'SETTINGS_UPDATE')
+   * @param {string|object} action - The action performed OR an object with {action, userId, resource, details, status, ip}
    * @param {string} userId - The user who performed the action
    * @param {string} resource - The resource affected (e.g., 'user:123', 'settings:system')
    * @param {object} details - Additional details about the action
@@ -11,6 +11,17 @@ class AuditLogger {
    * @param {string} ip - Client IP address
    */
   async log(action, userId, resource, details = {}, status = 'success', ip = null) {
+    // Handle object parameter format for backwards compatibility
+    if (typeof action === 'object' && action !== null) {
+      const logObj = action;
+      action = logObj.action;
+      userId = logObj.userId;
+      resource = logObj.resource;
+      details = logObj.details || {};
+      status = logObj.status || 'success';
+      ip = logObj.ip;
+    }
+
     try {
       await DatabaseManager.insertAuditLog(
         action,

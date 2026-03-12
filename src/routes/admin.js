@@ -67,6 +67,9 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       }));
     }
 
+    let backupCount = 0;
+    let latestBackup = null;
+
     try {
       const fs = require('fs');
       const path = require('path');

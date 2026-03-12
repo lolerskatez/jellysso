@@ -51,12 +51,12 @@ router.post('/login', requireSetupComplete, async (req, res) => {
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
-        AuditLogger.log('LOGIN_SESSION_ERROR', authResult.User?.Id, `user:${username}`, 
+        AuditLogger.log('LOGIN_SESSION_ERROR', authResult.User?.Name || username, `user:${username}`, 
           { error: 'Session save failed' }, 'failure', req.ip);
         return res.status(500).json({ success: false, message: 'Session save failed' });
       }
       // Log successful login
-      AuditLogger.logSuccessfulLogin(authResult.User?.Id, req.ip);
+      AuditLogger.logSuccessfulLogin(authResult.User?.Name || username, req.ip);
       
       // Check if this is an AJAX request
       const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;

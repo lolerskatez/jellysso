@@ -309,15 +309,14 @@
 </head>
 <body>
   <div class="app-container">
-    <%- include('../partials/navigation', { user, currentPage: 'admin-dashboard' }) %>
+    <%- include('partials/navigation', { user, currentPage: 'admin-dashboard' }) %>
     <main class="main-content">
       <header class="header">
         <div class="header-left">
           <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
             <i class="fas fa-bars"></i>
           </button>
-          <h1 class="header-title">Admin Dashboard
-          </h1>
+          <h1 class="header-title">Dashboard</h1>
           <span class="last-update">Last updated: <span id="lastUpdate"><%= new Date().toLocaleTimeString() %></span></span>
         </div>
         <div class="header-right">
@@ -445,58 +444,6 @@
             </div>
           </div>
 
-          <!-- Analytics Summary Widget -->
-          <div class="widget col-4">
-            <div class="widget-header">
-              <h3><i class="fas fa-chart-line"></i> Analytics</h3>
-              <a href="/admin/analytics">Details</a>
-            </div>
-            <div class="widget-body">
-              <div class="health-item">
-                <span class="health-label">Activities (7d)</span>
-                <span class="health-value" id="analyticsActivities"><%= stats.total || 0 %></span>
-              </div>
-              <div class="health-item">
-                <span class="health-label">Failed Logins</span>
-                <span class="health-value" id="analyticsFailedLogins"><%= stats.byAction?.FAILED_LOGIN || 0 %></span>
-              </div>
-              <div class="health-item">
-                <span class="health-label">New Users</span>
-                <span class="health-value" id="analyticsNewUsers">0</span>
-              </div>
-              <div class="mini-chart">
-                <canvas id="miniActivityChart"></canvas>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Links Widget -->
-          <div class="widget col-4">
-            <div class="widget-header">
-              <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-            </div>
-            <div class="widget-body">
-              <div class="quick-links">
-                <a href="/admin/users" class="quick-link">
-                  <i class="fas fa-users"></i>
-                  <span>Manage Users</span>
-                </a>
-                <a href="/admin/statistics" class="quick-link">
-                  <i class="fas fa-chart-pie"></i>
-                  <span>Statistics</span>
-                </a>
-                <a href="/admin/settings" class="quick-link">
-                  <i class="fas fa-cog"></i>
-                  <span>Settings</span>
-                </a>
-                <a href="/admin/provisioning" class="quick-link">
-                  <i class="fas fa-file-upload"></i>
-                  <span>Import Users</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
           <!-- System Health Widget -->
           <div class="widget col-4">
             <div class="widget-header">
@@ -523,6 +470,33 @@
               <div class="health-item">
                 <span class="health-label">Uptime</span>
                 <span class="health-value"><%= Math.floor(process.uptime?.() / 3600 || 0) %>h</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Links Widget -->
+          <div class="widget col-4">
+            <div class="widget-header">
+              <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            </div>
+            <div class="widget-body">
+              <div class="quick-links">
+                <a href="/admin/users" class="quick-link">
+                  <i class="fas fa-users"></i>
+                  <span>Manage Users</span>
+                </a>
+                <a href="/admin/settings" class="quick-link">
+                  <i class="fas fa-cog"></i>
+                  <span>Settings</span>
+                </a>
+                <a href="/admin/backups" class="quick-link">
+                  <i class="fas fa-database"></i>
+                  <span>Backups</span>
+                </a>
+                <a href="/admin/oidc" class="quick-link">
+                  <i class="fas fa-key"></i>
+                  <span>OIDC SSO</span>
+                </a>
               </div>
             </div>
           </div>

@@ -303,7 +303,12 @@ app.get('/api/dashboard', requireWebAuth, async (req, res) => {
 
 // Basic routes (only accessible after setup)
 app.get('/', requireWebAuth, (req, res) => {
-  res.render('user-dashboard', { title: 'Jellyfin Companion - Dashboard', user: req.session.user });
+  // Redirect authenticated users to admin dashboard
+  if (req.session.user && req.session.user.Policy?.IsAdministrator) {
+    return res.redirect('/admin/');
+  }
+  // Redirect non-admins to quickconnect
+  res.redirect('/quickconnect');
 });
 
 app.get('/login', csrfProtection, async (req, res) => {

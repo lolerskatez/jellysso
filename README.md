@@ -125,11 +125,10 @@ USE_HTTPS=false
 - `PUT /api/settings` - Update settings
 
 ### Admin
-- `GET /admin/dashboard` - Main admin page
+- `GET /admin/` - Main admin dashboard
 - `GET /admin/users` - User management page
 - `GET /admin/audit-logs` - Audit logs page
 - `GET /admin/backups` - Backup management page
-- `GET /admin/analytics` - Analytics page
 
 ### QuickConnect
 - `POST /api/quickconnect/authorize` - Authorize device

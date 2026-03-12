@@ -22,7 +22,7 @@ const criticalFiles = [
   { path: 'src/models/TokenManager.js', description: 'OIDC token management' },
   { path: 'src/routes/admin.js', description: 'Admin panel routes' },
   { path: 'src/routes/system.js', description: 'System management routes' },
-  { path: 'views/admin/dashboard.ejs', description: 'Admin dashboard' },
+  { path: 'views/dashboard.ejs', description: 'Admin dashboard' },
   { path: 'views/admin/system.ejs', description: 'System management UI' },
   { path: 'views/admin/backups.ejs', description: 'Backup management UI' }
 ];

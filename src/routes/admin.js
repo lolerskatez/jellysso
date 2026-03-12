@@ -75,7 +75,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       console.warn('Could not get backup info:', e.message);
     }
     
-    res.render('admin/dashboard', {
+    res.render('dashboard', {
       user: req.session.user,
       csrfToken: res.locals.csrfToken,
       stats: stats,

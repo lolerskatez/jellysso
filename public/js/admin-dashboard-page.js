@@ -36,8 +36,6 @@ async function loadDashboardData() {
 
   try {
     await Promise.all([
-      loadStatistics(),
-      loadAnalytics(),
       loadBackupStatus(),
       loadRecentActivity()
     ]);
@@ -53,48 +51,6 @@ async function loadDashboardData() {
     if (lastUpdate) {
       lastUpdate.textContent = new Date().toLocaleTimeString();
     }
-  }
-}
-
-// Load statistics summary
-async function loadStatistics() {
-  try {
-    const response = await fetch('/admin/api/statistics?range=7d');
-    const data = await response.json();
-    
-    if (data.success && data.stats) {
-      const stats = data.stats;
-      updateElement('statTotalRequests', stats.totalRequests?.toLocaleString() || '0');
-      updateElement('statSuccessRate', (stats.successRate || 0) + '%');
-      updateElement('statFailedRequests', stats.failedRequests?.toLocaleString() || '0');
-      updateElement('statTotalUsers', stats.totalUsers?.toLocaleString() || '0');
-      updateElement('statUserLogins', stats.userLogins?.toLocaleString() || '0');
-      updateElement('statDbSize', stats.dbSize || '0 MB');
-    }
-  } catch (error) {
-    console.error('Statistics load error:', error);
-  }
-}
-
-// Load analytics summary
-async function loadAnalytics() {
-  try {
-    const response = await fetch('/admin/api/analytics?period=7');
-    const data = await response.json();
-    
-    if (data.success && data.report) {
-      const report = data.report;
-      
-      // Update analytics stats
-      updateElement('analyticsActivities', report.actionFrequency?.total?.toLocaleString() || '0');
-      updateElement('analyticsFailedLogins', report.securityEvents?.failedLogins?.toLocaleString() || '0');
-      updateElement('analyticsNewUsers', report.userCreationTrends?.total?.toLocaleString() || '0');
-      
-      // Update mini activity chart if exists
-      updateMiniChart(report);
-    }
-  } catch (error) {
-    console.error('Analytics load error:', error);
   }
 }
 

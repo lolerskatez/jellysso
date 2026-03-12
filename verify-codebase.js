@@ -19,15 +19,12 @@ const criticalFiles = [
   { path: 'src/models/CacheManager.js', description: 'Advanced caching system' },
   { path: 'src/models/PluginManager.js', description: 'Plugin loading system' },
   { path: 'src/models/PerformanceMonitor.js', description: 'Performance metrics' },
-  { path: 'src/models/AnalyticsManager.js', description: 'Analytics collection' },
   { path: 'src/models/TokenManager.js', description: 'OIDC token management' },
   { path: 'src/routes/admin.js', description: 'Admin panel routes' },
   { path: 'src/routes/system.js', description: 'System management routes' },
   { path: 'views/admin/dashboard.ejs', description: 'Admin dashboard' },
   { path: 'views/admin/system.ejs', description: 'System management UI' },
-  { path: 'views/admin/backups.ejs', description: 'Backup management UI' },
-  { path: 'views/admin/provisioning.ejs', description: 'User provisioning UI' },
-  { path: 'views/admin/analytics.ejs', description: 'Analytics dashboard' }
+  { path: 'views/admin/backups.ejs', description: 'Backup management UI' }
 ];
 
 let filesOK = 0;
@@ -72,13 +69,6 @@ try {
 }
 
 try {
-  require('./src/models/AnalyticsManager');
-  console.log('  ✅ AnalyticsManager');
-} catch (e) {
-  console.log(`  ❌ AnalyticsManager: ${e.message}`);
-}
-
-try {
   require('./src/models/TokenManager');
   console.log('  ✅ TokenManager');
 } catch (e) {
@@ -97,14 +87,8 @@ try {
   if (adminRoutes.includes('/system')) {
     console.log('  ✅ System management route present');
   }
-  if (adminRoutes.includes('/analytics')) {
-    console.log('  ✅ Analytics route present');
-  }
   if (adminRoutes.includes('/backups')) {
     console.log('  ✅ Backups route present');
-  }
-  if (adminRoutes.includes('/provisioning')) {
-    console.log('  ✅ Provisioning route present');
   }
 } catch (e) {
   console.log(`  ❌ Admin routes error: ${e.message}`);

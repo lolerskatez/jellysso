@@ -6,11 +6,16 @@ package-lock.json
 .env
 .env.local
 .env.*.local
+.env.test
 
 # Database files
 src/config/companion.db
 src/config/companion.db-shm
 src/config/companion.db-wal
+
+# Config files with real data
+src/config/setup.json
+src/config/*.json
 
 # Logs
 logs/
@@ -33,6 +38,7 @@ Thumbs.db
 .idea/
 *.sublime-workspace
 *.sublime-project
+*.code-workspace
 
 # Build artifacts
 dist/
@@ -41,15 +47,15 @@ build/
 
 # Backups
 backups/
+src/config/backups/
 
 # Temporary files
 tmp/
 temp/
 *.tmp
 
-# Configuration and secrets
-src/config/setup.json
-src/config/*.json
+# Test data
+test-data/
 
 # Certificates
 certs/
@@ -64,3 +70,25 @@ docker-compose.override.yml
 # Node version managers
 .nvmrc
 .node-version
+
+# Ad-hoc dev / QA scripts (not part of the application)
+query_db.js
+verify-codebase.js
+verify-qa.js
+setup-test.js
+test-setup-wizard.js
+COMMAND_REFERENCE.js
+
+# Internal meta / publishing docs (not for repo consumers)
+SECURITY_INCIDENT_REPORT.md
+DOCUMENTATION_FINAL.md
+GITHUB_PUBLICATION_SUMMARY.md
+GITHUB_READY_CHECKLIST.md
+GITHUB_SETUP.md
+INFRASTRUCTURE_QUICK_ANSWER.md
+INFRASTRUCTURE_QUICK_REFERENCE.md
+PRODUCTION_DEPLOYMENT_READY.md
+PLUGIN_SETUP_STATUS.md
+
+# Stale / generated assets
+public/favicon-generator.html

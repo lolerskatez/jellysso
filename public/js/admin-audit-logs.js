@@ -104,37 +104,96 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Export logs functionality
+  function escapeCsvField(value) {
+    const str = String(value ?? '').replace(/\r?\n/g, ' ');
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function buildCsv(rows) {
+    const headers = ['Timestamp', 'Action', 'User', 'Resource', 'Status', 'IP'];
+    const lines = [headers.join(',')];
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length >= 6) {
+        lines.push([
+          escapeCsvField(cells[0].textContent.trim().replace(/\s+/g, ' ')),
+          escapeCsvField(cells[1].textContent.trim()),
+          escapeCsvField(cells[2].textContent.trim()),
+          escapeCsvField(cells[3].textContent.trim()),
+          escapeCsvField(cells[4].textContent.trim()),
+          escapeCsvField(cells[5].textContent.trim())
+        ].join(','));
+      }
+    });
+    return lines.join('\r\n');
+  }
+
+  function triggerDownload(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const exportBtn = document.getElementById('exportLogsBtn');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', function() {
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const exportTxtBtn = document.getElementById('exportTxtBtn');
+  const exportDropdown = document.getElementById('exportDropdown');
+
+  // Toggle dropdown
+  if (exportBtn && exportDropdown) {
+    exportBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      exportDropdown.classList.toggle('active');
+    });
+    document.addEventListener('click', function() {
+      exportDropdown.classList.remove('active');
+    });
+  }
+
+  // CSV export
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener('click', function() {
       const table = document.querySelector('.audit-table');
       if (!table) return;
-
       const rows = table.querySelectorAll('tbody tr');
-      const data = [];
+      const csv = buildCsv(rows);
+      triggerDownload(csv, `audit-logs-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv;charset=utf-8;');
+      if (exportDropdown) exportDropdown.classList.remove('active');
+    });
+  }
 
+  // Plain text export
+  if (exportTxtBtn) {
+    exportTxtBtn.addEventListener('click', function() {
+      const table = document.querySelector('.audit-table');
+      if (!table) return;
+      const rows = table.querySelectorAll('tbody tr');
+      const dateStr = new Date().toISOString().split('T')[0];
+      const header = `Audit Logs Export — ${dateStr}\n${'='.repeat(60)}\n`;
+      const lines = [header];
       rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 6) {
-          data.push({
-            timestamp: cells[0].textContent.trim(),
-            action: cells[1].textContent.trim(),
-            user: cells[2].textContent.trim(),
-            resource: cells[3].textContent.trim(),
-            status: cells[4].textContent.trim(),
-            ip: cells[5].textContent.trim()
-          });
+          lines.push(
+            `Timestamp : ${cells[0].textContent.trim().replace(/\s+/g, ' ')}\n` +
+            `Action    : ${cells[1].textContent.trim()}\n` +
+            `User      : ${cells[2].textContent.trim()}\n` +
+            `Resource  : ${cells[3].textContent.trim()}\n` +
+            `Status    : ${cells[4].textContent.trim()}\n` +
+            `IP        : ${cells[5].textContent.trim()}\n` +
+            `${'-'.repeat(40)}`
+          );
         }
       });
-
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      triggerDownload(lines.join('\n'), `audit-logs-${dateStr}.txt`, 'text/plain;charset=utf-8;');
+      if (exportDropdown) exportDropdown.classList.remove('active');
     });
   }
 });

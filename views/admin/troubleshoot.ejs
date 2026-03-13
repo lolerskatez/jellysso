@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Jellyfin Client Troubleshooting - Jellyfin Companion Admin">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Client Troubleshooting - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .troubleshoot-container {
+      max-width: 1000px;
+    }
+
+    /* Platform tabs */
+    .platform-tabs {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xl);
+      border-bottom: 2px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+    .platform-tab {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .platform-tab:hover {
+      color: var(--primary);
+    }
+    .platform-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .platform-tab i {
+      font-size: 1.1rem;
+    }
+
+    /* Platform panels */
+    .platform-panel {
+      display: none;
+    }
+    .platform-panel.active {
+      display: block;
+    }
+
+    /* Issue accordion */
+    .issue-group {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .issue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-md) var(--spacing-lg);
+      cursor: pointer;
+      user-select: none;
+      gap: var(--spacing-md);
+      transition: background var(--transition);
+    }
+    .issue-header:hover {
+      background: var(--bg-secondary);
+    }
+    .issue-header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+    .issue-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--border-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .issue-icon.red    { background: rgba(239, 68, 68, 0.1);   color: var(--danger); }
+    .issue-icon.orange { background: rgba(245, 158, 11, 0.1);  color: var(--warning); }
+    .issue-icon.blue   { background: rgba(0, 102, 204, 0.1);   color: var(--primary); }
+    .issue-icon.green  { background: rgba(16, 185, 129, 0.1);  color: var(--success); }
+    .issue-icon.purple { background: rgba(139, 92, 246, 0.1);  color: #8b5cf6; }
+    .issue-icon.cyan   { background: rgba(6, 182, 212, 0.1);   color: #06b6d4; }
+
+    .issue-title {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--gray-900);
+    }
+    .issue-subtitle {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .issue-chevron {
+      color: var(--text-secondary);
+      transition: transform 0.25s ease;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+    .issue-group.open .issue-chevron {
+      transform: rotate(180deg);
+    }
+
+    .issue-body {
+      display: none;
+      padding: 0 var(--spacing-lg) var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
+    .issue-group.open .issue-body {
+      display: block;
+    }
+
+    /* Steps */
+    .steps {
+      list-style: none;
+      padding: 0;
+      margin: var(--spacing-md) 0 0 0;
+      counter-reset: steps;
+    }
+    .step {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      counter-increment: steps;
+    }
+    .step:last-child {
+      margin-bottom: 0;
+    }
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-content {
+      font-size: 0.9rem;
+      color: var(--gray-700);
+      line-height: 1.5;
+    }
+    .step-content strong {
+      color: var(--gray-900);
+    }
+    .step-content code {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.8125rem;
+      font-family: monospace;
+      color: var(--primary);
+    }
+
+    /* Tips & notes */
+    .tip-box {
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      margin-top: var(--spacing-md);
+      font-size: 0.875rem;
+      color: #0e7490;
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: flex-start;
+    }
+    .tip-box i { flex-shrink: 0; margin-top: 2px; }
+
+    .warn-box {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      margin-top: var(--spacing-md);
+      font-size: 0.875rem;
+      color: #92400e;
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: flex-start;
+    }
+    .warn-box i { flex-shrink: 0; margin-top: 2px; }
+
+    /* Info card at top */
+    .info-banner {
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+      border: 1px solid #7dd3fc;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-md);
+    }
+    .info-banner i {
+      color: #0369a1;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .info-banner p {
+      color: #0c4a6e;
+      margin: 0;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+    .info-banner strong {
+      color: #0369a1;
+    }
+
+    /* Server URL helper box */
+    .server-url-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md) var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-lg);
+      flex-wrap: wrap;
+    }
+    .server-url-box .label {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .url-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.875rem;
+      font-family: monospace;
+      color: var(--gray-900);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .url-pill:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .url-pill i { font-size: 0.75rem; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .platform-tabs { gap: 0; }
+      .platform-tab { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-troubleshoot' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Client Troubleshooting</h1>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="troubleshoot-container">
+
+          <div class="info-banner">
+            <i class="fas fa-info-circle"></i>
+            <p>
+              This guide covers common problems with <strong>Jellyfin clients</strong> connecting through JellySSO.
+              Your JellySSO server URL is <strong><%= baseUrl %></strong> — use this as the server address in all Jellyfin clients.
+              The underlying Jellyfin server at <strong><%= jellyfinUrl %></strong> should not be accessed directly by clients when going through JellySSO.
+            </p>
+          </div>
+
+          <div class="server-url-box">
+            <span class="label"><i class="fas fa-server"></i> &nbsp;JellySSO URL (use this in clients):</span>
+            <span class="url-pill" id="serverUrlPill" onclick="copyUrl('<%= baseUrl %>')">
+              <i class="fas fa-copy"></i>
+              <%= baseUrl %>
+            </span>
+          </div>
+
+          <!-- Platform Tabs -->
+          <div class="platform-tabs">
+            <button class="platform-tab active" data-panel="androidtv">
+              <i class="fab fa-android"></i> Android TV / Fire TV
+            </button>
+            <button class="platform-tab" data-panel="mobile">
+              <i class="fas fa-mobile-alt"></i> Mobile App
+            </button>
+            <button class="platform-tab" data-panel="web">
+              <i class="fas fa-globe"></i> Web Browser
+            </button>
+            <button class="platform-tab" data-panel="general">
+              <i class="fas fa-tools"></i> General
+            </button>
+          </div>
+
+          <!-- ═══════════════════════════════════════════════════
+               ANDROID TV / FIRE TV PANEL
+          ═══════════════════════════════════════════════════ -->
+          <div class="platform-panel active" id="panel-androidtv">
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-plug"></i></div>
+                  <div><div class="issue-title">Can't connect to server / "Unable to connect"</div><div class="issue-subtitle">App times out or shows a connection error on startup</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Open the Jellyfin app on your Android TV / Fire TV. On the server selection screen, tap <strong>Add Server</strong> or edit the existing entry.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Enter the <strong>JellySSO URL</strong> exactly: <code><%= baseUrl %></code> — not the internal Jellyfin server address. Omit any trailing slash.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Make sure your TV is on the <strong>same network</strong> as JellySSO if using a local address. If using a domain name, confirm DNS resolves correctly from the TV.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">If JellySSO is running with HTTPS, ensure your certificate is valid. Self-signed certificates may need to be installed on the device or you may need to use an HTTP URL for local access.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Check that JellySSO is running: open <code><%= baseUrl %>/health</code> in a browser on the same network. You should see <code>{"status":"ok"}</code>.</div></li>
+                  <li class="step"><span class="step-num">6</span><div class="step-content">Check your firewall / router rules — the port JellySSO runs on must be accessible from the TV's IP address.</div></li>
+                </ol>
+                <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Fire TV devices sometimes cache server addresses. Fully close the Jellyfin app (long-press Home → App Switcher → swipe away), then relaunch before retrying.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-sign-in-alt"></i></div>
+                  <div><div class="issue-title">Login fails / "Invalid username or password"</div><div class="issue-subtitle">Credentials are correct but login still fails</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Confirm you are entering your <strong>Jellyfin username and password</strong>, not your JellySSO admin credentials. These are separate accounts.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If this user was previously created via SSO login, their Jellyfin password was randomized by JellySSO for security. They must log in via the <strong>SSO button on the login page</strong> (web or mobile), not with a password.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Use <strong>QuickConnect</strong> instead of password login — it avoids credential issues entirely. Open the Jellyfin app, choose QuickConnect on the login screen, then authorize from <code><%= baseUrl %>/quickconnect</code>.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">If the user account is new, verify it exists in <strong>Admin → User Management</strong> in JellySSO.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Check <strong>Admin → Audit Logs</strong> for a <code>LOGIN_FAILED</code> entry — the details will include the failure reason.</div></li>
+                </ol>
+                <div class="warn-box"><i class="fas fa-exclamation-triangle"></i><span>SSO users created by JellySSO have their Jellyfin password locked intentionally. The correct authentication path for these users on Android TV is QuickConnect — initiate from the TV, then approve on a device where you can access the JellySSO web interface.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon blue"><i class="fas fa-qrcode"></i></div>
+                  <div><div class="issue-title">QuickConnect not working</div><div class="issue-subtitle">Code shown on TV is not accepted or expires too fast</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">On your TV, select <strong>Quick Connect</strong> on the login screen. Note the 6-character code — it's valid for a few minutes.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">On a device that's already logged in, go to <code><%= baseUrl %>/quickconnect</code> and enter the code shown on the TV.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If the code is rejected, make sure both devices are connecting to the <strong>same JellySSO instance</strong> (same URL).</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">If QuickConnect shows no pending sessions, the TV may be sending the request to the wrong server. Verify the server URL saved in the app matches <code><%= baseUrl %></code>.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Check Admin → Audit Logs for <code>QUICKCONNECT_</code> events to see what the server is receiving.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon purple"><i class="fas fa-play-circle"></i></div>
+                  <div><div class="issue-title">Video won't play / buffering / black screen</div><div class="issue-subtitle">Login works but media won't stream</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">This is typically a <strong>Jellyfin server</strong> issue, not JellySSO. JellySSO only handles authentication — media streaming happens directly between the client and Jellyfin.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">In the Jellyfin app on the TV, go to <strong>Settings → Network</strong> and check that the server URL is correctly set to <code><%= baseUrl %></code>.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Check whether the user has <strong>media permissions</strong> in Jellyfin. Go to Jellyfin Admin → Users → select the user → verify they have access to the relevant libraries.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Try a different video or a lower bitrate. If some content plays but not others, it may be a transcoding issue on the Jellyfin server itself.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">On Fire TV, go to <strong>Settings → Applications → Manage Installed Applications → Jellyfin → Clear Cache</strong>, then retry.</div></li>
+                </ol>
+                <div class="tip-box"><i class="fas fa-lightbulb"></i><span>JellySSO acts as a proxy for authentication only. If you can log in successfully but media won't load, the issue is between the Jellyfin app and your Jellyfin media server — check Jellyfin's own logs at its admin dashboard.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon cyan"><i class="fas fa-certificate"></i></div>
+                  <div><div class="issue-title">SSL / certificate errors</div><div class="issue-subtitle">"Certificate not valid" or HTTPS connection refused</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Android TV and Fire TV reject <strong>self-signed certificates</strong> by default. If JellySSO uses a self-signed cert, switch to a trusted CA (e.g. Let's Encrypt via a reverse proxy).</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Alternatively, use <strong>HTTP</strong> for local network access if your network is trusted.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If using a reverse proxy (Nginx, Caddy, Traefik) in front of JellySSO, make sure the proxy is terminating SSL and passing the correct <code>X-Forwarded-Proto</code> and <code>X-Forwarded-Host</code> headers.</div></li>
+                </ol>
+              </div>
+            </div>
+
+          </div><!-- /androidtv panel -->
+
+
+          <!-- ═══════════════════════════════════════════════════
+               MOBILE APP PANEL
+          ═══════════════════════════════════════════════════ -->
+          <div class="platform-panel" id="panel-mobile">
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-plug"></i></div>
+                  <div><div class="issue-title">App can't find / connect to server</div><div class="issue-subtitle">Discovery fails or connection times out</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">On the server selection screen, tap <strong>Add Server Manually</strong> and enter the full JellySSO URL: <code><%= baseUrl %></code>.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Auto-discovery (LAN scanning) will find Jellyfin directly, not JellySSO. Always add the server manually with the JellySSO URL.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If on cellular data, the local IP won't be reachable. Make sure you have a public domain or a VPN configured for remote access.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Verify the server responds: open <code><%= baseUrl %></code> in your phone's browser. You should see the JellySSO login page.</div></li>
+                </ol>
+                <div class="tip-box"><i class="fas fa-lightbulb"></i><span>iOS 14+ and newer Android versions may block HTTP (non-HTTPS) connections to local IP addresses depending on app configuration. If you get connection errors on mobile only, try using HTTPS with a valid certificate.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-sign-in-alt"></i></div>
+                  <div><div class="issue-title">Login fails on the mobile app</div><div class="issue-subtitle">Username/password rejected or never returns</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Ensure the server URL saved in the app points to <code><%= baseUrl %></code>, not directly to Jellyfin.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If your account was created or last authenticated via <strong>SSO (OIDC)</strong>, the Jellyfin password is locked. You cannot log in with a username/password on the mobile app — use QuickConnect instead.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">To use QuickConnect on mobile: select it on the app login screen, then open a browser on the same or another device and go to <code><%= baseUrl %>/quickconnect</code> to approve.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">If login just hangs and never responds, check Admin → Audit Logs for a <code>LOGIN_ATTEMPT</code> entry to confirm the request is reaching JellySSO at all.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon green"><i class="fas fa-key"></i></div>
+                  <div><div class="issue-title">SSO login option not available in mobile app</div><div class="issue-subtitle">No SSO button on the app's login screen</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Native Jellyfin mobile apps do not have a built-in SSO button. The SSO login flow is browser-based — open <code><%= baseUrl %></code> in your <strong>mobile browser</strong> and log in with SSO there.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">After logging in via the browser, use <strong>QuickConnect</strong> to authorize the native app without needing to re-enter credentials.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">The typical SSO + mobile workflow: <br><strong>Browser</strong> → log in via SSO → go to QuickConnect page and enter the code shown in the app.</div></li>
+                </ol>
+                <div class="tip-box"><i class="fas fa-lightbulb"></i><span>This is a known limitation of Jellyfin's native apps — they don't support OIDC/OAuth redirects natively. QuickConnect is the intended workaround and works seamlessly once you're logged into the web interface.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon purple"><i class="fas fa-play-circle"></i></div>
+                  <div><div class="issue-title">Media not loading / playback errors</div><div class="issue-subtitle">Audio or video fails to start on mobile</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Streaming is handled directly between the Jellyfin app and Jellyfin server. JellySSO is not in the media path, so this is a Jellyfin configuration issue.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">In the app, go to <strong>Settings → Playback</strong> and try reducing the streaming bitrate or enabling transcoding.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Ensure the user has media library <strong>access permissions</strong> in Jellyfin — go to Jellyfin Admin → Users → check library access.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">On iOS, some codecs require transcoding. Make sure your Jellyfin server has hardware or software transcoding enabled.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Clear the app cache: on Android go to <strong>Settings → Apps → Jellyfin → Storage → Clear Cache</strong>. On iOS, delete and reinstall the app.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon cyan"><i class="fas fa-sync"></i></div>
+                  <div><div class="issue-title">Keeps asking to re-login / session expires too fast</div><div class="issue-subtitle">App logs out unexpectedly or shows "session expired"</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Check the <strong>session timeout</strong> setting in JellySSO: go to Admin → Settings → Application tab → Session Timeout. The default is 30 minutes; increase it if needed.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If JellySSO was restarted or redeployed, all sessions are invalidated. Users will need to log in again after a server restart.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Make sure your <strong>session store</strong> is persistent (database-backed) and not in-memory only, otherwise restarts always clear sessions.</div></li>
+                </ol>
+              </div>
+            </div>
+
+          </div><!-- /mobile panel -->
+
+
+          <!-- ═══════════════════════════════════════════════════
+               WEB BROWSER PANEL
+          ═══════════════════════════════════════════════════ -->
+          <div class="platform-panel" id="panel-web">
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-ban"></i></div>
+                  <div><div class="issue-title">Can't access JellySSO in the browser</div><div class="issue-subtitle">Page won't load or shows a connection refused error</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Confirm JellySSO is running: check the server logs or run <code>npm start</code> / your startup method.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Make sure you're using the correct URL: <code><%= baseUrl %></code>. Ensure the port is included if it's non-standard (not 80/443).</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If running behind a reverse proxy, verify the proxy is forwarding to the correct internal port and has <code>proxy_pass</code> / <code>ProxyPass</code> correctly configured.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">HTTPS mixed-content: if your proxy serves HTTPS but JellySSO internally serves HTTP, make sure the proxy sets the <code>X-Forwarded-Proto: https</code> header.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-user-lock"></i></div>
+                  <div><div class="issue-title">SSO login redirects but comes back with an error</div><div class="issue-subtitle">OIDC callback fails or shows "oidc_callback_failed"</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">The <strong>Callback / Redirect URI</strong> registered in your identity provider must be exactly: <code><%= baseUrl %>/api/auth/oidc/callback</code>. Check this in your Authentik/Keycloak/etc. application settings.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Verify the <strong>Issuer URL</strong> in Admin → SSO Configuration is correct and reachable from the JellySSO server (not just your browser).</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Click <strong>Test Connection</strong> on the SSO Configuration page to verify JellySSO can reach your identity provider's discovery endpoint.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Check that the <strong>Client ID</strong> and <strong>Client Secret</strong> in JellySSO match exactly what's configured in your identity provider.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Inspect the JellySSO server logs for a detailed error message — the callback handler logs the full exception on failure.</div></li>
+                  <li class="step"><span class="step-num">6</span><div class="step-content">Check Admin → Audit Logs for <code>OIDC_CALLBACK_ERROR</code> or <code>OIDC_STATE_MISMATCH</code> entries which include the specific error details.</div></li>
+                </ol>
+                <div class="warn-box"><i class="fas fa-exclamation-triangle"></i><span><code>OIDC_STATE_MISMATCH</code> usually means the login session expired before the callback completed (took too long on the IdP), or the user opened multiple login tabs simultaneously. Clear cookies and retry in a single tab.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon blue"><i class="fas fa-shield-alt"></i></div>
+                  <div><div class="issue-title">CSRF error / "Invalid token" on forms</div><div class="issue-subtitle">Form submissions fail with a CSRF error</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">CSRF tokens are tied to your session. If your session expired while you had a form open, the token is no longer valid. <strong>Refresh the page</strong> and try again.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If running behind a reverse proxy, the proxy must preserve the <code>Cookie</code> header and not strip or alter it.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Make sure you're not accessing JellySSO through two different URLs simultaneously (e.g. <code>localhost</code> and an IP address). Session cookies are tied to the domain/origin.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon green"><i class="fas fa-user-slash"></i></div>
+                  <div><div class="issue-title">SSO user created but has no access to media libraries</div><div class="issue-subtitle">Logged in via SSO but libraries are empty or inaccessible</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">When JellySSO auto-creates a Jellyfin user, they are created with <strong>default Jellyfin permissions</strong>. You must grant library access manually.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">In the Jellyfin admin panel, go to <strong>Dashboard → Users</strong>, find the SSO user, and configure their library access under the <strong>Access</strong> tab.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Alternatively, configure Jellyfin's <strong>default user policy</strong> to grant new users access to specific libraries automatically (Jellyfin Dashboard → Users → Default Role).</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon purple"><i class="fas fa-user-cog"></i></div>
+                  <div><div class="issue-title">SSO user not getting admin rights despite being in admin group</div><div class="issue-subtitle">Admin group mapping not working</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">In Admin → SSO Configuration, verify the <strong>Admin Group(s)</strong> field matches the group name <em>exactly</em> as it appears in your identity provider (case-insensitive but must match spelling).</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Confirm your identity provider is including the group in the <strong>token claims</strong>. The group is looked for in <code>groups</code>, <code>roles</code>, or <code>group</code> claims. Check your IdP's application/token settings.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">In Authentik: make sure the Jellyfin SSO application has a <strong>Property Mapping</strong> that includes the group claim. Add a scope mapping with <code>groups</code> built-in scope.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Use <strong>Test Connection</strong> on the SSO page to confirm the discovery endpoint is reachable, then log in again — group mapping only applies on each new login.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Check Admin → Audit Logs for <code>OIDC_GROUP_MAPPING</code> entries to see what groups were received and what admin status was applied.</div></li>
+                </ol>
+                <div class="tip-box"><i class="fas fa-lightbulb"></i><span>For multiple admin groups, enter them comma-separated in the Admin Group(s) field, e.g. <code>jellyfin-admins, media-admins</code>.</span></div>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon cyan"><i class="fas fa-cookie"></i></div>
+                  <div><div class="issue-title">Stuck in a login redirect loop</div><div class="issue-subtitle">Browser keeps redirecting between login and SSO provider</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content"><strong>Clear cookies and site data</strong> for the JellySSO domain in your browser. A stale or corrupt session cookie can cause infinite redirects.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Open the browser developer tools (F12), go to the <strong>Network tab</strong>, and observe what URL the loop cycles through to identify which step is failing.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If the redirect goes to the SSO provider and back but never completes, the callback URL mismatch is usually the cause — double-check the Redirect URI registered in your identity provider.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Try in a <strong>private/incognito window</strong> with no extensions. Blocker extensions can interfere with OAuth redirect flows.</div></li>
+                </ol>
+              </div>
+            </div>
+
+          </div><!-- /web panel -->
+
+
+          <!-- ═══════════════════════════════════════════════════
+               GENERAL TROUBLESHOOTING PANEL
+          ═══════════════════════════════════════════════════ -->
+          <div class="platform-panel" id="panel-general">
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon blue"><i class="fas fa-network-wired"></i></div>
+                  <div><div class="issue-title">Verify JellySSO ↔ Jellyfin connectivity</div><div class="issue-subtitle">Confirm JellySSO can reach your Jellyfin server</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Go to <strong>Admin → Settings → Jellyfin</strong> tab and ensure your Jellyfin URL is correct and the API key is valid.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">From the JellySSO host machine, verify Jellyfin is reachable: <code>curl <%= jellyfinUrl %>/System/Info/Public</code></div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Check that the API key has <strong>not expired or been revoked</strong> in Jellyfin's Dashboard → API Keys section.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">If JellySSO is in Docker, confirm the Jellyfin container is on the same network or the hostname is resolvable from within the JellySSO container.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-file-alt"></i></div>
+                  <div><div class="issue-title">Reading logs for errors</div><div class="issue-subtitle">Where to find diagnostic information</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content"><strong>Admin → Audit Logs</strong> — records every login attempt, failure, OIDC event, config change and more. Filter by action to find specific events.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content"><strong>Admin → Plugin Management → View Logs</strong> — if using the Jellyfin plugin, plugin-specific logs appear here.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content"><strong>JellySSO server console</strong> — detailed stack traces from OIDC and auth errors are printed to stdout. Check your process manager logs (Docker logs, PM2, systemd journal).</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content"><strong>Jellyfin Dashboard → Logs</strong> — for any playback or user access issues, Jellyfin's own application log is the authoritative source.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon green"><i class="fas fa-redo"></i></div>
+                  <div><div class="issue-title">After a config change nothing seems to update</div><div class="issue-subtitle">Settings saved but behaviour hasn't changed</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Some settings (like HTTPS mode, session configuration) require a <strong>server restart</strong> to take effect. Restart the JellySSO process after making infrastructure-level changes.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">SSO config changes (enable/disable, new credentials) take effect on the next login attempt — no restart needed for OIDC settings.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Make sure you clicked <strong>Save</strong> on the settings page and saw a success notification. Check Admin → Audit Logs for a corresponding <code>SETTINGS_UPDATE</code> or <code>OIDC_CONFIG_UPDATE</code> event.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Hard-refresh your browser (Ctrl+Shift+R / Cmd+Shift+R) to clear cached JavaScript and CSS after any update.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header" onclick="toggleIssue(this)">
+                <div class="issue-header-left">
+                  <div class="issue-icon purple"><i class="fas fa-docker"></i></div>
+                  <div><div class="issue-title">Docker / reverse proxy checklist</div><div class="issue-subtitle">Common pitfalls when running behind a proxy or in containers</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Pass <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, and <code>X-Forwarded-Host</code> headers from your proxy. JellySSO uses these to build the correct base URL for OAuth callbacks.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Set <code>trust proxy</code> in your environment. JellySSO is configured to trust reverse proxy headers — ensure your proxy IP is in the trusted range.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Make sure the Docker container can resolve the Jellyfin container hostname. Use Docker network aliases or explicit IP addresses.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">Map the data volume (<code>/app/src/config</code>) so the SQLite database persists across container restarts. Without this, all settings and sessions are lost on restart.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">If using Nginx, ensure <code>proxy_read_timeout</code> is at least 30s and <code>proxy_buffering off</code> is set for real-time SSE/streaming features.</div></li>
+                </ol>
+                <div class="warn-box"><i class="fas fa-exclamation-triangle"></i><span>The OIDC callback URL is built from the request headers at runtime. If your proxy doesn't send the correct <code>Host</code> header, the callback URL sent to your identity provider will be wrong, causing authentication failures.</span></div>
+              </div>
+            </div>
+
+          </div><!-- /general panel -->
+
+        </div><!-- /troubleshoot-container -->
+      </div><!-- /page-content -->
+    </main>
+  </div>
+
+  <script>
+    // Accordion toggle
+    function toggleIssue(header) {
+      const group = header.closest('.issue-group');
+      group.classList.toggle('open');
+    }
+
+    // Tab switching
+    document.querySelectorAll('.platform-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.platform-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+      });
+    });
+
+    // Copy URL to clipboard
+    function copyUrl(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        const pill = document.getElementById('serverUrlPill');
+        const orig = pill.innerHTML;
+        pill.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => { pill.innerHTML = orig; }, 1800);
+      });
+    }
+  </script>
+</body>
+</html>

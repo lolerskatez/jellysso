@@ -1773,4 +1773,16 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Client Troubleshooting Page
+router.get('/troubleshoot', requireAuth, requireAdmin, (req, res) => {
+  const config = SetupManager.getConfig();
+  const baseUrl = getBaseUrl(req, config);
+  res.render('admin/troubleshoot', {
+    user: req.session.user,
+    csrfToken: res.locals.csrfToken,
+    baseUrl,
+    jellyfinUrl: config.jellyfinUrl || 'http://jellyfin:8096'
+  });
+});
+
 module.exports = router;

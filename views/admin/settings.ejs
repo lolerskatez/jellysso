@@ -479,7 +479,7 @@
                 <div class="setting-description">Protect against Cross-Site Request Forgery</div>
               </div>
               <div>
-                <div class="toggle-switch active" data-name="csrfProtection"></div>
+                <div class="toggle-switch <%= settings.csrfProtection !== false ? 'active' : '' %>" data-name="csrfProtection"></div>
               </div>
             </div>
 
@@ -489,7 +489,7 @@
                 <div class="setting-description">Limit requests per IP address</div>
               </div>
               <div>
-                <div class="toggle-switch active" data-name="rateLimitEnabled"></div>
+                <div class="toggle-switch <%= settings.rateLimitEnabled !== false ? 'active' : '' %>" data-name="rateLimitEnabled"></div>
               </div>
             </div>
 
@@ -556,7 +556,7 @@
                 <div class="setting-description">Write logs to disk</div>
               </div>
               <div>
-                <div class="toggle-switch active" data-name="logToFile"></div>
+                <div class="toggle-switch <%= settings.logToFile !== false ? 'active' : '' %>" data-name="logToFile"></div>
               </div>
             </div>
 
@@ -576,7 +576,7 @@
                 <div class="setting-description">Log all user actions to database</div>
               </div>
               <div>
-                <div class="toggle-switch active" data-name="auditLogging"></div>
+                <div class="toggle-switch <%= settings.auditLogging !== false ? 'active' : '' %>" data-name="auditLogging"></div>
               </div>
             </div>
 
@@ -613,7 +613,7 @@
               </div>
               <div>
                 <div class="inline-controls">
-                  <input type="time" name="dailyCleanupTime" value="02:00">
+                  <input type="time" name="dailyCleanupTime" value="<%= settings.dailyCleanupTime || '02:00' %>">
                   <span>(Daily)</span>
                 </div>
               </div>
@@ -627,15 +627,15 @@
               <div>
                 <div class="inline-controls">
                   <select name="weeklyOptimizationDay">
-                    <option value="0">Sunday</option>
-                    <option value="1">Monday</option>
-                    <option value="2">Tuesday</option>
-                    <option value="3">Wednesday</option>
-                    <option value="4">Thursday</option>
-                    <option value="5">Friday</option>
-                    <option value="6" selected>Saturday</option>
+                    <option value="0" <%= parseInt(settings.weeklyOptimizationDay) === 0 ? 'selected' : '' %>>Sunday</option>
+                    <option value="1" <%= parseInt(settings.weeklyOptimizationDay) === 1 ? 'selected' : '' %>>Monday</option>
+                    <option value="2" <%= parseInt(settings.weeklyOptimizationDay) === 2 ? 'selected' : '' %>>Tuesday</option>
+                    <option value="3" <%= parseInt(settings.weeklyOptimizationDay) === 3 ? 'selected' : '' %>>Wednesday</option>
+                    <option value="4" <%= parseInt(settings.weeklyOptimizationDay) === 4 ? 'selected' : '' %>>Thursday</option>
+                    <option value="5" <%= parseInt(settings.weeklyOptimizationDay) === 5 ? 'selected' : '' %>>Friday</option>
+                    <option value="6" <%= parseInt(settings.weeklyOptimizationDay) === 6 ? 'selected' : '' %>>Saturday</option>
                   </select>
-                  <input type="time" name="weeklyOptimizationTime" value="03:00">
+                  <input type="time" name="weeklyOptimizationTime" value="<%= settings.weeklyOptimizationTime || '03:00' %>">
                 </div>
               </div>
             </div>
@@ -649,10 +649,10 @@
                 <div class="inline-controls">
                   <select name="monthlyBackupDay">
                     <% for (let i = 1; i <= 31; i++) { %>
-                      <option value="<%= i %>" <%= i === 1 ? 'selected' : '' %>><%= i %></option>
+                      <option value="<%= i %>" <%= parseInt(settings.monthlyBackupDay) === i ? 'selected' : '' %>><%= i %></option>
                     <% } %>
                   </select>
-                  <input type="time" name="monthlyBackupTime" value="04:00">
+                  <input type="time" name="monthlyBackupTime" value="<%= settings.monthlyBackupTime || '04:00' %>">
                 </div>
               </div>
             </div>

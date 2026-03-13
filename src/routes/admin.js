@@ -526,25 +526,45 @@ router.put('/api/users/:userId/profile', requireAuth, requireAdmin, async (req, 
 // Settings management page
 router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const settings = await DatabaseManager.getAllSettings();
+    const rawSettings = await DatabaseManager.getAllSettings();
     const jellyfinConfig = SetupManager.getConfig();
-    
-    // Get maintenance settings
-    const maintenanceSettings = {
-      dailyHour: settings.maintenance_daily_hour || 2,
-      weeklyDay: settings.maintenance_weekly_day || 0,
-      weeklyHour: settings.maintenance_weekly_hour || 3,
-      monthlyDay: settings.maintenance_monthly_day || 1,
-      monthlyHour: settings.maintenance_monthly_hour || 4,
-      backupRetention: settings.backup_retention || 12,
-      cleanupThreshold: settings.cleanup_threshold || 90
-    };
-    
+
+    // Build time strings (HH:MM) from stored hour integers
+    const pad = n => String(parseInt(n) || 0).padStart(2, '0');
+    const dailyHour   = rawSettings.maintenance_daily_hour   ?? 2;
+    const weeklyDay   = rawSettings.maintenance_weekly_day   ?? 0;
+    const weeklyHour  = rawSettings.maintenance_weekly_hour  ?? 3;
+    const monthlyDay  = rawSettings.maintenance_monthly_day  ?? 1;
+    const monthlyHour = rawSettings.maintenance_monthly_hour ?? 4;
+
+    // Normalize all settings to camelCase for the view
+    const settings = Object.assign({}, rawSettings, {
+      // Maintenance
+      dailyCleanupTime:       pad(dailyHour)  + ':00',
+      weeklyOptimizationDay:  weeklyDay,
+      weeklyOptimizationTime: pad(weeklyHour) + ':00',
+      monthlyBackupDay:       monthlyDay,
+      monthlyBackupTime:      pad(monthlyHour) + ':00',
+      backupRetention:  rawSettings.backup_retention  ?? 12,
+      cleanupThreshold: rawSettings.cleanup_threshold ?? 90,
+      // Security
+      csrfProtection:    rawSettings.csrf_protection    !== 'false',
+      rateLimitEnabled:  rawSettings.rate_limit_enabled !== 'false',
+      rateLimit:         rawSettings.rate_limit         ?? 60,
+      requireHttps:      rawSettings.require_https      === 'true',
+      // Logging
+      logLevel:          rawSettings.log_level          || 'info',
+      logToFile:         rawSettings.log_to_file        !== 'false',
+      logRetention:      rawSettings.log_retention      ?? 30,
+      auditLogging:      rawSettings.audit_logging      !== 'false',
+      auditLogRetention: rawSettings.audit_log_retention ?? 90
+    });
+
     res.render('admin/settings', {
       user: req.session.user,
       csrfToken: res.locals.csrfToken,
-      settings: Object.assign({}, settings, maintenanceSettings),
-      appSettings: settings,
+      settings,
+      appSettings: rawSettings,
       jellyfinSettings: jellyfinConfig
     });
   } catch (error) {
@@ -733,13 +753,13 @@ router.post('/api/maintenance/settings', requireAuth, requireAdmin, async (req, 
     const { dailyCleanup, weeklyOptimize, monthlyBackup, backupRetention, cleanupThreshold } = req.body;
     
     // Store settings in database
-    await DatabaseManager.updateSetting('maintenance_daily_hour', dailyCleanup?.hour || 2);
-    await DatabaseManager.updateSetting('maintenance_weekly_day', weeklyOptimize?.dayOfWeek || 0);
-    await DatabaseManager.updateSetting('maintenance_weekly_hour', weeklyOptimize?.hour || 3);
-    await DatabaseManager.updateSetting('maintenance_monthly_day', monthlyBackup?.dayOfMonth || 1);
-    await DatabaseManager.updateSetting('maintenance_monthly_hour', monthlyBackup?.hour || 4);
-    await DatabaseManager.updateSetting('backup_retention', backupRetention || 12);
-    await DatabaseManager.updateSetting('cleanup_threshold', cleanupThreshold || 90);
+    await DatabaseManager.setSetting('maintenance_daily_hour',   String(dailyCleanup?.hour   || 2));
+    await DatabaseManager.setSetting('maintenance_weekly_day',   String(weeklyOptimize?.dayOfWeek || 0));
+    await DatabaseManager.setSetting('maintenance_weekly_hour',  String(weeklyOptimize?.hour  || 3));
+    await DatabaseManager.setSetting('maintenance_monthly_day',  String(monthlyBackup?.dayOfMonth || 1));
+    await DatabaseManager.setSetting('maintenance_monthly_hour', String(monthlyBackup?.hour   || 4));
+    await DatabaseManager.setSetting('backup_retention',         String(backupRetention       || 12));
+    await DatabaseManager.setSetting('cleanup_threshold',        String(cleanupThreshold      || 90));
     
     // Log the configuration change
     await AuditLogger.log({
@@ -1290,42 +1310,64 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Save application settings
+// Save application settings — handles all tabs (app, jellyfin, security, logging, maintenance)
 router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
-  console.log('Settings save request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Settings save request body:', JSON.stringify(req.body, null, 2));
   try {
-    const config = SetupManager.getConfig();
-    
-    // Update settings
-    if (req.body.appName !== undefined) config.appName = req.body.appName;
-    if (req.body.sessionTimeout !== undefined) config.sessionTimeout = parseInt(req.body.sessionTimeout);
-    if (req.body.httpsEnabled !== undefined) config.httpsEnabled = req.body.httpsEnabled === 'true' || req.body.httpsEnabled === true;
-    if (req.body.theme !== undefined) config.theme = req.body.theme;
-    
-    // Update Jellyfin settings
-    const updates = {};
-    if (req.body.jellyfinUrl !== undefined) updates.jellyfinUrl = req.body.jellyfinUrl;
-    if (req.body.jellyfinPublicUrl !== undefined) updates.jellyfinPublicUrl = req.body.jellyfinPublicUrl;
-    if (req.body.webAppPublicUrl !== undefined) updates.webAppPublicUrl = req.body.webAppPublicUrl;
-    if (req.body.apiKey !== undefined && req.body.apiKey) updates.apiKey = req.body.apiKey;
-    
-    // Save to config file
-    SetupManager.updateConfig(updates);
-    
+    const section = req.body.section || 'app';
+    // JS sends { section, settings: { ... } }; support flat body too
+    const s = req.body.settings || req.body;
+
+    if (section === 'app') {
+      const updates = {};
+      if (s.appName        !== undefined) updates.appName        = s.appName;
+      if (s.sessionTimeout !== undefined) updates.sessionTimeout = parseInt(s.sessionTimeout) || 30;
+      if (s.httpsEnabled   !== undefined) updates.httpsEnabled   = s.httpsEnabled === 'true' || s.httpsEnabled === true;
+      if (s.theme          !== undefined) updates.theme          = s.theme;
+      if (s.webAppPublicUrl !== undefined) updates.webAppPublicUrl = s.webAppPublicUrl;
+      SetupManager.updateConfig(updates);
+
+    } else if (section === 'jellyfin') {
+      const updates = {};
+      if (s.jellyfinUrl       !== undefined) updates.jellyfinUrl       = s.jellyfinUrl;
+      if (s.jellyfinPublicUrl !== undefined) updates.jellyfinPublicUrl = s.jellyfinPublicUrl;
+      if (s.webAppPublicUrl   !== undefined) updates.webAppPublicUrl   = s.webAppPublicUrl;
+      if (s.apiKey && s.apiKey.trim())       updates.apiKey            = s.apiKey.trim();
+      SetupManager.updateConfig(updates);
+
+    } else if (section === 'security') {
+      if (s.csrfProtection   !== undefined) await DatabaseManager.setSetting('csrf_protection',    String(s.csrfProtection));
+      if (s.rateLimitEnabled !== undefined) await DatabaseManager.setSetting('rate_limit_enabled', String(s.rateLimitEnabled));
+      if (s.rateLimit        !== undefined) await DatabaseManager.setSetting('rate_limit',          String(parseInt(s.rateLimit) || 60));
+      if (s.requireHttps     !== undefined) await DatabaseManager.setSetting('require_https',      String(s.requireHttps));
+
+    } else if (section === 'logging') {
+      if (s.logLevel          !== undefined) await DatabaseManager.setSetting('log_level',           s.logLevel);
+      if (s.logToFile         !== undefined) await DatabaseManager.setSetting('log_to_file',         String(s.logToFile));
+      if (s.logRetention      !== undefined) await DatabaseManager.setSetting('log_retention',       String(parseInt(s.logRetention) || 30));
+      if (s.auditLogging      !== undefined) await DatabaseManager.setSetting('audit_logging',       String(s.auditLogging));
+      if (s.auditLogRetention !== undefined) await DatabaseManager.setSetting('audit_log_retention', String(parseInt(s.auditLogRetention) || 90));
+
+    } else if (section === 'maintenance') {
+      // Parse HH:MM time strings into hour integers
+      const parseHour = str => str ? parseInt(str.split(':')[0]) || 0 : undefined;
+      if (s.dailyCleanupTime        !== undefined) await DatabaseManager.setSetting('maintenance_daily_hour',   String(parseHour(s.dailyCleanupTime)));
+      if (s.weeklyOptimizationDay   !== undefined) await DatabaseManager.setSetting('maintenance_weekly_day',   String(parseInt(s.weeklyOptimizationDay)));
+      if (s.weeklyOptimizationTime  !== undefined) await DatabaseManager.setSetting('maintenance_weekly_hour',  String(parseHour(s.weeklyOptimizationTime)));
+      if (s.monthlyBackupDay        !== undefined) await DatabaseManager.setSetting('maintenance_monthly_day',  String(parseInt(s.monthlyBackupDay)));
+      if (s.monthlyBackupTime       !== undefined) await DatabaseManager.setSetting('maintenance_monthly_hour', String(parseHour(s.monthlyBackupTime)));
+      if (s.backupRetention         !== undefined) await DatabaseManager.setSetting('backup_retention',        String(parseInt(s.backupRetention) || 12));
+      if (s.cleanupThreshold        !== undefined) await DatabaseManager.setSetting('cleanup_threshold',       String(parseInt(s.cleanupThreshold) || 90));
+    }
+
     await AuditLogger.log({
       action: 'SETTINGS_UPDATE',
       userId: req.session.user?.Id,
-      resource: 'settings',
-      details: { 
-        appName: config.appName,
-        httpsEnabled: config.httpsEnabled,
-        webAppPublicUrl: config.webAppPublicUrl
-      },
+      resource: `settings:${section}`,
+      details: { section },
       status: 'success',
       ip: req.ip
     });
-    
+
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (error) {
     console.error('Error saving settings:', error);

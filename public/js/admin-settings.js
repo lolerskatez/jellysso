@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Run maintenance function
   async function runMaintenance() {
-    if (!confirm('Run database maintenance now? This may take a few moments.')) {
+    if (!confirm('Run all database maintenance tasks now? This may take a few moments.')) {
       return;
     }
 
@@ -134,11 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
       const response = await fetch('/admin/api/maintenance/run', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
+        body: JSON.stringify({ task: 'all' })
       });
 
       const data = await response.json();

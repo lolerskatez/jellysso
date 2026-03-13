@@ -31,11 +31,11 @@
       </a>
     </div>
 
-    <!-- Client Troubleshooting (for all users) -->
+    <!-- Jellyfin Client Guide (for all users) -->
     <div class="nav-item">
-      <a href="/admin/troubleshoot" class="nav-link <%= currentPage === 'admin-troubleshoot' ? 'active' : '' %>">
+      <a href="/admin/client-guide" class="nav-link <%= currentPage === 'client-guide' ? 'active' : '' %>">
         <i class="fas fa-life-ring"></i>
-        Client Troubleshooting
+        Client Setup Guide
       </a>
     </div>
 
@@ -79,6 +79,12 @@
         <a href="/admin/plugins" class="nav-link <%= currentPage === 'admin-plugins' ? 'active' : '' %>">
           <i class="fas fa-puzzle-piece"></i>
           Plugin Management
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/troubleshoot" class="nav-link <%= currentPage === 'admin-troubleshoot' ? 'active' : '' %>">
+          <i class="fas fa-tools"></i>
+          App Troubleshooting
         </a>
       </div>
     <% } %>

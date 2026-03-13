@@ -1773,8 +1773,8 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Client Troubleshooting Page
-router.get('/troubleshoot', requireAuth, (req, res) => {
+// JellySSO App Troubleshooting (admin only)
+router.get('/troubleshoot', requireAuth, requireAdmin, (req, res) => {
   const config = SetupManager.getConfig();
   const baseUrl = getBaseUrl(req, config);
   res.render('admin/troubleshoot', {
@@ -1782,6 +1782,29 @@ router.get('/troubleshoot', requireAuth, (req, res) => {
     csrfToken: res.locals.csrfToken,
     baseUrl,
     jellyfinUrl: config.jellyfinUrl || 'http://jellyfin:8096'
+  });
+});
+
+// Jellyfin Client Setup Guide (all authenticated users)
+router.get('/client-guide', requireAuth, (req, res) => {
+  const config = SetupManager.getConfig();
+  const baseUrl = getBaseUrl(req, config);
+  const jellyfinPublicUrl = config.jellyfinPublicUrl || '';
+  const jellyfinUrl = config.jellyfinUrl || '';
+  const webAppPublicUrl = config.webAppPublicUrl || '';
+  // clientUrl = the server address Jellyfin apps should connect to directly
+  const clientUrl = jellyfinPublicUrl || jellyfinUrl;
+  // appUrl = the public-facing JellySSO address (for SSO login / QuickConnect)
+  const appUrl = webAppPublicUrl || baseUrl;
+  res.render('client-guide', {
+    user: req.session.user,
+    csrfToken: res.locals.csrfToken,
+    baseUrl,
+    jellyfinUrl,
+    jellyfinPublicUrl,
+    webAppPublicUrl,
+    clientUrl,
+    appUrl
   });
 });
 

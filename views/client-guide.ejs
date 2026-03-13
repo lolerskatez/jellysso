@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Jellyfin Client Setup Guide">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Client Setup Guide - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .guide-container {
+      max-width: 960px;
+    }
+
+    /* ── Server address cards ──────────────────────────────────────────── */
+    .server-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+    .server-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-lg);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .server-card.primary {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 6%, var(--bg-card)), var(--bg-card));
+    }
+    .server-card-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .server-card.primary .server-card-label {
+      color: var(--primary);
+    }
+    .server-card-label .badge {
+      background: var(--primary);
+      color: white;
+      font-size: 0.625rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      letter-spacing: 0.3px;
+    }
+    .copy-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px 6px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-family: monospace;
+      color: var(--gray-900);
+      cursor: pointer;
+      transition: all var(--transition);
+      word-break: break-all;
+      max-width: 100%;
+    }
+    .copy-pill:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 5%, var(--bg-secondary));
+    }
+    .copy-pill.copied {
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .copy-pill i { font-size: 0.75rem; flex-shrink: 0; }
+    .server-card-desc {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: var(--spacing-sm);
+      line-height: 1.5;
+    }
+
+    /* ── QuickConnect banner ───────────────────────────────────────────── */
+    .qc-banner {
+      background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03));
+      border: 1px solid rgba(16,185,129,0.35);
+      border-radius: var(--border-radius-lg);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-md);
+    }
+    .qc-banner-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--border-radius);
+      background: rgba(16,185,129,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--success);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .qc-banner-text { flex: 1; }
+    .qc-banner-text h3 {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin: 0 0 4px 0;
+    }
+    .qc-banner-text p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.5;
+    }
+    .qc-banner-text a {
+      color: var(--success);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .qc-banner-text a:hover { text-decoration: underline; }
+
+    /* ── Platform tabs ─────────────────────────────────────────────────── */
+    .platform-tabs {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xl);
+      border-bottom: 2px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+    .platform-tab {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .platform-tab:hover { color: var(--primary); }
+    .platform-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .platform-tab i { font-size: 1.1rem; }
+
+    /* ── Platform panels ───────────────────────────────────────────────── */
+    .platform-panel { display: none; }
+    .platform-panel.active { display: block; }
+
+    /* ── Setup step cards ──────────────────────────────────────────────── */
+    .setup-section {
+      margin-bottom: var(--spacing-xl);
+    }
+    .setup-section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin: 0 0 var(--spacing-md) 0;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    .setup-section-title i {
+      color: var(--primary);
+    }
+
+    .steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .step {
+      display: flex;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-content {
+      font-size: 0.9rem;
+      color: var(--gray-700);
+      line-height: 1.6;
+    }
+    .step-content strong { color: var(--gray-900); }
+    .step-content code {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.8125rem;
+      font-family: monospace;
+      color: var(--primary);
+    }
+    .step-content .inline-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-family: monospace;
+      font-size: 0.8125rem;
+      color: var(--primary);
+      cursor: pointer;
+      transition: all var(--transition);
+      vertical-align: middle;
+    }
+    .step-content .inline-pill:hover {
+      border-color: var(--primary);
+    }
+    .step-content .inline-pill i { font-size: 0.7rem; }
+
+    /* ── Info / tip / warn boxes ───────────────────────────────────────── */
+    .tip-box {
+      background: rgba(6, 182, 212, 0.07);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      margin-top: var(--spacing-md);
+      font-size: 0.875rem;
+      color: #0e7490;
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: flex-start;
+    }
+    .tip-box i { flex-shrink: 0; margin-top: 2px; }
+
+    .warn-box {
+      background: rgba(245,158,11,0.07);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      margin-top: var(--spacing-md);
+      font-size: 0.875rem;
+      color: #92400e;
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: flex-start;
+    }
+    .warn-box i { flex-shrink: 0; margin-top: 2px; }
+
+    /* ── Accordion (common issues) ─────────────────────────────────────── */
+    .issue-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-sm);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .issue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-md) var(--spacing-lg);
+      cursor: pointer;
+      user-select: none;
+      gap: var(--spacing-md);
+      transition: background var(--transition);
+    }
+    .issue-header:hover { background: var(--bg-secondary); }
+    .issue-header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+    .issue-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--border-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+    .issue-icon.red    { background: rgba(239,68,68,0.1);  color: var(--danger); }
+    .issue-icon.orange { background: rgba(245,158,11,0.1); color: var(--warning); }
+    .issue-icon.blue   { background: rgba(0,102,204,0.1);  color: var(--primary); }
+    .issue-icon.green  { background: rgba(16,185,129,0.1); color: var(--success); }
+    .issue-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--gray-900);
+    }
+    .issue-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+    .issue-chevron {
+      color: var(--text-secondary);
+      transition: transform 0.25s ease;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .issue-group.open .issue-chevron { transform: rotate(180deg); }
+    .issue-body {
+      display: none;
+      padding: 0 var(--spacing-lg) var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
+    .issue-group.open .issue-body { display: block; }
+
+    .common-issues-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin: var(--spacing-xl) 0 var(--spacing-md) 0;
+    }
+
+    @media (max-width: 640px) {
+      .platform-tabs { gap: 0; }
+      .platform-tab { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem; }
+      .server-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'client-guide' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Jellyfin Client Setup Guide</h1>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="guide-container">
+
+          <!-- ── Server address cards ──────────────────────────────────── -->
+          <div class="server-cards">
+            <div class="server-card primary">
+              <div class="server-card-label">
+                <i class="fas fa-external-link-alt"></i>
+                Jellyfin Public URL
+                <span class="badge">USE THIS</span>
+              </div>
+              <% if (jellyfinPublicUrl) { %>
+              <span class="copy-pill" data-url="<%= jellyfinPublicUrl %>">
+                <i class="fas fa-copy"></i>
+                <%= jellyfinPublicUrl %>
+              </span>
+              <% } else { %>
+              <span style="font-size:0.85rem; color: var(--text-secondary); font-style: italic;">Not configured — set this in Admin → Settings</span>
+              <% } %>
+              <p class="server-card-desc">Enter this address when adding a server in any Jellyfin app. This connects directly to the Jellyfin media server.</p>
+            </div>
+
+            <div class="server-card">
+              <div class="server-card-label">
+                <i class="fas fa-network-wired"></i>
+                Jellyfin Server URL (Internal)
+              </div>
+              <% if (jellyfinUrl) { %>
+              <span class="copy-pill" data-url="<%= jellyfinUrl %>">
+                <i class="fas fa-copy"></i>
+                <%= jellyfinUrl %>
+              </span>
+              <% } else { %>
+              <span style="font-size:0.85rem; color: var(--text-secondary); font-style: italic;">Not configured</span>
+              <% } %>
+              <p class="server-card-desc">The internal network address of your Jellyfin server. Use this for clients on the same local network if the public URL isn't available.</p>
+            </div>
+
+            <div class="server-card">
+              <div class="server-card-label">
+                <i class="fas fa-shield-alt"></i>
+                JellySSO Address
+              </div>
+              <span class="copy-pill" data-url="<%= baseUrl %>">
+                <i class="fas fa-copy"></i>
+                <%= baseUrl %>
+              </span>
+              <p class="server-card-desc">Used for SSO login in a web browser and to approve QuickConnect codes. Not the server address for Jellyfin apps.</p>
+            </div>
+
+            <% if (webAppPublicUrl && webAppPublicUrl !== baseUrl) { %>
+            <div class="server-card">
+              <div class="server-card-label">
+                <i class="fas fa-globe"></i>
+                Web App URL
+              </div>
+              <span class="copy-pill" data-url="<%= webAppPublicUrl %>">
+                <i class="fas fa-copy"></i>
+                <%= webAppPublicUrl %>
+              </span>
+              <p class="server-card-desc">The public URL for the Jellyfin web app if hosted separately.</p>
+            </div>
+            <% } %>
+          </div>
+
+          <!-- ── QuickConnect banner ───────────────────────────────────── -->
+          <div class="qc-banner">
+            <div class="qc-banner-icon"><i class="fas fa-bolt"></i></div>
+            <div class="qc-banner-text">
+              <h3>Tip: Use QuickConnect to log in on TV &amp; mobile apps</h3>
+              <p>
+                Native Jellyfin apps (Android TV, Fire TV, iOS, Android) don't support SSO login directly.
+                The easiest way to authenticate: open the Jellyfin app, choose <strong>Quick Connect</strong>, then visit
+                <a href="/quickconnect"><%= baseUrl %>/quickconnect</a> in a browser to approve the code.
+                No password needed.
+              </p>
+            </div>
+          </div>
+
+          <!-- ── Platform Tabs ─────────────────────────────────────────── -->
+          <div class="platform-tabs">
+            <button class="platform-tab active" data-panel="androidtv">
+              <i class="fab fa-android"></i> Android TV / Fire TV
+            </button>
+            <button class="platform-tab" data-panel="mobile">
+              <i class="fas fa-mobile-alt"></i> iOS &amp; Android
+            </button>
+            <button class="platform-tab" data-panel="web">
+              <i class="fas fa-globe"></i> Web Browser
+            </button>
+            <button class="platform-tab" data-panel="desktop">
+              <i class="fas fa-desktop"></i> Desktop
+            </button>
+          </div>
+
+
+          <!-- ════════════════════════════════════════════════════════════
+               ANDROID TV / FIRE TV
+          ════════════════════════════════════════════════════════════ -->
+          <div class="platform-panel active" id="panel-androidtv">
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content">Install the <strong>Jellyfin for Android TV</strong> app from the Google Play Store, Amazon Appstore, or your device's app store.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content">Launch the app. On the welcome screen select <strong>Add Server</strong>.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">Enter the server address: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span> — tap the pill to copy it first, then paste it on the TV.</div></li>
+                <li class="step"><span class="step-num">4</span><div class="step-content">The app may auto-discover servers on your LAN — it will find Jellyfin directly, which is correct. If it doesn't, add the server manually with the address above.</div></li>
+                <li class="step"><span class="step-num">5</span><div class="step-content">Once connected, on the login screen choose <strong>Sign in with Quick Connect</strong>. A 6-character code will appear on the TV.</div></li>
+                <li class="step"><span class="step-num">6</span><div class="step-content">On a phone or computer, open <strong><a href="/quickconnect" style="color:var(--primary)"><%= baseUrl %>/quickconnect</a></strong> and log in if prompted. Enter the code shown on the TV to approve the session.</div></li>
+                <li class="step"><span class="step-num">7</span><div class="step-content">The TV app will automatically sign in — no password required.</div></li>
+              </ol>
+              <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Fire TV: if you can't type the full server URL easily with a remote, use the Fire TV's built-in browser or a phone to complete initial setup via QuickConnect — no typing needed on the TV after entering the server address once.</span></div>
+            </div>
+
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-wifi"></i> Local vs. remote access</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content"><strong>On your home network:</strong> Use the <strong>Jellyfin Server URL (Internal)</strong> (<code><%= jellyfinUrl %></code>) if your TV can't reach the public URL. Both devices must be on the same network.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content"><strong>Away from home:</strong> Use the <strong>Jellyfin Public URL</strong> (<code><%= jellyfinPublicUrl || 'not configured' %></code>). This requires your Jellyfin server to be accessible from the internet via port forwarding, a reverse proxy, or a VPN.</div></li>
+              </ol>
+            </div>
+
+            <p class="common-issues-title">Common issues</p>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-plug"></i></div>
+                  <div><div class="issue-title">Can't connect to server</div><div class="issue-subtitle">App times out or shows "Unable to connect"</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Confirm the server URL saved in the app is the Jellyfin server address (<code><%= clientUrl || jellyfinUrl %></code>), not the JellySSO address.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Test reachability from a browser on the same network: <code><%= clientUrl || jellyfinUrl %>/System/Info/Public</code> — you should get a JSON response with Jellyfin server info.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Check your firewall / router — the port JellySSO runs on must be open to the TV's IP. Try accessing the URL from your phone on the same Wi-Fi first.</div></li>
+                  <li class="step"><span class="step-num">4</span><div class="step-content">If using HTTPS, ensure the certificate is from a trusted CA. Android TV and Fire TV reject self-signed certs. Use a reverse proxy with a Let's Encrypt certificate, or switch to HTTP on the local network.</div></li>
+                  <li class="step"><span class="step-num">5</span><div class="step-content">Fully close the app (long-press Home → App Switcher → swipe away) and relaunch — Fire TV caches server state aggressively.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-sign-in-alt"></i></div>
+                  <div><div class="issue-title">Login fails / "Invalid username or password"</div><div class="issue-subtitle">Credentials rejected despite being correct</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">If your account was created or last used via <strong>SSO login</strong>, your Jellyfin password is locked for security. You <strong>cannot</strong> log in with a password — use QuickConnect instead (see setup steps above).</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If you log in with a username/password, make sure you're using your <strong>Jellyfin credentials</strong>, not your SSO provider (e.g. Google/Authentik) credentials. These are separate.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">On QuickConnect: make sure both the TV and the browser authorizing the code are connecting to the <strong>same server URL</strong>.</div></li>
+                </ol>
+                <div class="warn-box"><i class="fas fa-exclamation-triangle"></i><span>SSO-created accounts have their Jellyfin password locked intentionally. QuickConnect is the correct login method for these users on Android TV and Fire TV.</span></div>
+              </div>
+            </div>
+
+          </div><!-- /androidtv panel -->
+
+
+          <!-- ════════════════════════════════════════════════════════════
+               iOS & ANDROID MOBILE
+          ════════════════════════════════════════════════════════════ -->
+          <div class="platform-panel" id="panel-mobile">
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content">Install the Jellyfin app: <strong>Swiftfin</strong> (iOS/tvOS) or <strong>Jellyfin for Android</strong> from your app store.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content">Open the app and select <strong>Add Server</strong> or <strong>Connect Manually</strong>.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">Enter the server address: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
+                <li class="step"><span class="step-num">4</span><div class="step-content">Auto-discovery will find Jellyfin directly on your LAN — that's correct. If it doesn't appear, add it manually with the address above.</div></li>
+                <li class="step"><span class="step-num">5</span><div class="step-content">On the login screen, select <strong>Quick Connect</strong> to get a code, then approve it at <a href="/quickconnect" style="color:var(--primary)"><%= baseUrl %>/quickconnect</a> in a browser.</div></li>
+                <li class="step"><span class="step-num">6</span><div class="step-content">Alternatively: open <code><%= baseUrl %></code> in your mobile browser and log in via SSO, then use QuickConnect to authorize the native app.</div></li>
+              </ol>
+              <div class="tip-box"><i class="fas fa-lightbulb"></i><span>iOS 14+ and newer Android versions may block plain HTTP (non-HTTPS) connections to external servers. If you get connection errors only on mobile (not on desktop), try switching to HTTPS with a valid certificate.</span></div>
+            </div>
+
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-key"></i> SSO login on mobile</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content">Native Jellyfin apps don't have a built-in SSO/OIDC button. Open <strong><code><%= baseUrl %></code> in your mobile browser</strong> and log in via the SSO button there.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content">After logging in via the browser, tap the <strong>QuickConnect</strong> tile on your user dashboard, then enter the code shown in the Jellyfin app.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">The app will be signed in without needing a password. You only need to do this once per device — the app stores the access token.</div></li>
+              </ol>
+            </div>
+
+            <p class="common-issues-title">Common issues</p>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-plug"></i></div>
+                  <div><div class="issue-title">App can't find / connect to server</div><div class="issue-subtitle">Discovery fails or connection times out</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Add the server manually using the Jellyfin server address: <code><%= clientUrl || jellyfinUrl %></code>. Auto-discovery may work on LAN — that's fine too.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">On cellular data, a local IP address won't be reachable. You need a public domain or a VPN for remote access.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Verify the server responds by opening <code><%= clientUrl || jellyfinUrl %>/System/Info/Public</code> in your phone browser. You should get a JSON response.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-sync"></i></div>
+                  <div><div class="issue-title">Session keeps expiring / app logs out</div><div class="issue-subtitle">"Session expired" or frequent re-login prompts</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">JellySSO session timeout defaults to 30 minutes. An admin can increase it in <strong>Admin → Settings → Application → Session Timeout</strong>.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If the server was restarted, all sessions are cleared. Log in again via QuickConnect — it only takes a few seconds.</div></li>
+                </ol>
+              </div>
+            </div>
+
+          </div><!-- /mobile panel -->
+
+
+          <!-- ════════════════════════════════════════════════════════════
+               WEB BROWSER
+          ════════════════════════════════════════════════════════════ -->
+          <div class="platform-panel" id="panel-web">
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-globe"></i> Accessing Jellyfin via browser</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content">To use SSO login, open the JellySSO login page: <span class="copy-pill inline-pill" data-url="<%= baseUrl %>"><i class="fas fa-copy"></i><%= baseUrl %></span> — click <strong>Sign in with SSO</strong> to authenticate through your identity provider.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content">To access Jellyfin directly (username/password login), go to: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">After SSO login at JellySSO you will have an authenticated session on your Jellyfin server. Bookmark <code><%= baseUrl %></code> for SSO sign-in or <code><%= clientUrl %></code> for direct Jellyfin access.</div></li>
+              </ol>
+            </div>
+
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-qrcode"></i> Authorizing another device from the browser</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content">Make sure you are logged in — either via <code><%= baseUrl %></code> (SSO login) or directly at <code><%= clientUrl %></code>.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content">On the device you want to authorize (TV, phone app), go to its login screen and select <strong>Quick Connect</strong>. Note the 6-character code.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">In your browser, navigate to <a href="/quickconnect" style="color:var(--primary)"><strong><%= baseUrl %>/quickconnect</strong></a>.</div></li>
+                <li class="step"><span class="step-num">4</span><div class="step-content">Enter the code from the device and click <strong>Authorize</strong>. The device will be logged in instantly.</div></li>
+              </ol>
+            </div>
+
+            <p class="common-issues-title">Common issues</p>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-ban"></i></div>
+                  <div><div class="issue-title">Page won't load / connection refused</div><div class="issue-subtitle">Browser shows ERR_CONNECTION_REFUSED or similar</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Verify JellySSO is running. Ask an admin to check the server process or container.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Make sure you're using the Jellyfin server URL including port if non-standard: <code><%= clientUrl || jellyfinUrl %></code>.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If you're outside the home network and the URL uses a local IP, you'll need a VPN or a domain with port forwarding set up.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-user-lock"></i></div>
+                  <div><div class="issue-title">SSO login redirects back with an error</div><div class="issue-subtitle">OIDC callback fails after leaving the SSO provider page</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Clear your browser cookies for this site (site data, not all cookies) and try again in a single tab.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">If the issue persists, contact an admin — the OIDC callback URL may be misconfigured on the identity provider side.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Try a private/incognito window with no extensions. Ad-blockers and privacy extensions can break OAuth redirect flows.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon blue"><i class="fas fa-user-slash"></i></div>
+                  <div><div class="issue-title">Logged in but libraries are empty</div><div class="issue-subtitle">No content visible after signing in</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">If your account was newly created (e.g. first SSO login), library access must be granted by an admin in the Jellyfin dashboard or JellySSO admin panel.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Contact your server admin and ask them to grant library access to your user account.</div></li>
+                </ol>
+              </div>
+            </div>
+
+          </div><!-- /web panel -->
+
+
+          <!-- ════════════════════════════════════════════════════════════
+               DESKTOP
+          ════════════════════════════════════════════════════════════ -->
+          <div class="platform-panel" id="panel-desktop">
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-desktop"></i> Desktop app setup</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content">Download the <strong>Jellyfin Media Player</strong> (JMP) from <a href="https://github.com/jellyfin/jellyfin-media-player/releases" target="_blank" rel="noopener" style="color:var(--primary)">jellyfin/jellyfin-media-player</a> for Windows, macOS, or Linux.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content">On the welcome screen, click <strong>Add Server</strong> and enter the Jellyfin server URL: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">Enter your Jellyfin username and password on the login screen. If your account uses SSO, use QuickConnect — click the <strong>Quick Connect</strong> option, note the code, then approve it at <a href="/quickconnect" style="color:var(--primary)"><%= baseUrl %>/quickconnect</a>.</div></li>
+                <li class="step"><span class="step-num">4</span><div class="step-content">Alternatively, access the <strong>Jellyfin web client</strong> directly: navigate to <code><%= clientUrl %></code> in Chrome, Firefox, Edge, or Safari. For SSO login, use <code><%= baseUrl %></code> instead.</div></li>
+              </ol>
+              <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Jellyfin Media Player embeds a Chromium-based web interface, so the browser and desktop app experience is nearly identical. Consider using the browser first to verify everything works before installing the desktop app.</span></div>
+            </div>
+
+            <div class="setup-section">
+              <h2 class="setup-section-title"><i class="fas fa-tv"></i> Other clients (Kodi, Infuse, etc.)</h2>
+              <ol class="steps">
+                <li class="step"><span class="step-num">1</span><div class="step-content"><strong>Kodi (Jellyfin for Kodi add-on):</strong> Install the add-on, then in its settings set the Jellyfin server address to <code><%= clientUrl || jellyfinUrl %></code>. Use your Jellyfin username and password; QuickConnect is not currently supported in the Kodi add-on.</div></li>
+                <li class="step"><span class="step-num">2</span><div class="step-content"><strong>Infuse (iOS/tvOS):</strong> Add a <em>Jellyfin</em> share and enter the server URL as <code><%= clientUrl || jellyfinUrl %></code> with your Jellyfin username and password.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content"><strong>Finamp (music client):</strong> Same server URL — enter <code><%= clientUrl || jellyfinUrl %></code> and authenticate with username/password.</div></li>
+                <li class="step"><span class="step-num">4</span><div class="step-content">For clients that don't support QuickConnect: you need a standard Jellyfin username and password. If your account is SSO-only (password locked), ask an admin to set a local password for you in <strong>Admin → User Management</strong>.</div></li>
+              </ol>
+            </div>
+
+            <p class="common-issues-title">Common issues</p>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon green"><i class="fas fa-lock"></i></div>
+                  <div><div class="issue-title">Need a password but account uses SSO</div><div class="issue-subtitle">Client doesn't support QuickConnect or SSO</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Contact your server administrator and ask them to set a <strong>local Jellyfin password</strong> for your account.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">The admin can do this in <strong>Admin → User Management</strong> — they can set a password for any user regardless of SSO status.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">Once a local password is set, use that password in clients that don't support QuickConnect.</div></li>
+                </ol>
+              </div>
+            </div>
+
+          </div><!-- /desktop panel -->
+
+        </div><!-- /guide-container -->
+      </div><!-- /page-content -->
+    </main>
+  </div>
+
+  <script src="/js/mobile-nav.js"></script>
+  <script src="/js/client-guide.js"></script>
+</body>
+</html>

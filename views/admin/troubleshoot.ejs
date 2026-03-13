@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Jellyfin Client Troubleshooting - Jellyfin Companion Admin">
+  <meta name="description" content="JellySSO Application Troubleshooting - Admin">
   <meta name="csrf-token" content="<%= csrfToken || '' %>">
-  <title>Client Troubleshooting - Jellyfin Companion</title>
+  <title>App Troubleshooting - Jellyfin Companion</title>
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
@@ -288,7 +288,7 @@
           <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
             <i class="fas fa-bars"></i>
           </button>
-          <h1 class="header-title">Client Troubleshooting</h1>
+          <h1 class="header-title">App Troubleshooting</h1>
         </div>
       </header>
 
@@ -298,18 +298,9 @@
           <div class="info-banner">
             <i class="fas fa-info-circle"></i>
             <p>
-              This guide covers common problems with <strong>Jellyfin clients</strong> connecting through JellySSO.
-              Your JellySSO server URL is <strong><%= baseUrl %></strong> — use this as the server address in all Jellyfin clients.
-              The underlying Jellyfin server at <strong><%= jellyfinUrl %></strong> should not be accessed directly by clients when going through JellySSO.
+              This reference covers common <strong>JellySSO application issues</strong> — SSO configuration, OIDC callbacks, CSRF errors, Docker/proxy setup, and connectivity between JellySSO and Jellyfin.
+              For help setting up Jellyfin clients (apps, TV, mobile), see the <a href="/admin/client-guide" style="color: #0369a1; font-weight: 600;">Client Setup Guide</a>.
             </p>
-          </div>
-
-          <div class="server-url-box">
-            <span class="label"><i class="fas fa-server"></i> &nbsp;JellySSO URL (use this in clients):</span>
-            <span class="url-pill" id="serverUrlPill" data-url="<%= baseUrl %>">
-              <i class="fas fa-copy"></i>
-              <%= baseUrl %>
-            </span>
           </div>
 
           <!-- Platform Tabs -->

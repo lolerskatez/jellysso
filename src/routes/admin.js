@@ -6,6 +6,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const PerformanceMonitor = require('../models/PerformanceMonitor');
 const appLogger = require('../utils/logger');
+const securityConfig = require('../utils/securityConfig');
 const fs = require('fs').promises;
 const fsSyncApi = require('fs');
 const path = require('path');
@@ -1360,6 +1361,12 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       if (s.rateLimitEnabled !== undefined) await DatabaseManager.setSetting('rate_limit_enabled', String(s.rateLimitEnabled));
       if (s.rateLimit        !== undefined) await DatabaseManager.setSetting('rate_limit',          String(parseInt(s.rateLimit) || 60));
       if (s.requireHttps     !== undefined) await DatabaseManager.setSetting('require_https',      String(s.requireHttps));
+
+      // Apply changes to the running server immediately (no restart required)
+      securityConfig.invalidateCache();
+      if (s.rateLimit !== undefined) {
+        securityConfig.reconfigureLimiter(parseInt(s.rateLimit) || 60);
+      }
 
     } else if (section === 'logging') {
       if (s.logLevel          !== undefined) await DatabaseManager.setSetting('log_level',           s.logLevel);

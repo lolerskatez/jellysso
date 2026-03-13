@@ -466,7 +466,7 @@
             <div class="setting-row">
               <div>
                 <div class="setting-label">Enable CSRF Protection</div>
-                <div class="setting-description">Protect against Cross-Site Request Forgery</div>
+                <div class="setting-description">Protect against Cross-Site Request Forgery attacks — applies immediately. <strong>Only disable for testing.</strong></div>
               </div>
               <div>
                 <div class="toggle-switch <%= settings.csrfProtection !== false ? 'active' : '' %>" data-name="csrfProtection"></div>
@@ -476,7 +476,7 @@
             <div class="setting-row">
               <div>
                 <div class="setting-label">Enable Rate Limiting</div>
-                <div class="setting-description">Limit requests per IP address</div>
+                <div class="setting-description">Limit the number of requests per IP address — applies immediately</div>
               </div>
               <div>
                 <div class="toggle-switch <%= settings.rateLimitEnabled !== false ? 'active' : '' %>" data-name="rateLimitEnabled"></div>
@@ -485,8 +485,8 @@
 
             <div class="setting-row">
               <div>
-                <div class="setting-label">Rate Limit (requests/minute)</div>
-                <div class="setting-description">Maximum requests allowed per minute per IP</div>
+                <div class="setting-label">Rate Limit (requests / minute)</div>
+                <div class="setting-description">Maximum requests allowed per minute per IP — applies immediately</div>
               </div>
               <div>
                 <input type="number" name="rateLimit" value="<%= settings.rateLimit || 60 %>" min="1" max="1000">
@@ -496,20 +496,10 @@
             <div class="setting-row">
               <div>
                 <div class="setting-label">Require HTTPS</div>
-                <div class="setting-description">Force all connections to use HTTPS</div>
+                <div class="setting-description">Redirect all HTTP connections to HTTPS — applies immediately. Ensure a valid TLS certificate is configured before enabling.</div>
               </div>
               <div>
                 <div class="toggle-switch <%= settings.requireHttps ? 'active' : '' %>" data-name="requireHttps"></div>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Session Secret</div>
-                <div class="setting-description">Encryption key for session data</div>
-              </div>
-              <div>
-                <input type="password" value="••••••••••••••••" readonly>
               </div>
             </div>
           </div>

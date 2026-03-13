@@ -2,7 +2,6 @@ const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 const SetupManager = require('./models/SetupManager');
@@ -26,22 +25,11 @@ app.set('trust proxy', 1);
 // Logging setup — shared singleton so admin routes can adjust level/transports at runtime
 const logger = require('./utils/logger');
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  skip: (req) => {
-    // Don't rate limit health checks or static files
-    return req.path === '/api/health' || 
-           req.path.startsWith('/css/') || 
-           req.path.startsWith('/js/') || 
-           req.path.startsWith('/webfonts/') ||
-           req.path.startsWith('/images/');
-  }
-});
+// Security configuration — dynamic rate-limit / CSRF / HTTPS controlled via DB settings
+const securityConfig = require('./utils/securityConfig');
+
+// HTTPS redirect — reads require_https from DB; applies immediately when toggled
+app.use(securityConfig.getHttpsRedirectMiddleware());
 
 // Performance optimizations
 app.use(require('compression')()); // Enable gzip compression
@@ -76,7 +64,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-app.use(limiter); // Rate limiting
+app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB
 
 // Initialize session store (database-backed for persistence and clustering)
 const sessionStore = new SessionStore({
@@ -164,19 +152,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize CSRF protection for all requests EXCEPT logout, admin APIs, and setup
-// Setup routes are excluded because they run before authentication
-// Logout is safe (idempotent, only affects current user)
-// Admin APIs are protected by requireAdmin middleware which requires authentication
-app.use((req, res, next) => {
-  // Skip CSRF for setup routes (unauthenticated), logout endpoint, and admin routes (protected by auth)
+// CSRF protection — reads csrf_protection toggle from DB; applies immediately when toggled.
+// Always skipped for setup routes (unauthenticated), logout, and admin routes (protected by auth).
+app.use(async (req, res, next) => {
   if (req.path.startsWith('/setup') ||
-      (req.path === '/api/auth/logout' && req.method === 'POST') || 
+      (req.path === '/api/auth/logout' && req.method === 'POST') ||
       req.path.startsWith('/admin/') ||
       req.path.startsWith('/admin/api/') ||
       req.path.startsWith('/api/admin/')) {
     return next();
   }
+  try {
+    const enabled = await securityConfig.isCsrfEnabled();
+    if (!enabled) return next();
+  } catch (_) { /* default to enforcing on error */ }
   csrfProtection(req, res, next);
 });
 
@@ -395,3 +384,9 @@ app.listen(PORT, () => {
 
 // Start maintenance scheduler
 MaintenanceScheduler.start();
+
+// Initialise security config from DB so rate-limit max is correct from the first request
+DatabaseManager.getSetting('rate_limit').then(val => {
+  const max = parseInt(val) || 60;
+  securityConfig.reconfigureLimiter(max);
+}).catch(() => { /* use default */ });

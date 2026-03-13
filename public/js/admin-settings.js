@@ -257,7 +257,7 @@ async function loadAuditLogStats() {
 
     if (total)  total.textContent  = (data.totalRequests  ?? '—').toLocaleString();
     if (last24h) last24h.textContent = (data.last24h       ?? '—').toLocaleString();
-    if (rate)   rate.textContent   = data.successRate != null ? `${data.successRate}%` : '—';
+    if (rate)   rate.textContent   = data.successRate ?? '—';
     if (box)    box.style.display  = '';
   } catch (e) {
     console.error('Failed to load audit log stats:', e);

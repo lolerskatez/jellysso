@@ -183,21 +183,21 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { action, userId, status, limit = 25, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    const options = {
+
+    // Fetch ALL matching logs (up to 10000) so totals/stats are accurate
+    const allMatchingLogs = await AuditLogger.getLogs({
       action: action || undefined,
       userId: userId || undefined,
       status: status || undefined,
-      limit: Math.min(parseInt(limit), 500)
-    };
-    
-    const logs = await AuditLogger.getLogs(options);
-    const totalLogs = logs.length;
-    const paginatedLogs = logs.slice(offset, offset + parseInt(limit));
-    
-    // Count success/failure stats
-    const successCount = logs.filter(l => l.status === 'success').length;
-    const failureCount = logs.filter(l => l.status === 'failure').length;
+      limit: 10000
+    });
+
+    const totalLogs = allMatchingLogs.length;
+    const paginatedLogs = allMatchingLogs.slice(offset, offset + parseInt(limit));
+
+    // Count success/failure stats across all matching logs (not just the current page)
+    const successCount = allMatchingLogs.filter(l => l.status === 'success').length;
+    const failureCount = allMatchingLogs.filter(l => l.status === 'failure').length;
     
     // Enrich logs with usernames from Jellyfin
     let enrichedLogs = paginatedLogs;

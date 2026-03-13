@@ -539,8 +539,12 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
     const monthlyDay  = rawSettings.maintenance_monthly_day  ?? 1;
     const monthlyHour = rawSettings.maintenance_monthly_hour ?? 4;
 
-    // Normalize all settings to camelCase for the view
+    // Merge SetupManager config values so app-tab settings round-trip correctly
     const settings = Object.assign({}, rawSettings, {
+      // App tab — from setup.json (SetupManager), not DB
+      appName:        jellyfinConfig.appName        || 'JellySSO',
+      sessionTimeout: jellyfinConfig.sessionTimeout || 30,
+      theme:          jellyfinConfig.theme          || 'auto',
       // Maintenance
       dailyCleanupTime:       pad(dailyHour)  + ':00',
       weeklyOptimizationDay:  weeklyDay,
@@ -1341,11 +1345,12 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
 
     if (section === 'app') {
       const updates = {};
-      if (s.appName        !== undefined) updates.appName        = s.appName;
-      if (s.sessionTimeout !== undefined) updates.sessionTimeout = parseInt(s.sessionTimeout) || 30;
-      if (s.httpsEnabled   !== undefined) updates.httpsEnabled   = s.httpsEnabled === 'true' || s.httpsEnabled === true;
-      if (s.theme          !== undefined) updates.theme          = s.theme;
+      if (s.appName         !== undefined) updates.appName         = String(s.appName).trim() || 'JellySSO';
+      if (s.sessionTimeout  !== undefined) updates.sessionTimeout  = Math.max(5, parseInt(s.sessionTimeout) || 30);
+      if (s.theme           !== undefined) updates.theme           = s.theme;
       if (s.webAppPublicUrl !== undefined) updates.webAppPublicUrl = s.webAppPublicUrl;
+      // port is intentionally excluded — must be set via PORT env var
+      // httpsEnabled is intentionally excluded — handled by Security tab's requireHttps
       SetupManager.updateConfig(updates);
 
     } else if (section === 'jellyfin') {

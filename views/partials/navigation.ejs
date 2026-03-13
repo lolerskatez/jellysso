@@ -1,11 +1,30 @@
 <!-- Base Navigation Component -->
 <!-- Pass user and currentPage variables when including this partial -->
+<!-- Apply theme immediately (before paint) to avoid flash of wrong theme -->
+<script>
+(function(){
+  var t = '<%= locals.theme || "auto" %>';
+  if (t === 'dark') document.documentElement.setAttribute('data-theme','dark');
+  else if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+  else {
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    // Re-apply if system preference changes while on the page
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      if (document.documentElement.getAttribute('data-theme') !== 'dark' &&
+          document.documentElement.getAttribute('data-theme') !== 'light') {
+        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      }
+    });
+  }
+})();
+</script>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-      <img src="/logo-icon.svg" alt="JellySSO" style="width: 40px; height: 40px;">
-      <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">JellySSO</h2>
+      <img src="/logo-icon.svg" alt="<%= locals.appName || 'JellySSO' %>" style="width: 40px; height: 40px;">
+      <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;"><%= locals.appName || 'JellySSO' %></h2>
     </div>
     <p><%= user?.Policy?.IsAdministrator ? 'Admin Dashboard' : 'User Dashboard' %></p>
   </div>

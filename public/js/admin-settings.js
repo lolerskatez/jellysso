@@ -109,6 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification('Settings saved successfully!', 'success');
         if (section === 'maintenance') loadMaintenanceHistory();
         if (section === 'logging') loadAuditLogStats();
+        // Reload the page after saving app settings so appName and theme take effect
+        if (section === 'app') {
+          setTimeout(() => window.location.reload(), 800);
+          return;
+        }
       } else {
         showNotification(data.message || 'Failed to save settings', 'error');
       }

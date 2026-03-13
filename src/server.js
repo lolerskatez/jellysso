@@ -88,6 +88,40 @@ app.use(session({
 // Set CSRF token in response locals for all requests (AFTER session middleware)
 app.use(setCsrfToken);
 
+// Session idle-timeout middleware — reads sessionTimeout (minutes) from SetupManager config.
+// On every authenticated request, stamps lastActivity; destroys the session and redirects
+// to login if the session has been idle longer than the configured timeout.
+app.use((req, res, next) => {
+  // Skip for static assets, health check, setup, and unauthenticated paths
+  const skipPaths = ['/api/health', '/setup', '/login', '/css/', '/js/', '/webfonts/', '/images/'];
+  if (skipPaths.some(p => req.path.startsWith(p)) || !req.session?.user) {
+    return next();
+  }
+
+  const config = SetupManager.getConfig();
+  const timeoutMs = Math.max(5, parseInt(config.sessionTimeout) || 30) * 60 * 1000;
+  const now = Date.now();
+  const last = req.session.lastActivity || now;
+
+  if (now - last > timeoutMs) {
+    return req.session.destroy(() => {
+      res.redirect('/login');
+    });
+  }
+
+  req.session.lastActivity = now;
+  next();
+});
+
+// Inject app-wide locals (appName, theme) derived from SetupManager config so all
+// views and partials can reference them via locals.appName / locals.theme.
+app.use((req, res, next) => {
+  const config = SetupManager.getConfig();
+  res.locals.appName = config.appName || 'JellySSO';
+  res.locals.theme   = config.theme   || 'auto';
+  next();
+});
+
 // Initialize global cache manager
 global.appCache = new CacheManager({
   defaultTTL: 5 * 60 * 1000, // 5 minutes default

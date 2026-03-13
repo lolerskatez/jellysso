@@ -1774,7 +1774,7 @@ router.get('/api/test-api-key', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // Client Troubleshooting Page
-router.get('/troubleshoot', requireAuth, requireAdmin, (req, res) => {
+router.get('/troubleshoot', requireAuth, (req, res) => {
   const config = SetupManager.getConfig();
   const baseUrl = getBaseUrl(req, config);
   res.render('admin/troubleshoot', {

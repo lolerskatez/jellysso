@@ -418,17 +418,7 @@
                 <div class="setting-description">Jellyfin API key for server-to-server communication</div>
               </div>
               <div>
-                <div class="inline-controls" style="flex-direction: column; align-items: flex-start; gap: var(--spacing-md);">
-                  <input type="text" name="apiKey" value="<%= jellyfinSettings.apiKey || '' %>" placeholder="Enter or generate API key" style="font-family: monospace; font-size: 0.8125rem;">
-                  <div style="display: flex; gap: var(--spacing-sm);">
-                    <button type="button" class="btn btn-secondary" id="generateApiKeyBtn" style="padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem;">
-                      <i class="fas fa-refresh"></i> Generate New Key
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="copyApiKeyBtn" style="padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem;">
-                      <i class="fas fa-copy"></i> Copy
-                    </button>
-                  </div>
-                </div>
+                <input type="text" name="apiKey" value="<%= jellyfinSettings.apiKey || '' %>" placeholder="Enter API key" style="font-family: monospace; font-size: 0.8125rem;">
               </div>
             </div>
 
@@ -455,16 +445,16 @@
                 </span>
               </div>
             </div>
+
+            <div class="info-box" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning); margin-top: var(--spacing-lg); margin-bottom: 0;">
+              <i class="fas fa-exclamation-triangle"></i>
+              Changing Jellyfin URLs requires restarting the server to take effect.
+            </div>
           </div>
 
           <div class="button-group">
             <button class="btn btn-primary" data-action="save" data-section="jellyfin"><i class="fas fa-save"></i> Save Changes</button>
             <button class="btn btn-secondary" data-action="reset" data-section="jellyfin"><i class="fas fa-undo"></i> Reset to Defaults</button>
-          </div>
-
-          <div class="info-box" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning);">
-            <i class="fas fa-exclamation-triangle"></i> 
-            Changing Jellyfin URLs requires restarting the server to take effect.
           </div>
         </div>
 

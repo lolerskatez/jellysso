@@ -204,65 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
     runMaintenanceBtn.addEventListener('click', runMaintenance);
   }
 
-  // Generate API Key function
-  async function generateApiKey() {
-    if (!confirm('Generate a new API key? The old key will no longer work.')) {
-      return;
-    }
-
-    try {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-      const response = await fetch('/admin/api/generate-api-key', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken || ''
-        }
-      });
-
-      const data = await response.json();
-      
-      if (data.success && data.apiKey) {
-        const apiKeyInput = document.querySelector('input[name="apiKey"]');
-        if (apiKeyInput) {
-          apiKeyInput.value = data.apiKey;
-        }
-        showNotification('New API key generated successfully!', 'success');
-      } else {
-        showNotification(data.message || 'Failed to generate API key', 'error');
-      }
-    } catch (error) {
-      console.error('Error generating API key:', error);
-      showNotification('Error generating API key', 'error');
-    }
-  }
-
-  // Copy API Key function
-  function copyApiKey() {
-    const apiKeyInput = document.querySelector('input[name="apiKey"]');
-    if (apiKeyInput && apiKeyInput.value) {
-      navigator.clipboard.writeText(apiKeyInput.value).then(() => {
-        showNotification('API key copied to clipboard!', 'success');
-      }).catch(() => {
-        showNotification('Failed to copy API key', 'error');
-      });
-    } else {
-      showNotification('No API key to copy', 'error');
-    }
-  }
-
-  // Event listeners for API key buttons
-  const generateApiKeyBtn = document.getElementById('generateApiKeyBtn');
-  const copyApiKeyBtn = document.getElementById('copyApiKeyBtn');
-  
-  if (generateApiKeyBtn) {
-    generateApiKeyBtn.addEventListener('click', generateApiKey);
-  }
-  
-  if (copyApiKeyBtn) {
-    copyApiKeyBtn.addEventListener('click', copyApiKey);
-  }
-
   // Initialize first tab as active if none selected
   const activePanel = document.querySelector('.settings-panel.active');
   if (!activePanel && tabPanels.length > 0) {

@@ -1375,38 +1375,6 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Generate new API key
-router.post('/api/generate-api-key', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const crypto = require('crypto');
-    
-    // Generate a random API key
-    const newApiKey = crypto.randomBytes(32).toString('hex');
-    
-    // Update API key in config
-    SetupManager.updateConfig({ apiKey: newApiKey });
-    
-    // Log the action
-    await AuditLogger.log({
-      action: 'API_KEY_GENERATED',
-      userId: req.session.user?.Id,
-      resource: 'api-key',
-      details: { keyPrefix: newApiKey.substring(0, 8) + '...' },
-      status: 'success',
-      ip: req.ip
-    });
-    
-    res.json({ 
-      success: true, 
-      message: 'New API key generated successfully',
-      apiKey: newApiKey
-    });
-  } catch (error) {
-    console.error('Error generating API key:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
 // ============================================================================
 // PLUGIN MANAGEMENT ROUTES
 // ============================================================================

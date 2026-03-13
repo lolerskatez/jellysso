@@ -6,8 +6,29 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const PerformanceMonitor = require('../models/PerformanceMonitor');
 const fs = require('fs').promises;
+const fsSyncApi = require('fs');
 const path = require('path');
 const { getBaseUrl } = require('../utils/urlHelper');
+const multer = require('multer');
+const os = require('os');
+
+// Configure multer for file uploads
+const uploadsDir = path.join(os.tmpdir(), 'jellysso-uploads');
+if (!fsSyncApi.existsSync(uploadsDir)) {
+  fsSyncApi.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const upload = multer({ 
+  dest: uploadsDir,
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.endsWith('.db')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .db files are allowed'), false);
+    }
+  }
+});
 
 // Middleware: Require authentication
 const requireAuth = (req, res, next) => {
@@ -73,7 +94,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     try {
       const fs = require('fs');
       const path = require('path');
-      const backupDir = path.join(process.cwd(), 'backups');
+      const backupDir = path.join(__dirname, '..', 'config', 'backups');
       if (fs.existsSync(backupDir)) {
         const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.db'));
         backupCount = files.length;
@@ -764,7 +785,12 @@ router.get('/backups', requireAuth, requireAdmin, async (req, res) => {
 // API: Get backups list
 router.get('/api/backups', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const backupsDir = path.join(__dirname, '../..', 'backups');
+    // Disable caching for this endpoint
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
+    const backupsDir = path.join(__dirname, '..', 'config', 'backups');
     let backups = [];
     
     try {
@@ -833,7 +859,7 @@ router.get('/api/backups/download', requireAuth, requireAdmin, async (req, res) 
       return res.status(400).json({ success: false, message: 'Invalid filename' });
     }
     
-    const backupPath = path.join(__dirname, '../..', 'backups', filename);
+    const backupPath = path.join(__dirname, '..', 'config', 'backups', filename);
     const stats = await fs.stat(backupPath);
     
     res.download(backupPath, filename, (err) => {
@@ -860,15 +886,15 @@ router.post('/api/backups/restore', requireAuth, requireAdmin, async (req, res) 
       return res.status(400).json({ success: false, message: 'Invalid backup name' });
     }
     
-    const backupPath = path.join(__dirname, '../..', 'backups', backupName);
-    const dbPath = path.join(__dirname, '../config/companion.db');
+    const backupPath = path.join(__dirname, '..', 'config', 'backups', backupName);
+    const dbPath = path.join(__dirname, '..', 'config', 'companion.db');
     
     // Verify backup exists
     await fs.stat(backupPath);
     
     // Create safety backup of current database
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const safetyBackup = path.join(__dirname, '../..', 'backups', `pre-restore-${timestamp}.db`);
+    const safetyBackup = path.join(__dirname, '..', 'config', 'backups', `pre-restore-${timestamp}.db`);
     
     try {
       await fs.copyFile(dbPath, safetyBackup);
@@ -924,7 +950,7 @@ router.post('/api/backups/delete', requireAuth, requireAdmin, async (req, res) =
       return res.status(400).json({ success: false, message: 'Invalid backup name' });
     }
     
-    const backupPath = path.join(__dirname, '../..', 'backups', backupName);
+    const backupPath = path.join(__dirname, '..', 'config', 'backups', backupName);
     await fs.unlink(backupPath);
     
     await AuditLogger.log({
@@ -937,6 +963,86 @@ router.post('/api/backups/delete', requireAuth, requireAdmin, async (req, res) =
     
     res.json({ success: true, message: `Backup ${backupName} deleted successfully` });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Import backup
+router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('backupFile'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file provided' });
+    }
+
+    // Validate file extension
+    if (!req.file.originalname.endsWith('.db')) {
+      fsSyncApi.unlinkSync(req.file.path);
+      return res.status(400).json({ success: false, message: 'Invalid file type. Please upload a .db file' });
+    }
+
+    const backupsDir = path.join(__dirname, '..', 'config', 'backups');
+    
+    // Ensure backups directory exists
+    if (!fsSyncApi.existsSync(backupsDir)) {
+      fsSyncApi.mkdirSync(backupsDir, { recursive: true });
+    }
+
+    // Generate a unique filename for the imported backup
+    const date = new Date();
+    const timestamp = date.toISOString().split('T')[0];
+    let importedName = `companion-imported-${timestamp}.db`;
+    let counter = 1;
+    
+    // If file already exists, add a counter
+    while (fsSyncApi.existsSync(path.join(backupsDir, importedName))) {
+      importedName = `companion-imported-${timestamp}-${counter}.db`;
+      counter++;
+    }
+
+    // Move uploaded file to backups directory
+    const finalPath = path.join(backupsDir, importedName);
+    await fs.copyFile(req.file.path, finalPath);
+    
+    // Clean up the temp file
+    try {
+      await fs.unlink(req.file.path);
+    } catch (err) {
+      console.warn('Warning: Could not clean up temp file:', err.message);
+    }
+
+    // Get file stats
+    const stats = fsSyncApi.statSync(finalPath);
+
+    // Log to audit logs
+    try {
+      await AuditLogger.log({
+        action: 'BACKUP_IMPORTED',
+        userId: req.session.user?.Name || 'system',
+        resource: importedName,
+        status: 'success',
+        details: { fileSize: `${Math.round(stats.size / 1024)} KB` },
+        ip: req.ip
+      });
+    } catch (logError) {
+      console.error('Error logging backup import:', logError);
+      // Don't fail the import just because logging failed
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Backup imported successfully as ${importedName}`,
+      backupName: importedName
+    });
+  } catch (error) {
+    console.error('Import backup error:', error);
+    // Clean up file if it exists
+    if (req.file && fsSyncApi.existsSync(req.file.path)) {
+      try {
+        fsSyncApi.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up uploaded file:', cleanupError);
+      }
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 });

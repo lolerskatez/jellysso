@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load all dashboard data
   loadDashboardData();
 
+  // Auto-refresh every 60 seconds
+  setInterval(loadDashboardData, 60000);
+
   // Refresh button
   const refreshBtn = document.getElementById('refreshDashboard');
   if (refreshBtn) {
@@ -37,7 +40,8 @@ async function loadDashboardData() {
   try {
     await Promise.all([
       loadBackupStatus(),
-      loadRecentActivity()
+      loadRecentActivity(),
+      loadSystemHealth()
     ]);
   } catch (error) {
     console.error('Dashboard load error:', error);
@@ -58,23 +62,55 @@ async function loadDashboardData() {
 async function loadBackupStatus() {
   try {
     const response = await fetch('/admin/api/backups');
-    const data = await response.json();
-    
-    if (data.success) {
-      const backups = data.backups || [];
-      updateElement('backupCount', backups.length.toString());
-      
+    if (!response.ok) return;
+    const backups = await response.json();
+
+    // API returns a raw array
+    if (Array.isArray(backups)) {
+      updateElement('backupCount', backups.length + ' Backups');
+
       if (backups.length > 0) {
         const latest = backups[0];
         updateElement('lastBackupDate', new Date(latest.date).toLocaleDateString());
-        updateElement('lastBackupSize', latest.size || 'Unknown');
+        const sizeKB = Math.round(latest.size / 1024);
+        updateElement('lastBackupSize', sizeKB >= 1024 ? (sizeKB / 1024).toFixed(1) + ' MB' : sizeKB + ' KB');
       } else {
         updateElement('lastBackupDate', 'Never');
-        updateElement('lastBackupSize', '-');
+        updateElement('lastBackupSize', '—');
       }
     }
   } catch (error) {
     console.error('Backup status load error:', error);
+  }
+}
+
+// Load system health
+async function loadSystemHealth() {
+  try {
+    const response = await fetch('/api/health');
+    if (!response.ok) return;
+    const data = await response.json();
+
+    // Update uptime
+    if (data.uptime !== undefined) {
+      const totalSeconds = Math.floor(data.uptime);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const days = Math.floor(hours / 24);
+      let uptimeStr;
+      if (days > 0) uptimeStr = days + 'd ' + (hours % 24) + 'h';
+      else if (hours > 0) uptimeStr = hours + 'h ' + minutes + 'm';
+      else uptimeStr = minutes + 'm';
+      updateElement('systemUptime', uptimeStr);
+    }
+
+    // Update memory from performance API if available
+    if (window.performance && window.performance.memory) {
+      const mb = Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024);
+      updateElement('systemMemory', mb + ' MB');
+    }
+  } catch (error) {
+    console.error('System health load error:', error);
   }
 }
 
@@ -203,11 +239,15 @@ async function createBackup() {
   const btn = document.getElementById('createBackupBtn');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
   }
 
   try {
-    const response = await fetch('/admin/api/backups/create', { method: 'POST' });
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const response = await fetch('/admin/api/backups/create', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': csrfToken }
+    });
     const data = await response.json();
 
     if (data.success) {
@@ -221,7 +261,7 @@ async function createBackup() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-plus"></i>';
+      btn.innerHTML = '<i class="fas fa-plus"></i> Create Backup';
     }
   }
 }

@@ -458,23 +458,23 @@
             <div class="widget-body">
               <div class="health-item">
                 <span class="health-label">Jellyfin Status</span>
-                <span class="health-status health-good">
+                <span id="jellyfinStatus" class="health-status health-good">
                   <i class="fas fa-check-circle"></i> Connected
                 </span>
               </div>
               <div class="health-item">
                 <span class="health-label">Database</span>
-                <span class="health-status health-good">
+                <span id="dbStatus" class="health-status health-good">
                   <i class="fas fa-check-circle"></i> Healthy
                 </span>
               </div>
               <div class="health-item">
                 <span class="health-label">Memory</span>
-                <span class="health-value"><%= Math.round(process.memoryUsage?.heapUsed / 1024 / 1024 || 0) %> MB</span>
+                <span id="systemMemory" class="health-value"><%= Math.round(process.memoryUsage().heapUsed / 1024 / 1024) %> MB</span>
               </div>
               <div class="health-item">
                 <span class="health-label">Uptime</span>
-                <span class="health-value"><%= Math.floor(process.uptime?.() / 3600 || 0) %>h</span>
+                <span id="systemUptime" class="health-value"><%= Math.floor(process.uptime() / 3600) %>h <%= Math.floor((process.uptime() % 3600) / 60) %>m</span>
               </div>
             </div>
           </div>
@@ -493,12 +493,16 @@
                 <div class="backup-info">
                   <h4 id="backupCount"><%= typeof backupCount !== 'undefined' ? backupCount : 0 %> Backups</h4>
                   <p>Last: <span id="lastBackupDate"><%= typeof latestBackup !== 'undefined' && latestBackup ? new Date(latestBackup).toLocaleDateString() : 'Never' %></span></p>
+                  <p style="margin-top: 2px;">Size: <span id="lastBackupSize">—</span></p>
                 </div>
               </div>
               <div class="backup-actions">
                 <button class="btn btn-primary btn-sm" id="createBackupBtn">
                   <i class="fas fa-plus"></i> Create Backup
                 </button>
+                <a href="/admin/backups" class="btn btn-secondary btn-sm">
+                  <i class="fas fa-folder-open"></i> Manage
+                </a>
               </div>
             </div>
           </div>
@@ -525,6 +529,14 @@
                 <a href="/admin/oidc" class="quick-link">
                   <i class="fas fa-key"></i>
                   <span>OIDC SSO</span>
+                </a>
+                <a href="/admin/audit-logs" class="quick-link">
+                  <i class="fas fa-clipboard-list"></i>
+                  <span>Audit Logs</span>
+                </a>
+                <a href="/admin/provisioning" class="quick-link">
+                  <i class="fas fa-user-plus"></i>
+                  <span>Provisioning</span>
                 </a>
               </div>
             </div>

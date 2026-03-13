@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeBtn) {
       activeBtn.classList.add('active');
     }
+
+    // Refresh live data for tabs that display it
+    if (tabName === 'logging') loadAuditLogStats();
+    if (tabName === 'maintenance') loadMaintenanceHistory();
   }
 
   // Toggle switch function
@@ -103,6 +107,8 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (data.success) {
         showNotification('Settings saved successfully!', 'success');
+        if (section === 'maintenance') loadMaintenanceHistory();
+        if (section === 'logging') loadAuditLogStats();
       } else {
         showNotification(data.message || 'Failed to save settings', 'error');
       }
@@ -148,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (data.success) {
         showNotification('Maintenance completed successfully!', 'success');
+        loadMaintenanceHistory();
       } else {
         showNotification(data.message || 'Maintenance failed', 'error');
       }
@@ -212,4 +219,47 @@ document.addEventListener('DOMContentLoaded', function() {
       tabButtons[0].classList.add('active');
     }
   }
+
+  // Load maintenance history on page load
+  loadMaintenanceHistory();
+  // Load audit log stats on page load (powers the logging tab summary box)
+  loadAuditLogStats();
 });
+
+// Load maintenance history from audit logs
+async function loadMaintenanceHistory() {
+  try {
+    const response = await fetch('/admin/api/maintenance/history');
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.success) return;
+    const el = id => document.getElementById(id);
+    if (el('lastCleanupHistory'))  el('lastCleanupHistory').textContent  = data.history.lastCleanup;
+    if (el('lastOptimizeHistory')) el('lastOptimizeHistory').textContent = data.history.lastOptimize;
+    if (el('lastBackupHistory'))   el('lastBackupHistory').textContent   = data.history.lastBackup;
+  } catch (e) {
+    console.error('Failed to load maintenance history:', e);
+  }
+}
+
+// Load live audit log statistics into the logging tab summary box
+async function loadAuditLogStats() {
+  try {
+    const response = await fetch('/admin/api/stats');
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.success) return;
+
+    const box = document.getElementById('auditLogSummary');
+    const total = document.getElementById('auditLogTotal');
+    const last24h = document.getElementById('auditLogLast24h');
+    const rate = document.getElementById('auditLogSuccessRate');
+
+    if (total)  total.textContent  = (data.totalRequests  ?? '—').toLocaleString();
+    if (last24h) last24h.textContent = (data.last24h       ?? '—').toLocaleString();
+    if (rate)   rate.textContent   = data.successRate != null ? `${data.successRate}%` : '—';
+    if (box)    box.style.display  = '';
+  } catch (e) {
+    console.error('Failed to load audit log stats:', e);
+  }
+}

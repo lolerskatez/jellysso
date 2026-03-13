@@ -5,6 +5,7 @@ const DatabaseManager = require('../models/DatabaseManager');
 const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const PerformanceMonitor = require('../models/PerformanceMonitor');
+const appLogger = require('../utils/logger');
 const fs = require('fs').promises;
 const fsSyncApi = require('fs');
 const path = require('path');
@@ -725,23 +726,43 @@ router.get('/api/maintenance/settings', requireAuth, requireAdmin, async (req, r
     const settings = {
       dailyCleanup: {
         enabled: true,
-        hour: 2
+        hour: parseInt(await DatabaseManager.getSetting('maintenance_daily_hour'))   || 2
       },
       weeklyOptimize: {
         enabled: true,
-        dayOfWeek: 0, // Sunday
-        hour: 3
+        dayOfWeek: parseInt(await DatabaseManager.getSetting('maintenance_weekly_day'))  || 0,
+        hour:      parseInt(await DatabaseManager.getSetting('maintenance_weekly_hour')) || 3
       },
       monthlyBackup: {
         enabled: true,
-        dayOfMonth: 1,
-        hour: 4
+        dayOfMonth: parseInt(await DatabaseManager.getSetting('maintenance_monthly_day'))  || 1,
+        hour:       parseInt(await DatabaseManager.getSetting('maintenance_monthly_hour')) || 4
       },
-      backupRetention: 12,
-      cleanupThreshold: 90
+      backupRetention:  parseInt(await DatabaseManager.getSetting('backup_retention'))  || 12,
+      cleanupThreshold: parseInt(await DatabaseManager.getSetting('cleanup_threshold')) || 90
     };
-    
     res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// API: Get maintenance history from audit logs
+router.get('/api/maintenance/history', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const logs = await AuditLogger.getLogs({ limit: 2000 });
+    const find = action => {
+      const log = logs.find(l => l.action === action);
+      return log ? new Date(log.timestamp).toLocaleString() : 'Never';
+    };
+    res.json({
+      success: true,
+      history: {
+        lastCleanup:  find('MAINTENANCE_CLEANUP'),
+        lastOptimize: find('MAINTENANCE_OPTIMIZE'),
+        lastBackup:   find('MAINTENANCE_BACKUP')
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1345,7 +1366,27 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       if (s.logToFile         !== undefined) await DatabaseManager.setSetting('log_to_file',         String(s.logToFile));
       if (s.logRetention      !== undefined) await DatabaseManager.setSetting('log_retention',       String(parseInt(s.logRetention) || 30));
       if (s.auditLogging      !== undefined) await DatabaseManager.setSetting('audit_logging',       String(s.auditLogging));
-      if (s.auditLogRetention !== undefined) await DatabaseManager.setSetting('audit_log_retention', String(parseInt(s.auditLogRetention) || 90));
+      if (s.auditLogRetention !== undefined) {
+        const days = String(parseInt(s.auditLogRetention) || 90);
+        await DatabaseManager.setSetting('audit_log_retention', days);
+        // Keep in sync with the maintenance scheduler key so both tabs agree
+        await DatabaseManager.setSetting('cleanup_threshold', days);
+      }
+
+      // Apply changes to the running logger immediately (no restart required)
+      if (s.logLevel !== undefined) {
+        appLogger.setLevel(s.logLevel);
+      }
+      if (s.logToFile !== undefined) {
+        appLogger.setFileLogging(s.logToFile !== false && s.logToFile !== 'false');
+      }
+      if (s.logRetention !== undefined) {
+        const days = parseInt(s.logRetention) || 30;
+        appLogger.cleanupOldLogs(days);
+      }
+
+      // Invalidate the AuditLogger cache so the next write re-checks the DB flag
+      AuditLogger.invalidateCache();
 
     } else if (section === 'maintenance') {
       // Parse HH:MM time strings into hour integers
@@ -1356,7 +1397,14 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       if (s.monthlyBackupDay        !== undefined) await DatabaseManager.setSetting('maintenance_monthly_day',  String(parseInt(s.monthlyBackupDay)));
       if (s.monthlyBackupTime       !== undefined) await DatabaseManager.setSetting('maintenance_monthly_hour', String(parseHour(s.monthlyBackupTime)));
       if (s.backupRetention         !== undefined) await DatabaseManager.setSetting('backup_retention',        String(parseInt(s.backupRetention) || 12));
-      if (s.cleanupThreshold        !== undefined) await DatabaseManager.setSetting('cleanup_threshold',       String(parseInt(s.cleanupThreshold) || 90));
+      if (s.cleanupThreshold        !== undefined) {
+        const days = String(parseInt(s.cleanupThreshold) || 90);
+        await DatabaseManager.setSetting('cleanup_threshold', days);
+        // Keep in sync with the logging tab key so both tabs show the same value
+        await DatabaseManager.setSetting('audit_log_retention', days);
+      }
+      // Restart scheduler so new times take effect immediately
+      require('../models/MaintenanceScheduler').restart().catch(e => console.warn('Scheduler restart:', e.message));
     }
 
     await AuditLogger.log({

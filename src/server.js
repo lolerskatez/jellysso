@@ -5,7 +5,6 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
-const winston = require('winston');
 const SetupManager = require('./models/SetupManager');
 const DatabaseManager = require('./models/DatabaseManager');
 const MaintenanceScheduler = require('./models/MaintenanceScheduler');
@@ -24,26 +23,8 @@ const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
 // Trust proxy for proper IP detection and protocol handling
 app.set('trust proxy', 1);
 
-// Logging setup
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'jellysso' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-  ],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-  }));
-}
+// Logging setup — shared singleton so admin routes can adjust level/transports at runtime
+const logger = require('./utils/logger');
 
 // Rate limiting
 const limiter = rateLimit({

@@ -18,19 +18,31 @@ class MaintenanceScheduler {
   /**
    * Start all maintenance tasks
    */
-  start() {
+  async start() {
     console.log('🔧 Starting database maintenance scheduler...');
+
+    const dailyHour   = parseInt(await DatabaseManager.getSetting('maintenance_daily_hour'))   || 2;
+    const weeklyDay   = parseInt(await DatabaseManager.getSetting('maintenance_weekly_day'))   || 0;
+    const weeklyHour  = parseInt(await DatabaseManager.getSetting('maintenance_weekly_hour'))  || 3;
+    const monthlyDay  = parseInt(await DatabaseManager.getSetting('maintenance_monthly_day'))  || 1;
+    const monthlyHour = parseInt(await DatabaseManager.getSetting('maintenance_monthly_hour')) || 4;
+
+    // Daily cleanup
+    this.scheduleDaily('Daily Audit Cleanup', this.cleanupAuditLogs.bind(this), dailyHour);
     
-    // Daily cleanup at 2 AM
-    this.scheduleDaily('Daily Audit Cleanup', this.cleanupAuditLogs.bind(this), 2);
+    // Weekly optimization
+    this.scheduleWeekly('Weekly Database Optimization', this.optimizeDatabase.bind(this), weeklyDay, weeklyHour);
     
-    // Weekly optimization on Sunday at 3 AM
-    this.scheduleWeekly('Weekly Database Optimization', this.optimizeDatabase.bind(this), 0, 3);
-    
-    // Monthly backup on 1st of month at 4 AM
-    this.scheduleMonthly('Monthly Database Backup', this.backupDatabase.bind(this), 1, 4);
+    // Monthly backup
+    this.scheduleMonthly('Monthly Database Backup', this.backupDatabase.bind(this), monthlyDay, monthlyHour);
     
     console.log('✅ Maintenance scheduler started');
+  }
+
+  async restart() {
+    this.stop();
+    await this.start();
+    console.log('🔄 Maintenance scheduler restarted with updated settings');
   }
 
   /**
@@ -125,7 +137,7 @@ class MaintenanceScheduler {
    */
   async cleanupAuditLogs() {
     try {
-      const daysToKeep = 90;
+      const daysToKeep = parseInt(await DatabaseManager.getSetting('cleanup_threshold')) || 90;
       const deleted = await DatabaseManager.cleanupAuditLogs(daysToKeep);
       
       console.log(`🧹 Audit cleanup completed: deleted ${deleted} old entries`);
@@ -217,8 +229,9 @@ class MaintenanceScheduler {
       
       console.log(`💾 Database backup completed: ${backupPath} (${sizeKB}KB)`);
       
-      // Clean up old backups (keep last 12)
-      this.cleanupOldBackups(backupDir, 12);
+      // Clean up old backups using configured retention count
+      const backupRetention = parseInt(await DatabaseManager.getSetting('backup_retention')) || 12;
+      this.cleanupOldBackups(backupDir, backupRetention);
       
       // Log the maintenance action
       await DatabaseManager.insertAuditLog(

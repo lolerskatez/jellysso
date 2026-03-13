@@ -1,6 +1,42 @@
 const DatabaseManager = require('./DatabaseManager');
 
 class AuditLogger {
+  constructor() {
+    // Cache the audit_logging flag to avoid a DB hit on every log call.
+    // invalidateCache() should be called whenever the setting is changed.
+    this._auditEnabledCache = null;
+    this._auditCacheTime = 0;
+  }
+
+  /**
+   * Read the audit_logging flag from DB, with a 60-second cache.
+   * Returns true (enabled) when the setting is missing or set to any value other than 'false'.
+   */
+  async _isAuditEnabled() {
+    const now = Date.now();
+    if (this._auditEnabledCache !== null && now - this._auditCacheTime < 60_000) {
+      return this._auditEnabledCache;
+    }
+    try {
+      const val = await DatabaseManager.getSetting('audit_logging');
+      this._auditEnabledCache = val !== 'false';
+    } catch (_) {
+      // If we can't read the DB, default to enabled so logs aren't silently dropped
+      this._auditEnabledCache = true;
+    }
+    this._auditCacheTime = now;
+    return this._auditEnabledCache;
+  }
+
+  /**
+   * Invalidate the cached audit_logging flag so the next log() call re-reads from DB.
+   * Call this whenever the audit_logging setting is updated.
+   */
+  invalidateCache() {
+    this._auditEnabledCache = null;
+    this._auditCacheTime = 0;
+  }
+
   /**
    * Log an audit event
    * @param {string|object} action - The action performed OR an object with {action, userId, resource, details, status, ip}
@@ -21,6 +57,10 @@ class AuditLogger {
       status = logObj.status || 'success';
       ip = logObj.ip;
     }
+
+    // Respect the audit_logging toggle — skip writing if disabled
+    const enabled = await this._isAuditEnabled();
+    if (!enabled) return false;
 
     try {
       await DatabaseManager.insertAuditLog(

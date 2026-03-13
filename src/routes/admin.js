@@ -504,6 +504,17 @@ router.get('/api/audit-logs', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// API: Clear all audit logs
+router.delete('/api/audit-logs', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const deleted = await DatabaseManager.clearAllAuditLogs();
+    await AuditLogger.log('AUDIT_LOGS_CLEARED', req.session.user?.Name || req.session.user?.Id, 'audit:logs', { deletedCount: deleted }, 'success', req.ip);
+    res.json({ success: true, message: `Cleared ${deleted} log entries` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // API: Get system statistics as JSON
 router.get('/api/statistics', requireAuth, requireAdmin, async (req, res) => {
   try {

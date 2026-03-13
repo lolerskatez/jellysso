@@ -62,6 +62,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Clear logs functionality
+  const clearLogsBtn = document.getElementById('clearLogsBtn');
+  const clearLogsModal = document.getElementById('clearLogsModal');
+  const closeClearLogsModal = document.getElementById('closeClearLogsModal');
+  const cancelClearLogs = document.getElementById('cancelClearLogs');
+  const confirmClearLogs = document.getElementById('confirmClearLogs');
+
+  if (clearLogsBtn && clearLogsModal) {
+    clearLogsBtn.addEventListener('click', () => clearLogsModal.classList.add('active'));
+    closeClearLogsModal.addEventListener('click', () => clearLogsModal.classList.remove('active'));
+    cancelClearLogs.addEventListener('click', () => clearLogsModal.classList.remove('active'));
+    clearLogsModal.addEventListener('click', (e) => {
+      if (e.target === clearLogsModal) clearLogsModal.classList.remove('active');
+    });
+
+    confirmClearLogs.addEventListener('click', async () => {
+      confirmClearLogs.disabled = true;
+      confirmClearLogs.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+      try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        const res = await fetch('/admin/api/audit-logs', {
+          method: 'DELETE',
+          headers: { 'X-CSRF-Token': csrfToken }
+        });
+        const data = await res.json();
+        if (data.success) {
+          clearLogsModal.classList.remove('active');
+          window.location.reload();
+        } else {
+          alert('Failed to clear logs: ' + data.message);
+          confirmClearLogs.disabled = false;
+          confirmClearLogs.innerHTML = '<i class="fas fa-trash"></i> Delete All Logs';
+        }
+      } catch (err) {
+        alert('Error clearing logs: ' + err.message);
+        confirmClearLogs.disabled = false;
+        confirmClearLogs.innerHTML = '<i class="fas fa-trash"></i> Delete All Logs';
+      }
+    });
+  }
+
   // Export logs functionality
   const exportBtn = document.getElementById('exportLogsBtn');
   if (exportBtn) {

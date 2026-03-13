@@ -264,6 +264,18 @@ class DatabaseManager {
   }
 
   /**
+   * Clear all audit logs
+   */
+  clearAllAuditLogs() {
+    return new Promise((resolve, reject) => {
+      this.db.run('DELETE FROM audit_logs', [], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      });
+    });
+  }
+
+  /**
    * Delete old audit logs
    */
   cleanupAuditLogs(daysToKeep = 90) {

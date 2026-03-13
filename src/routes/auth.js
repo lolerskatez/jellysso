@@ -490,37 +490,48 @@ router.get('/oidc/callback', async (req, res) => {
     }
 
     // Auto-create user if enabled and user doesn't exist
+    let userWasCreated = false;
     if (!jellyfinUser && oidcConfig.autoCreateUsers && jellyfinConfig.apiKey) {
       try {
         jellyfinUser = await jellyfinApi.createUser(username);
+        userWasCreated = true;
         console.log(`Created new Jellyfin user via SSO: ${username}`);
+
+        // Newly created users never had a real password — randomize immediately so
+        // they can only ever log in through SSO.
+        const randomPassword = crypto.randomBytes(32).toString('hex') + crypto.randomBytes(32).toString('base64');
+        await jellyfinApi.resetUserPassword(jellyfinUser.Id, randomPassword);
+        await jellyfinApi.updateUserConfiguration(jellyfinUser.Id, {
+          EnableLocalPassword: false,
+          AuthenticationProviderId: 'SSO'
+        });
+        console.log(`🔒 New SSO user locked to SSO-only login: ${username}`);
       } catch (err) {
         console.error('Error creating Jellyfin user:', err);
-        // Don't fail - OIDC authentication succeeded, just continue without the Jellyfin user
         console.log(`Continuing with OIDC session for user ${username} without Jellyfin user creation`);
       }
     }
 
-    // SECURITY: For ALL SSO users (new or existing), ensure password authentication is disabled
-    // This ensures they can ONLY log in through SSO
-    if (jellyfinUser && jellyfinConfig.apiKey) {
+    // SECURITY: For pre-existing Jellyfin users logging in via SSO for the first time,
+    // disable local password auth without destroying their existing password.
+    // We track which users have been locked in the DB to avoid repeat calls on every login.
+    if (jellyfinUser && !userWasCreated && jellyfinConfig.apiKey) {
       try {
-        // Generate a strong random password that the user will never know
-        const crypto = require('crypto');
-        const randomPassword = crypto.randomBytes(32).toString('hex') + crypto.randomBytes(32).toString('base64');
-        
-        // Reset the password to prevent direct Jellyfin login
-        await jellyfinApi.resetUserPassword(jellyfinUser.Id, randomPassword);
-        
-        // Also disable local password preference
-        await jellyfinApi.updateUserConfiguration(jellyfinUser.Id, {
-          EnableLocalPassword: false,
-          AuthenticationProviderId: 'SSO'  // Mark as SSO user
-        });
-        console.log(`🔒 Secured SSO user - password reset and login disabled for: ${username}`);
+        const lockedRaw = await DatabaseManager.getSetting('sso_locked_users');
+        const lockedUsers = Array.isArray(lockedRaw) ? lockedRaw : [];
+
+        if (!lockedUsers.includes(jellyfinUser.Id)) {
+          await jellyfinApi.updateUserConfiguration(jellyfinUser.Id, {
+            EnableLocalPassword: false,
+            AuthenticationProviderId: 'SSO'
+          });
+          lockedUsers.push(jellyfinUser.Id);
+          await DatabaseManager.setSetting('sso_locked_users', lockedUsers, 'json');
+          console.log(`🔒 Existing SSO user configured for SSO-only login (first time): ${username}`);
+        }
       } catch (configErr) {
-        console.warn(`⚠️  Could not secure SSO user ${username}:`, configErr.message);
-        // Not critical - continue with login
+        console.warn(`⚠️  Could not configure SSO-only login for ${username}:`, configErr.message);
+        // Not critical — continue with login
       }
     }
 

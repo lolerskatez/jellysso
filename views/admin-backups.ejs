@@ -225,7 +225,7 @@
               <i class="fas fa-database"></i>
               System Backups
             </h3>
-            <div style="background: white; border-radius: var(--border-radius); padding: var(--spacing-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+            <div style="background: var(--bg-primary); border-radius: var(--border-radius); padding: var(--spacing-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
               <!-- What's Being Backed Up Section -->
               <div style="background: linear-gradient(135deg, rgba(0, 102, 204, 0.08) 0%, rgba(0, 102, 204, 0.04) 100%); border-left: 4px solid var(--primary); padding: var(--spacing-lg); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
                 <div style="margin-bottom: var(--spacing-md);">
@@ -266,7 +266,7 @@
                     </ul>
                   </div>
                 </div>
-                <div style="background: white; padding: 12px; border-radius: 4px; border-left: 3px solid var(--warning); color: var(--text-secondary); font-size: 0.8125rem;">
+                <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 4px; border-left: 3px solid var(--warning); color: var(--text-secondary); font-size: 0.8125rem;">
                   <i class="fas fa-exclamation-triangle" style="color: var(--warning); margin-right: 6px;"></i>
                   <strong>Note:</strong> Jellyfin media library backups must be performed through Jellyfin's own backup feature.
                 </div>
@@ -320,7 +320,7 @@
 
   <!-- Restore Modal -->
   <div id="restoreModal" class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s;">
-    <div style="background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 480px; overflow: hidden; transform: scale(0.9); transition: transform 0.3s;">
+    <div style="background: var(--bg-primary); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 480px; overflow: hidden; transform: scale(0.9); transition: transform 0.3s;">
       <div style="display: flex; align-items: center; gap: 8px; padding: 20px; border-bottom: 1px solid var(--border-color); background: rgba(245, 158, 11, 0.1);">
         <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
         <h3 style="margin: 0; font-size: 1.125rem; color: var(--gray-900);">Restore Database</h3>
@@ -341,7 +341,7 @@
 
   <!-- Delete Modal -->
   <div id="deleteModal" class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s;">
-    <div style="background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 480px; overflow: hidden; transform: scale(0.9); transition: transform 0.3s;">
+    <div style="background: var(--bg-primary); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 480px; overflow: hidden; transform: scale(0.9); transition: transform 0.3s;">
       <div style="display: flex; align-items: center; gap: 8px; padding: 20px; border-bottom: 1px solid var(--border-color); background: rgba(239, 68, 68, 0.1);">
         <i class="fas fa-exclamation-circle" style="color: var(--danger);"></i>
         <h3 style="margin: 0; font-size: 1.125rem; color: var(--gray-900);">Delete Backup</h3>

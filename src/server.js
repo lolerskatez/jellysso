@@ -58,10 +58,11 @@ app.use(helmet({
     },
     useDefaults: false // Disable default directives including upgrade-insecure-requests
   },
-  crossOriginOpenerPolicy: false, // Disable for compatibility
+  crossOriginOpenerPolicy: false,   // Disable for compatibility
+  crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   strictTransportSecurity: false,
-  crossOriginEmbedderPolicy: false
+  originAgentCluster: false,        // Consistently opt-out; avoids "inconsistent agent cluster" warning
 }));
 
 app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB

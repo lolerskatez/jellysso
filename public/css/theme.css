@@ -845,3 +845,215 @@ html[data-theme="dark"] .badge,
 html[data-theme="dark"] .status-badge {
   filter: brightness(0.85);
 }
+/* ---- Modal (layout.css background: white) ---- */
+html[data-theme="dark"] .modal {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+/* ---- Badge color variants (hardcoded hex) ---- */
+html[data-theme="dark"] .badge-success {
+  background-color: rgba(76, 175, 80, 0.25);
+  color: #a5d6a7;
+}
+html[data-theme="dark"] .badge-warning {
+  background-color: rgba(255, 193, 7, 0.25);
+  color: #ffe082;
+}
+html[data-theme="dark"] .badge-danger {
+  background-color: rgba(244, 67, 54, 0.25);
+  color: #ef9a9a;
+}
+html[data-theme="dark"] .badge-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* ---- Alert variants (hardcoded hex) ---- */
+html[data-theme="dark"] .alert-success {
+  background-color: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.35);
+  color: #a5d6a7;
+}
+html[data-theme="dark"] .alert-warning {
+  background-color: rgba(255, 193, 7, 0.15);
+  border-color: rgba(255, 193, 7, 0.35);
+  color: #ffe082;
+}
+html[data-theme="dark"] .alert-danger {
+  background-color: rgba(244, 67, 54, 0.15);
+  border-color: rgba(244, 67, 54, 0.35);
+  color: #ef9a9a;
+}
+html[data-theme="dark"] .alert-info {
+  background-color: rgba(33, 150, 243, 0.15);
+  border-color: rgba(33, 150, 243, 0.35);
+  color: #90caf9;
+}
+
+/* ---- QuickConnect page ---- */
+html[data-theme="dark"] .quickconnect-card {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .session-item {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+html[data-theme="dark"] .code-input {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .status-info {
+  background-color: rgba(33, 150, 243, 0.15);
+  border-color: rgba(33, 150, 243, 0.35);
+  color: #90caf9;
+}
+html[data-theme="dark"] .status-success {
+  background-color: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.35);
+  color: #a5d6a7;
+}
+html[data-theme="dark"] .status-error {
+  background-color: rgba(244, 67, 54, 0.15);
+  border-color: rgba(244, 67, 54, 0.35);
+  color: #ef9a9a;
+}
+
+/* ---- Backups page ---- */
+html[data-theme="dark"] .actions-card,
+html[data-theme="dark"] .table-card,
+html[data-theme="dark"] .backup-item {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .table-card-header {
+  border-color: var(--border-color);
+}
+html[data-theme="dark"] .backups-table th {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .backups-table td {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* ---- OIDC page: info-card gradient ---- */
+html[data-theme="dark"] .oidc-container .info-card {
+  background: linear-gradient(135deg, rgba(3, 105, 161, 0.2) 0%, rgba(12, 74, 110, 0.15) 100%) !important;
+  border-color: rgba(0, 164, 220, 0.35) !important;
+}
+html[data-theme="dark"] .oidc-container .info-card h3 {
+  color: #7dd3fc;
+}
+html[data-theme="dark"] .oidc-container .info-card p {
+  color: var(--text-secondary);
+}
+
+/* ---- Plugin page: info-card gradient ---- */
+html[data-theme="dark"] .plugin-container .info-card {
+  background: linear-gradient(135deg, rgba(91, 33, 182, 0.2) 0%, rgba(107, 33, 168, 0.15) 100%) !important;
+  border-color: rgba(167, 139, 250, 0.35) !important;
+}
+html[data-theme="dark"] .plugin-container .info-card h3 {
+  color: #c4b5fd;
+}
+html[data-theme="dark"] .plugin-container .info-card p {
+  color: var(--text-secondary);
+}
+
+/* ---- OIDC & Plugin pages: white-background containers ---- */
+html[data-theme="dark"] .uri-display,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .status-section {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* ---- Users page ---- */
+html[data-theme="dark"] .user-card {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .search-box input {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .view-toggle button:not(.active) {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+}
+html[data-theme="dark"] .view-toggle {
+  border-color: var(--border-color);
+}
+
+/* ---- Warning / info box (settings pages) ---- */
+html[data-theme="dark"] .warning-box {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--text-primary);
+}
+
+/* ---- Stat card explicitly declared white in view-level styles ---- */
+html[data-theme="dark"] .stat-card {
+  background-color: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .stat-content h3 {
+  color: var(--text-primary);
+}
+
+/* ---- User settings page ---- */
+html[data-theme="dark"] .settings-sidebar {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+/* ---- User index / profile page ---- */
+html[data-theme="dark"] .profile-card,
+html[data-theme="dark"] .system-info-card {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .quick-action-btn {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .quick-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ---- Admin dashboard widgets ---- */
+html[data-theme="dark"] .widget {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .widget-header {
+  border-color: var(--border-color);
+}
+html[data-theme="dark"] .widget-header h3 {
+  color: var(--text-primary);
+}
+
+/* ---- Audit logs page ---- */
+html[data-theme="dark"] .filter-bar,
+html[data-theme="dark"] .stat-item {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .stat-item strong {
+  color: var(--text-primary);
+}

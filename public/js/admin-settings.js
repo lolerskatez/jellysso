@@ -111,6 +111,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (section === 'logging') loadAuditLogStats();
         // Reload the page after saving app settings so appName and theme take effect
         if (section === 'app') {
+          // Persist theme to localStorage so theme-init.js applies it on every page immediately
+          if (formData.theme && window.applyTheme) {
+            localStorage.setItem('app-theme', formData.theme);
+            window.applyTheme(formData.theme);
+          }
           setTimeout(() => window.location.reload(), 800);
           return;
         }

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Backups - Jellyfin Companion Admin">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
   <title>Backups - Jellyfin Companion</title>
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/layout.css">
@@ -114,8 +115,16 @@
               System Backups
             </h3>
             <div style="background: white; border-radius: var(--border-radius); padding: var(--spacing-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+              <div style="background: rgba(0, 102, 204, 0.05); border-left: 3px solid var(--primary); padding: var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg); color: var(--text-secondary); font-size: 0.875rem;">
+                <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 8px;"></i>
+                <strong>What's being backed up:</strong> Your Jellyfin Companion database including audit logs, user provisioning settings, and configuration. The Jellyfin media library itself is NOT backed up (backup through Jellyfin separately).
+              </div>
+              <div style="background: rgba(16, 185, 129, 0.05); border-left: 3px solid var(--success); padding: var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg); color: var(--text-secondary); font-size: 0.875rem;">
+                <i class="fas fa-calendar-alt" style="color: var(--success); margin-right: 8px;"></i>
+                <strong>Automatic Backup Schedule:</strong> Monthly on day <strong><%= backupConfig?.monthlyDay || 1 %></strong> at <strong><%= backupConfig?.monthlyHour || 4 %>:00 AM</strong>. Retention: <strong><%= backupConfig?.retention || 12 %> months</strong>. <a href="/admin/settings" style="color: var(--primary);">Configure</a>
+              </div>
               <p style="color: var(--text-secondary); margin-top: 0;">
-                Create, manage, and restore system backups. Regular backups help protect your data against unexpected issues.
+                Create, manage, and restore database backups. You can use the button below to create a backup immediately, or manage existing backups below.
               </p>
               <button id="createBackupBtn" class="btn btn-primary" style="margin-top: var(--spacing-lg);">
                 <i class="fas fa-plus"></i>

@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Create backup
   async function createBackup() {
-    if (!confirm('Create a new database backup now?')) return;
+    if (!confirm('Create a backup of the database now?')) return;
 
     if (createBackupBtn) {
       createBackupBtn.disabled = true;
@@ -48,7 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     try {
-      const response = await fetch('/admin/api/backups/create', { method: 'POST' });
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      const response = await fetch('/admin/api/backups/create', { 
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken }
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -90,9 +94,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
       const response = await fetch('/admin/api/backups/restore', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken 
+        },
         body: JSON.stringify({ backupName: currentBackupName })
       });
       const data = await response.json();
@@ -133,9 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
       const response = await fetch('/admin/api/backups/delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken 
+        },
         body: JSON.stringify({ backupName: currentBackupName })
       });
       const data = await response.json();

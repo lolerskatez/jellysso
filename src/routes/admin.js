@@ -741,9 +741,19 @@ router.post('/api/maintenance/run', requireAuth, requireAdmin, async (req, res) 
 // Backups page
 router.get('/backups', requireAuth, requireAdmin, async (req, res) => {
   try {
+    // Get backup settings
+    const backupRetention = await DatabaseManager.getSetting('backup_retention') || 12;
+    const monthlyDay = await DatabaseManager.getSetting('maintenance_monthly_day') || 1;
+    const monthlyHour = await DatabaseManager.getSetting('maintenance_monthly_hour') || 4;
+    
     res.render('admin-backups', {
       user: req.session.user,
-      csrfToken: res.locals.csrfToken
+      csrfToken: res.locals.csrfToken,
+      backupConfig: {
+        retention: backupRetention,
+        monthlyDay: monthlyDay,
+        monthlyHour: monthlyHour
+      }
     });
   } catch (error) {
     console.error('Backups page error:', error);

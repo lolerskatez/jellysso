@@ -229,6 +229,8 @@ class MaintenanceScheduler {
         null,
         { backupFile: backupPath, sizeKB }
       );
+      
+      return backupPath;
     } catch (error) {
       console.error('Error during database backup:', error);
       throw error;

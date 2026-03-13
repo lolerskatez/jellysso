@@ -39,6 +39,7 @@ async function loadDashboardData() {
 
   try {
     await Promise.all([
+      loadStatCards(),
       loadBackupStatus(),
       loadRecentActivity(),
       loadSystemHealth()
@@ -55,6 +56,25 @@ async function loadDashboardData() {
     if (lastUpdate) {
       lastUpdate.textContent = new Date().toLocaleTimeString();
     }
+  }
+}
+
+// Load stat cards (top row)
+async function loadStatCards() {
+  try {
+    const response = await fetch('/admin/api/stats');
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.success) return;
+
+    updateElement('statTotalRequests', data.totalRequests);
+    updateElement('statSuccessRate', data.successRate);
+    updateElement('statFailedRequests', data.failedRequests);
+    updateElement('statTotalUsers', data.userCount);
+    updateElement('statUserLogins', data.last24h);
+    updateElement('statDbSize', data.dbSize);
+  } catch (error) {
+    console.error('Stat cards load error:', error);
   }
 }
 

@@ -131,6 +131,53 @@ router.get('/dashboard', requireAuth, requireAdmin, (req, res) => {
   res.redirect('/admin/');
 });
 
+// Live stats API for dashboard stat cards
+router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const auditStats = await DatabaseManager.getAuditStats();
+
+    // User count from Jellyfin
+    let userCount = 0;
+    try {
+      const config = SetupManager.getConfig();
+      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+      const users = await jellyfin.getUsers();
+      userCount = users.length;
+    } catch (e) {
+      console.warn('Could not get user count from Jellyfin:', e.message);
+    }
+
+    // DB file size
+    let dbSize = '—';
+    try {
+      const dbPath = path.join(__dirname, '../config/companion.db');
+      const stat = fsSyncApi.statSync(dbPath);
+      const kb = Math.round(stat.size / 1024);
+      dbSize = kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB';
+    } catch (e) {
+      console.warn('Could not get DB size:', e.message);
+    }
+
+    const total = auditStats.total || 0;
+    const success = auditStats.byStatus?.success || 0;
+    const failure = auditStats.byStatus?.failure || 0;
+    const successRate = total > 0 ? Math.round((success / total) * 100) : 0;
+
+    res.json({
+      success: true,
+      totalRequests: total,
+      successRate: successRate + '%',
+      failedRequests: failure,
+      userCount,
+      last24h: auditStats.last24h || 0,
+      dbSize
+    });
+  } catch (error) {
+    console.error('Stats API error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Audit log viewer page
 router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
   try {

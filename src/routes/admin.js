@@ -592,7 +592,36 @@ router.get('/api/audit-logs', requireAuth, requireAdmin, async (req, res) => {
     };
     
     const logs = await AuditLogger.getLogs(options);
-    res.json({ success: true, count: logs.length, logs });
+    
+    // Enrich logs with usernames from Jellyfin (same as dashboard and audit-logs page)
+    let enrichedLogs = logs;
+    try {
+      const config = SetupManager.getConfig();
+      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+      const jellyfinUsers = await jellyfin.getUsers();
+      
+      // Create a map of userId to username
+      const userMap = {};
+      jellyfinUsers.forEach(u => {
+        userMap[u.Id] = u.Name;
+        userMap[u.Name] = u.Name; // Also map by name in case userId is already a name
+      });
+
+      // Enrich logs with usernames
+      enrichedLogs = logs.map(log => ({
+        ...log,
+        username: userMap[log.userId] || log.userId || 'System'
+      }));
+    } catch (enrichError) {
+      console.warn('Could not enrich audit logs API with usernames:', enrichError.message);
+      // Fallback: use userId as-is
+      enrichedLogs = logs.map(log => ({
+        ...log,
+        username: log.userId || 'System'
+      }));
+    }
+    
+    res.json({ success: true, count: enrichedLogs.length, logs: enrichedLogs });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1421,7 +1450,7 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
 
     await AuditLogger.log({
       action: 'SETTINGS_UPDATE',
-      userId: req.session.user?.Id,
+      userId: req.session.user?.Name || req.session.user?.Id || 'system',
       resource: `settings:${section}`,
       details: { section },
       status: 'success',
@@ -1634,7 +1663,7 @@ router.delete('/api/plugins/logs', requireAuth, requireAdmin, async (req, res) =
     // For now, we'll just return success
     await AuditLogger.log({
       action: 'PLUGIN_LOGS_CLEARED',
-      userId: req.session.user?.Id,
+      userId: req.session.user?.Name || req.session.user?.Id || 'system',
       resource: 'plugin-logs',
       details: {},
       status: 'success',

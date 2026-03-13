@@ -417,20 +417,16 @@
               <table class="activity-table">
                 <thead>
                   <tr>
-                    <th>Timestamp</th>
                     <th>Action</th>
                     <th>User</th>
                     <th>Status</th>
+                    <th>Timestamp</th>
                   </tr>
                 </thead>
                 <tbody id="recentActivityTable">
                   <% if (recentLogs && recentLogs.length > 0) { %>
                     <% recentLogs.slice(0, 5).forEach(log => { %>
                       <tr>
-                        <td class="timestamp-cell">
-                          <div class="date"><%= new Date(log.timestamp).toLocaleDateString() %></div>
-                          <div class="time"><%= new Date(log.timestamp).toLocaleTimeString() %></div>
-                        </td>
                         <td><span class="action-badge"><%= log.action %></span></td>
                         <td><strong><%= log.username || log.userId || 'System' %></strong></td>
                         <td>
@@ -438,6 +434,10 @@
                             <i class="fas fa-<%= log.status === 'success' ? 'check' : 'times' %>"></i>
                             <%= log.status %>
                           </span>
+                        </td>
+                        <td class="timestamp-cell">
+                          <div class="date"><%= new Date(log.timestamp).toLocaleDateString() %></div>
+                          <div class="time"><%= new Date(log.timestamp).toLocaleTimeString() %></div>
                         </td>
                       </tr>
                     <% }); %>

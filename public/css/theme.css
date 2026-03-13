@@ -792,6 +792,19 @@ html[data-theme="dark"] .main-content {
   color: var(--text-primary);
 }
 
+/* ---- Sidebar: var(--gray-900) is remapped to light in dark mode,
+        so the gradient must be explicitly kept dark ---- */
+html[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+}
+
+/* ---- Top header bar (background: white in layout.css) ---- */
+html[data-theme="dark"] .header {
+  background-color: var(--bg-primary) !important;
+  border-bottom-color: var(--border-color);
+  color: var(--text-primary);
+}
+
 html[data-theme="dark"] .card,
 html[data-theme="dark"] .settings-section,
 html[data-theme="dark"] .modal-content,
@@ -829,7 +842,6 @@ html[data-theme="dark"] .table tbody tr:hover {
   background-color: var(--bg-tertiary);
 }
 
-html[data-theme="dark"] .header,
 html[data-theme="dark"] .page-content {
   background-color: var(--bg-secondary);
 }

@@ -909,6 +909,18 @@ html[data-theme="dark"] .quickconnect-card {
   background-color: var(--bg-primary);
   color: var(--text-primary);
 }
+html[data-theme="dark"] .instructions {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+html[data-theme="dark"] .instructions li {
+  color: var(--text-secondary);
+}
+html[data-theme="dark"] .code-display {
+  background: linear-gradient(135deg, rgba(0, 164, 220, 0.12) 0%, rgba(0, 164, 220, 0.07) 100%);
+  border-color: var(--primary);
+  color: var(--primary);
+}
 html[data-theme="dark"] .session-item {
   background-color: var(--bg-tertiary);
   border-color: var(--border-color);
@@ -979,7 +991,16 @@ html[data-theme="dark"] .plugin-container .info-card p {
 }
 
 /* ---- OIDC & Plugin pages: white-background containers ---- */
-html[data-theme="dark"] .uri-display,
+/* !important needed on uri-display because plugins.ejs applies inline gradient style */
+html[data-theme="dark"] .uri-display {
+  background: var(--bg-primary) !important;
+  background-image: none !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .uri-display p {
+  color: var(--text-secondary) !important;
+}
 html[data-theme="dark"] .settings-card,
 html[data-theme="dark"] .status-section {
   background-color: var(--bg-primary);

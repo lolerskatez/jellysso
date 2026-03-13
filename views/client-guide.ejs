@@ -407,26 +407,12 @@
                 <i class="fas fa-shield-alt"></i>
                 JellySSO Address
               </div>
-              <span class="copy-pill" data-url="<%= baseUrl %>">
+              <span class="copy-pill" data-url="<%= appUrl %>">
                 <i class="fas fa-copy"></i>
-                <%= baseUrl %>
+                <%= appUrl %>
               </span>
               <p class="server-card-desc">Used for SSO login in a web browser and to approve QuickConnect codes. Not the server address for Jellyfin apps.</p>
             </div>
-
-            <% if (webAppPublicUrl && webAppPublicUrl !== baseUrl) { %>
-            <div class="server-card">
-              <div class="server-card-label">
-                <i class="fas fa-globe"></i>
-                Web App URL
-              </div>
-              <span class="copy-pill" data-url="<%= webAppPublicUrl %>">
-                <i class="fas fa-copy"></i>
-                <%= webAppPublicUrl %>
-              </span>
-              <p class="server-card-desc">The public URL for the Jellyfin web app if hosted separately.</p>
-            </div>
-            <% } %>
           </div>
 
           <!-- ── QuickConnect banner ───────────────────────────────────── -->
@@ -437,7 +423,7 @@
               <p>
                 Native Jellyfin apps (Android TV, Fire TV, iOS, Android) don't support SSO login directly.
                 The easiest way to authenticate: open the Jellyfin app, choose <strong>Quick Connect</strong>, then visit
-                <a href="/quickconnect"><%= baseUrl %>/quickconnect</a> in a browser to approve the code.
+                <a href="/quickconnect"><%= appUrl %>/quickconnect</a> in a browser to approve the code.
                 No password needed.
               </p>
             </div>
@@ -472,7 +458,7 @@
                 <li class="step"><span class="step-num">3</span><div class="step-content">Enter the server address: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span> — tap the pill to copy it first, then paste it on the TV.</div></li>
                 <li class="step"><span class="step-num">4</span><div class="step-content">The app may auto-discover servers on your LAN — it will find Jellyfin directly, which is correct. If it doesn't, add the server manually with the address above.</div></li>
                 <li class="step"><span class="step-num">5</span><div class="step-content">Once connected, on the login screen choose <strong>Sign in with Quick Connect</strong>. A 6-character code will appear on the TV.</div></li>
-                <li class="step"><span class="step-num">6</span><div class="step-content">On a phone or computer, open <strong><a href="/quickconnect" style="color:var(--primary)"><%= baseUrl %>/quickconnect</a></strong> and log in if prompted. Enter the code shown on the TV to approve the session.</div></li>
+                <li class="step"><span class="step-num">6</span><div class="step-content">On a phone or computer, open <strong><a href="/quickconnect" style="color:var(--primary)"><%= appUrl %>/quickconnect</a></strong> and log in if prompted. Enter the code shown on the TV to approve the session.</div></li>
                 <li class="step"><span class="step-num">7</span><div class="step-content">The TV app will automatically sign in — no password required.</div></li>
               </ol>
               <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Fire TV: if you can't type the full server URL easily with a remote, use the Fire TV's built-in browser or a phone to complete initial setup via QuickConnect — no typing needed on the TV after entering the server address once.</span></div>
@@ -539,8 +525,8 @@
                 <li class="step"><span class="step-num">2</span><div class="step-content">Open the app and select <strong>Add Server</strong> or <strong>Connect Manually</strong>.</div></li>
                 <li class="step"><span class="step-num">3</span><div class="step-content">Enter the server address: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
                 <li class="step"><span class="step-num">4</span><div class="step-content">Auto-discovery will find Jellyfin directly on your LAN — that's correct. If it doesn't appear, add it manually with the address above.</div></li>
-                <li class="step"><span class="step-num">5</span><div class="step-content">On the login screen, select <strong>Quick Connect</strong> to get a code, then approve it at <a href="/quickconnect" style="color:var(--primary)"><%= baseUrl %>/quickconnect</a> in a browser.</div></li>
-                <li class="step"><span class="step-num">6</span><div class="step-content">Alternatively: open <code><%= baseUrl %></code> in your mobile browser and log in via SSO, then use QuickConnect to authorize the native app.</div></li>
+                <li class="step"><span class="step-num">5</span><div class="step-content">On the login screen, select <strong>Quick Connect</strong> to get a code, then approve it at <a href="/quickconnect" style="color:var(--primary)"><%= appUrl %>/quickconnect</a> in a browser.</div></li>
+                <li class="step"><span class="step-num">6</span><div class="step-content">Alternatively: open <code><%= appUrl %></code> in your mobile browser and log in via SSO, then use QuickConnect to authorize the native app.</div></li>
               </ol>
               <div class="tip-box"><i class="fas fa-lightbulb"></i><span>iOS 14+ and newer Android versions may block plain HTTP (non-HTTPS) connections to external servers. If you get connection errors only on mobile (not on desktop), try switching to HTTPS with a valid certificate.</span></div>
             </div>
@@ -548,7 +534,7 @@
             <div class="setup-section">
               <h2 class="setup-section-title"><i class="fas fa-key"></i> SSO login on mobile</h2>
               <ol class="steps">
-                <li class="step"><span class="step-num">1</span><div class="step-content">Native Jellyfin apps don't have a built-in SSO/OIDC button. Open <strong><code><%= baseUrl %></code> in your mobile browser</strong> and log in via the SSO button there.</div></li>
+                <li class="step"><span class="step-num">1</span><div class="step-content">Native Jellyfin apps don't have a built-in SSO/OIDC button. Open <strong><code><%= appUrl %></code> in your mobile browser</strong> and log in via the SSO button there.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">After logging in via the browser, tap the <strong>QuickConnect</strong> tile on your user dashboard, then enter the code shown in the Jellyfin app.</div></li>
                 <li class="step"><span class="step-num">3</span><div class="step-content">The app will be signed in without needing a password. You only need to do this once per device — the app stores the access token.</div></li>
               </ol>
@@ -599,18 +585,18 @@
             <div class="setup-section">
               <h2 class="setup-section-title"><i class="fas fa-globe"></i> Accessing Jellyfin via browser</h2>
               <ol class="steps">
-                <li class="step"><span class="step-num">1</span><div class="step-content">To use SSO login, open the JellySSO login page: <span class="copy-pill inline-pill" data-url="<%= baseUrl %>"><i class="fas fa-copy"></i><%= baseUrl %></span> — click <strong>Sign in with SSO</strong> to authenticate through your identity provider.</div></li>
+                <li class="step"><span class="step-num">1</span><div class="step-content">To use SSO login, open the JellySSO login page: <span class="copy-pill inline-pill" data-url="<%= appUrl %>"><i class="fas fa-copy"></i><%= appUrl %></span> — click <strong>Sign in with SSO</strong> to authenticate through your identity provider.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">To access Jellyfin directly (username/password login), go to: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
-                <li class="step"><span class="step-num">3</span><div class="step-content">After SSO login at JellySSO you will have an authenticated session on your Jellyfin server. Bookmark <code><%= baseUrl %></code> for SSO sign-in or <code><%= clientUrl %></code> for direct Jellyfin access.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">After SSO login you will have an authenticated session on your Jellyfin server. Bookmark <code><%= appUrl %></code> for SSO sign-in or <code><%= clientUrl %></code> for direct Jellyfin access.</div></li>
               </ol>
             </div>
 
             <div class="setup-section">
               <h2 class="setup-section-title"><i class="fas fa-qrcode"></i> Authorizing another device from the browser</h2>
               <ol class="steps">
-                <li class="step"><span class="step-num">1</span><div class="step-content">Make sure you are logged in — either via <code><%= baseUrl %></code> (SSO login) or directly at <code><%= clientUrl %></code>.</div></li>
+                <li class="step"><span class="step-num">1</span><div class="step-content">Make sure you are logged in — either via <code><%= appUrl %></code> (SSO login) or directly at <code><%= clientUrl %></code>.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">On the device you want to authorize (TV, phone app), go to its login screen and select <strong>Quick Connect</strong>. Note the 6-character code.</div></li>
-                <li class="step"><span class="step-num">3</span><div class="step-content">In your browser, navigate to <a href="/quickconnect" style="color:var(--primary)"><strong><%= baseUrl %>/quickconnect</strong></a>.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">In your browser, navigate to <a href="/quickconnect" style="color:var(--primary)"><strong><%= appUrl %>/quickconnect</strong></a>.</div></li>
                 <li class="step"><span class="step-num">4</span><div class="step-content">Enter the code from the device and click <strong>Authorize</strong>. The device will be logged in instantly.</div></li>
               </ol>
             </div>
@@ -679,8 +665,8 @@
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Download the <strong>Jellyfin Media Player</strong> (JMP) from <a href="https://github.com/jellyfin/jellyfin-media-player/releases" target="_blank" rel="noopener" style="color:var(--primary)">jellyfin/jellyfin-media-player</a> for Windows, macOS, or Linux.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">On the welcome screen, click <strong>Add Server</strong> and enter the Jellyfin server URL: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
-                <li class="step"><span class="step-num">3</span><div class="step-content">Enter your Jellyfin username and password on the login screen. If your account uses SSO, use QuickConnect — click the <strong>Quick Connect</strong> option, note the code, then approve it at <a href="/quickconnect" style="color:var(--primary)"><%= baseUrl %>/quickconnect</a>.</div></li>
-                <li class="step"><span class="step-num">4</span><div class="step-content">Alternatively, access the <strong>Jellyfin web client</strong> directly: navigate to <code><%= clientUrl %></code> in Chrome, Firefox, Edge, or Safari. For SSO login, use <code><%= baseUrl %></code> instead.</div></li>
+                <li class="step"><span class="step-num">3</span><div class="step-content">Enter your Jellyfin username and password on the login screen. If your account uses SSO, use QuickConnect — click the <strong>Quick Connect</strong> option, note the code, then approve it at <a href="/quickconnect" style="color:var(--primary)"><%= appUrl %>/quickconnect</a>.</div></li>
+                <li class="step"><span class="step-num">4</span><div class="step-content">Alternatively, access the <strong>Jellyfin web client</strong> directly: navigate to <code><%= clientUrl %></code> in Chrome, Firefox, Edge, or Safari. For SSO login, use <code><%= appUrl %></code> instead.</div></li>
               </ol>
               <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Jellyfin Media Player embeds a Chromium-based web interface, so the browser and desktop app experience is nearly identical. Consider using the browser first to verify everything works before installing the desktop app.</span></div>
             </div>

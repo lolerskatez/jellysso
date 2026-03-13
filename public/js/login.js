@@ -8,12 +8,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const usernameField = document.getElementById('username');
 
   function showMessage(message, type = 'error') {
-    messageDiv.style.display = 'block';
-    messageDiv.className = `alert alert-${type}`;
+    messageDiv.style.display = 'flex';
+    messageDiv.className = `alert ${type}`;
     const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
     messageDiv.innerHTML = `
       <i class="fas fa-${icon}"></i>
-      <div style="flex: 1;">${message}</div>
+      <span>${message}</span>
     `;
   }
 

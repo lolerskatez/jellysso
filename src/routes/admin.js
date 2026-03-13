@@ -1206,7 +1206,15 @@ router.get('/oidc', requireAuth, requireAdmin, async (req, res) => {
 // Get OIDC settings
 router.get('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const settings = await DatabaseManager.getSetting('oidc_config');
+    let settings = await DatabaseManager.getSetting('oidc_config');
+    // Heal legacy double-encoded JSON (stored as a JSON string inside a JSON string)
+    if (typeof settings === 'string') {
+      try { settings = JSON.parse(settings); } catch (_) {}
+    }
+    // If the stored value was double-encoded, re-save it correctly now
+    if (settings && typeof settings === 'object') {
+      await DatabaseManager.setSetting('oidc_config', settings, 'json');
+    }
     res.json({ 
       success: true, 
       settings: settings || null 

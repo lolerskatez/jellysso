@@ -306,7 +306,7 @@
 
           <div class="server-url-box">
             <span class="label"><i class="fas fa-server"></i> &nbsp;JellySSO URL (use this in clients):</span>
-            <span class="url-pill" id="serverUrlPill" onclick="copyUrl('<%= baseUrl %>')">
+            <span class="url-pill" id="serverUrlPill" data-url="<%= baseUrl %>">
               <i class="fas fa-copy"></i>
               <%= baseUrl %>
             </span>
@@ -334,7 +334,7 @@
           <div class="platform-panel active" id="panel-androidtv">
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon red"><i class="fas fa-plug"></i></div>
                   <div><div class="issue-title">Can't connect to server / "Unable to connect"</div><div class="issue-subtitle">App times out or shows a connection error on startup</div></div>
@@ -355,7 +355,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon orange"><i class="fas fa-sign-in-alt"></i></div>
                   <div><div class="issue-title">Login fails / "Invalid username or password"</div><div class="issue-subtitle">Credentials are correct but login still fails</div></div>
@@ -375,7 +375,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon blue"><i class="fas fa-qrcode"></i></div>
                   <div><div class="issue-title">QuickConnect not working</div><div class="issue-subtitle">Code shown on TV is not accepted or expires too fast</div></div>
@@ -394,7 +394,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon purple"><i class="fas fa-play-circle"></i></div>
                   <div><div class="issue-title">Video won't play / buffering / black screen</div><div class="issue-subtitle">Login works but media won't stream</div></div>
@@ -414,7 +414,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon cyan"><i class="fas fa-certificate"></i></div>
                   <div><div class="issue-title">SSL / certificate errors</div><div class="issue-subtitle">"Certificate not valid" or HTTPS connection refused</div></div>
@@ -439,7 +439,7 @@
           <div class="platform-panel" id="panel-mobile">
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon red"><i class="fas fa-plug"></i></div>
                   <div><div class="issue-title">App can't find / connect to server</div><div class="issue-subtitle">Discovery fails or connection times out</div></div>
@@ -458,7 +458,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon orange"><i class="fas fa-sign-in-alt"></i></div>
                   <div><div class="issue-title">Login fails on the mobile app</div><div class="issue-subtitle">Username/password rejected or never returns</div></div>
@@ -476,7 +476,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon green"><i class="fas fa-key"></i></div>
                   <div><div class="issue-title">SSO login option not available in mobile app</div><div class="issue-subtitle">No SSO button on the app's login screen</div></div>
@@ -494,7 +494,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon purple"><i class="fas fa-play-circle"></i></div>
                   <div><div class="issue-title">Media not loading / playback errors</div><div class="issue-subtitle">Audio or video fails to start on mobile</div></div>
@@ -513,7 +513,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon cyan"><i class="fas fa-sync"></i></div>
                   <div><div class="issue-title">Keeps asking to re-login / session expires too fast</div><div class="issue-subtitle">App logs out unexpectedly or shows "session expired"</div></div>
@@ -538,7 +538,7 @@
           <div class="platform-panel" id="panel-web">
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon red"><i class="fas fa-ban"></i></div>
                   <div><div class="issue-title">Can't access JellySSO in the browser</div><div class="issue-subtitle">Page won't load or shows a connection refused error</div></div>
@@ -556,7 +556,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon orange"><i class="fas fa-user-lock"></i></div>
                   <div><div class="issue-title">SSO login redirects but comes back with an error</div><div class="issue-subtitle">OIDC callback fails or shows "oidc_callback_failed"</div></div>
@@ -577,7 +577,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon blue"><i class="fas fa-shield-alt"></i></div>
                   <div><div class="issue-title">CSRF error / "Invalid token" on forms</div><div class="issue-subtitle">Form submissions fail with a CSRF error</div></div>
@@ -594,7 +594,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon green"><i class="fas fa-user-slash"></i></div>
                   <div><div class="issue-title">SSO user created but has no access to media libraries</div><div class="issue-subtitle">Logged in via SSO but libraries are empty or inaccessible</div></div>
@@ -611,7 +611,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon purple"><i class="fas fa-user-cog"></i></div>
                   <div><div class="issue-title">SSO user not getting admin rights despite being in admin group</div><div class="issue-subtitle">Admin group mapping not working</div></div>
@@ -631,7 +631,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon cyan"><i class="fas fa-cookie"></i></div>
                   <div><div class="issue-title">Stuck in a login redirect loop</div><div class="issue-subtitle">Browser keeps redirecting between login and SSO provider</div></div>
@@ -657,7 +657,7 @@
           <div class="platform-panel" id="panel-general">
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon blue"><i class="fas fa-network-wired"></i></div>
                   <div><div class="issue-title">Verify JellySSO ↔ Jellyfin connectivity</div><div class="issue-subtitle">Confirm JellySSO can reach your Jellyfin server</div></div>
@@ -675,7 +675,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon orange"><i class="fas fa-file-alt"></i></div>
                   <div><div class="issue-title">Reading logs for errors</div><div class="issue-subtitle">Where to find diagnostic information</div></div>
@@ -693,7 +693,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon green"><i class="fas fa-redo"></i></div>
                   <div><div class="issue-title">After a config change nothing seems to update</div><div class="issue-subtitle">Settings saved but behaviour hasn't changed</div></div>
@@ -711,7 +711,7 @@
             </div>
 
             <div class="issue-group">
-              <div class="issue-header" onclick="toggleIssue(this)">
+              <div class="issue-header">
                 <div class="issue-header-left">
                   <div class="issue-icon purple"><i class="fas fa-docker"></i></div>
                   <div><div class="issue-title">Docker / reverse proxy checklist</div><div class="issue-subtitle">Common pitfalls when running behind a proxy or in containers</div></div>
@@ -737,32 +737,6 @@
     </main>
   </div>
 
-  <script>
-    // Accordion toggle
-    function toggleIssue(header) {
-      const group = header.closest('.issue-group');
-      group.classList.toggle('open');
-    }
-
-    // Tab switching
-    document.querySelectorAll('.platform-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.platform-panel').forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
-      });
-    });
-
-    // Copy URL to clipboard
-    function copyUrl(url) {
-      navigator.clipboard.writeText(url).then(() => {
-        const pill = document.getElementById('serverUrlPill');
-        const orig = pill.innerHTML;
-        pill.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        setTimeout(() => { pill.innerHTML = orig; }, 1800);
-      });
-    }
-  </script>
+  <script src="/js/troubleshoot.js"></script>
 </body>
 </html>

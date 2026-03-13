@@ -337,7 +337,7 @@ app.get('/login', csrfProtection, async (req, res) => {
     if (typeof oidcConfig === 'string') {
       oidcConfig = JSON.parse(oidcConfig);
     }
-    if (oidcConfig && oidcConfig.enabled) {
+    if (oidcConfig && oidcConfig.enabled && oidcConfig.issuerUrl && oidcConfig.clientId && oidcConfig.clientSecret) {
       oidcEnabled = true;
       oidcProviderName = oidcConfig.providerName || 'SSO Login';
     }

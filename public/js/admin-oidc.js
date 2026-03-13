@@ -54,7 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('scopes').value = s.scopes || 'openid profile email';
         document.getElementById('autoCreateUsers').checked = s.autoCreateUsers || false;
         document.getElementById('usernameClaim').value = s.usernameClaim || 'preferred_username';
-        document.getElementById('adminGroup').value = s.adminGroup || '';
+        document.getElementById('adminGroup').value = Array.isArray(s.adminGroup)
+          ? s.adminGroup.join(', ')
+          : (s.adminGroup || '');
 
         updateStatus(s.enabled);
       } else {

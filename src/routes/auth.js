@@ -287,6 +287,21 @@ async function getOidcConfig() {
   return config || null;
 }
 
+// Discovery document cache (5-minute TTL)
+const _discoveryCache = new Map();
+async function getDiscovery(issuerUrl) {
+  const discoveryUrl = issuerUrl.includes('.well-known')
+    ? issuerUrl
+    : issuerUrl.replace(/\/$/, '') + '/.well-known/openid-configuration';
+  const cached = _discoveryCache.get(discoveryUrl);
+  if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+    return cached.data;
+  }
+  const response = await axios.get(discoveryUrl);
+  _discoveryCache.set(discoveryUrl, { data: response.data, timestamp: Date.now() });
+  return response.data;
+}
+
 // OIDC Login - initiates the OIDC flow
 router.get('/oidc/login', async (req, res) => {
   try {
@@ -296,14 +311,8 @@ router.get('/oidc/login', async (req, res) => {
       return res.status(400).send('OIDC SSO is not enabled');
     }
 
-    // Fetch discovery document
-    let discoveryUrl = oidcConfig.issuerUrl;
-    if (!discoveryUrl.includes('.well-known')) {
-      discoveryUrl = discoveryUrl.replace(/\/$/, '') + '/.well-known/openid-configuration';
-    }
-
-    const discoveryResponse = await axios.get(discoveryUrl);
-    const discovery = discoveryResponse.data;
+    // Fetch discovery document (cached)
+    const discovery = await getDiscovery(oidcConfig.issuerUrl);
 
     // Generate state and nonce for security
     const state = crypto.randomBytes(32).toString('hex');
@@ -393,13 +402,8 @@ router.get('/oidc/callback', async (req, res) => {
       return res.redirect('/login?error=oidc_disabled');
     }
 
-    // Fetch discovery document
-    let discoveryUrl = oidcConfig.issuerUrl;
-    if (!discoveryUrl.includes('.well-known')) {
-      discoveryUrl = discoveryUrl.replace(/\/$/, '') + '/.well-known/openid-configuration';
-    }
-    const discoveryResponse = await axios.get(discoveryUrl);
-    const discovery = discoveryResponse.data;
+    // Fetch discovery document (cached)
+    const discovery = await getDiscovery(oidcConfig.issuerUrl);
 
     // Get base URL for callback (respects reverse proxy headers)
     const appConfig = SetupManager.getConfig();

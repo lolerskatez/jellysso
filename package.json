@@ -6,16 +6,15 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "generate-env": "node generate-env.js",
     "test": "jest tests/",
     "test:comprehensive": "jest tests/comprehensive.test.js",
     "test:admin": "jest tests/admin-features.test.js",
     "test:integration": "jest tests/integration.test.js",
     "test:all": "jest",
-    "test:setup": "node setup-test.js",
     "benchmark": "node benchmarks/runner.js",
     "benchmark:performance": "node benchmarks/performance-suite.js",
     "benchmark:load": "node benchmarks/load-testing.js",
-    "docker:test": "docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit",
     "build:plugin": "node build-plugin.js"
   },
   "keywords": [

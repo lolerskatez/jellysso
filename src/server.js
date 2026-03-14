@@ -134,18 +134,23 @@ const sessionStore = new SessionStore({
   cleanupInterval: 60 * 60 * 1000 // cleanup every hour
 });
 
+// Determine if secure cookies should be used
+// In development: check for Docker or reverse proxy indicators
+// trust proxy is set above, so if X-Forwarded-Proto indicates HTTPS, we should use secure cookies
+const useSecureCookies = isProduction || process.env.DOCKER === 'true' || process.env.TRUST_PROXY === 'true';
+
 app.use(session({
   store: sessionStore,
   secret: sessionSecret || 'default-secret',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Must be true so CSRF token is generated even before login
   cookie: {
-    // In production (behind a TLS-terminating proxy), trust proxy is set above,
-    // so req.secure is true and secure cookies are sent correctly over HTTPS.
-    secure: isProduction,
+    // Use secure cookies if in production, Docker, or behind a trusted proxy
+    // This ensures cookies work correctly behind HTTPS reverse proxies
+    secure: useSecureCookies,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax'
+    sameSite: 'lax' // Use 'lax' for better reverse proxy compatibility
   }
 }));
 
@@ -273,20 +278,53 @@ app.use(async (req, res, next) => {
         method: req.method,
         origin: req.get('Origin'),
         referer: req.get('Referer'),
+        'x-csrf-token-header': req.get('x-csrf-token') ? 'present' : 'missing',
         'x-forwarded-proto': req.get('X-Forwarded-Proto'),
         'x-forwarded-host': req.get('X-Forwarded-Host'),
         'x-forwarded-for': req.get('X-Forwarded-For'),
         hasSession: !!req.session,
-        hasSessionId: !!req.sessionID
+        hasSessionId: !!req.sessionID,
+        secure: req.secure,
+        protocol: req.protocol,
+        hostname: req.hostname
       });
       return res.status(403).json({ 
         error: 'CSRF token validation failed',
-        message: 'Invalid security token. Please try again.'
+        message: 'Invalid security token. Please try again.',
+        debug: {
+          hasSession: !!req.session,
+          tokenProvided: !!req.get('x-csrf-token'),
+          sessionCookie: req.session ? 'exists' : 'missing'
+        }
       });
     }
     if (err) return next(err);
     next();
   });
+});
+
+// CSRF token endpoint - allows clients to fetch a fresh CSRF token
+// Useful for SPA/API clients that need to make authenticated requests
+app.get('/api/csrf-token', (req, res) => {
+  try {
+    const token = req.csrfToken ? req.csrfToken() : null;
+    if (!token) {
+      return res.status(500).json({ 
+        error: 'Failed to generate CSRF token',
+        message: 'Session may not be initialized properly'
+      });
+    }
+    res.json({ 
+      csrf_token: token,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error('CSRF token generation failed:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate CSRF token',
+      message: err.message 
+    });
+  }
 });
 
 // Routes

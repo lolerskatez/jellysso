@@ -571,7 +571,15 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       csrfToken: res.locals.csrfToken,
       settings,
       appSettings: rawSettings,
-      jellyfinSettings: jellyfinConfig
+      jellyfinSettings: {
+        ...jellyfinConfig,
+        // Never send the full API key to the browser — show only a hint
+        apiKey: undefined,
+        apiKeySet: !!jellyfinConfig.apiKey,
+        apiKeyHint: jellyfinConfig.apiKey
+          ? jellyfinConfig.apiKey.substring(0, 4) + '\u2022'.repeat(24) + jellyfinConfig.apiKey.slice(-4)
+          : ''
+      }
     });
   } catch (error) {
     console.error('Settings error:', error);
@@ -1270,7 +1278,11 @@ router.get('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => 
     }
     res.json({ 
       success: true, 
-      settings: settings || null 
+      settings: settings ? {
+        ...settings,
+        // Never expose full client secret — use a sentinel the front-end can detect
+        clientSecret: settings.clientSecret ? '__masked__' : ''
+      } : null
     });
   } catch (error) {
     console.error('Error getting OIDC settings:', error);
@@ -1286,7 +1298,6 @@ router.post('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) =>
       providerName: req.body.providerName || 'SSO',
       issuerUrl: req.body.issuerUrl || '',
       clientId: req.body.clientId || '',
-      clientSecret: req.body.clientSecret || '',
       scopes: req.body.scopes || 'openid profile email',
       autoCreateUsers: req.body.autoCreateUsers || false,
       usernameClaim: req.body.usernameClaim || 'preferred_username',
@@ -1294,6 +1305,15 @@ router.post('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) =>
         ? req.body.adminGroup.split(',').map(g => g.trim()).filter(Boolean)
         : []
     };
+
+    // Preserve existing client secret if the sentinel '__masked__' was submitted
+    const submittedSecret = req.body.clientSecret || '';
+    if (submittedSecret && submittedSecret !== '__masked__') {
+      settings.clientSecret = submittedSecret;
+    } else {
+      const existing = await DatabaseManager.getSetting('oidc_config');
+      settings.clientSecret = (typeof existing === 'object' ? existing?.clientSecret : null) || '';
+    }
 
     await DatabaseManager.setSetting('oidc_config', settings, 'json');
 
@@ -1374,7 +1394,10 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         jellyfinUrl: config.jellyfinUrl || '',
         jellyfinPublicUrl: config.jellyfinPublicUrl || '',
         webAppPublicUrl: config.webAppPublicUrl || '',
-        apiKey: config.apiKey || ''
+        apiKeySet: !!config.apiKey,
+        apiKeyHint: config.apiKey
+          ? config.apiKey.substring(0, 4) + '\u2022'.repeat(24) + config.apiKey.slice(-4)
+          : ''
       }
     });
   } catch (error) {
@@ -1405,7 +1428,10 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       if (s.jellyfinUrl       !== undefined) updates.jellyfinUrl       = s.jellyfinUrl;
       if (s.jellyfinPublicUrl !== undefined) updates.jellyfinPublicUrl = s.jellyfinPublicUrl;
       if (s.webAppPublicUrl   !== undefined) updates.webAppPublicUrl   = s.webAppPublicUrl;
-      if (s.apiKey && s.apiKey.trim())       updates.apiKey            = s.apiKey.trim();
+      // Only update API key if a real new value was submitted (not blank or a masked hint)
+      if (s.apiKey && s.apiKey.trim() && !/^\u2022/.test(s.apiKey.trim())) {
+        updates.apiKey = s.apiKey.trim();
+      }
       SetupManager.updateConfig(updates);
 
     } else if (section === 'security') {

@@ -67,6 +67,14 @@ app.use(helmet({
 
 app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB
 
+// Fail fast in production if SESSION_SECRET is missing or is the insecure default
+const sessionSecret = process.env.SESSION_SECRET;
+if (isProduction && (!sessionSecret || sessionSecret === 'default-secret')) {
+  console.error('❌ SESSION_SECRET is not set or is using the insecure default value.');
+  console.error('   Generate one with: openssl rand -hex 32');
+  process.exit(1);
+}
+
 // Initialize session store (database-backed for persistence and clustering)
 const sessionStore = new SessionStore({
   expirationTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -75,11 +83,13 @@ const sessionStore = new SessionStore({
 
 app.use(session({
   store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'default-secret',
+  secret: sessionSecret || 'default-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
-    secure: false, // Force non-secure cookies
+  cookie: {
+    // In production (behind a TLS-terminating proxy), trust proxy is set above,
+    // so req.secure is true and secure cookies are sent correctly over HTTPS.
+    secure: isProduction,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'

@@ -1,6 +1,14 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+
+// On non-Windows, restrict DB file to owner-only after creation
+function lockDbPermissions(filePath) {
+  if (os.platform() !== 'win32') {
+    try { fs.chmodSync(filePath, 0o600); } catch (_) {}
+  }
+}
 
 class DatabaseManager {
   constructor() {
@@ -31,6 +39,13 @@ class DatabaseManager {
         console.error('Error opening database:', err);
       } else {
         console.log('Connected to SQLite database');
+        lockDbPermissions(this.dbPath);
+        // Enable WAL mode for better crash safety and concurrent read performance
+        this.db.run('PRAGMA journal_mode=WAL', (walErr) => {
+          if (walErr) console.warn('Could not enable WAL mode:', walErr.message);
+        });
+        // Enforce foreign key constraints
+        this.db.run('PRAGMA foreign_keys=ON');
         this.initializeTables();
       }
     });

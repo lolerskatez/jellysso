@@ -1,5 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+
+// On non-Windows, restrict config file permissions to owner-only
+function lockFilePermissions(filePath) {
+  if (os.platform() !== 'win32') {
+    try { fs.chmodSync(filePath, 0o600); } catch (_) {}
+  }
+}
 
 class SetupManager {
   constructor() {
@@ -23,6 +31,7 @@ class SetupManager {
         setupCompletedAt: null
       };
       fs.writeFileSync(this.setupFile, JSON.stringify(defaultConfig, null, 2));
+      lockFilePermissions(this.setupFile);
     }
   }
 
@@ -40,6 +49,7 @@ class SetupManager {
     const currentConfig = this.getConfig();
     const newConfig = { ...currentConfig, ...updates };
     fs.writeFileSync(this.setupFile, JSON.stringify(newConfig, null, 2));
+    lockFilePermissions(this.setupFile);
     return newConfig;
   }
 
@@ -81,6 +91,7 @@ class SetupManager {
       setupCompletedAt: null
     };
     fs.writeFileSync(this.setupFile, JSON.stringify(defaultConfig, null, 2));
+    lockFilePermissions(this.setupFile);
   }
 }
 

@@ -398,7 +398,10 @@
                 <div class="setting-description">Jellyfin API key for server-to-server communication</div>
               </div>
               <div>
-                <input type="text" name="apiKey" value="<%= jellyfinSettings.apiKey || '' %>" placeholder="Enter API key" style="font-family: monospace; font-size: 0.8125rem;">
+                <input type="password" name="apiKey" value="" placeholder="<%= jellyfinSettings.apiKeySet ? 'Key set — enter new key to replace' : 'Enter Jellyfin API key' %>" autocomplete="new-password" style="font-family: monospace; font-size: 0.8125rem;">
+                <% if (jellyfinSettings.apiKeySet) { %>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"><i class="fas fa-check-circle" style="color: var(--success);"></i> Key configured: <code><%= jellyfinSettings.apiKeyHint %></code></div>
+                <% } %>
               </div>
             </div>
 

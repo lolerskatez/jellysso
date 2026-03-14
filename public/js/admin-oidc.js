@@ -94,7 +94,8 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification('Client ID is required', 'error');
         return;
       }
-      if (!settings.clientSecret) {
+      // '__masked__' means the secret is already stored server-side — treat as valid
+      if (!settings.clientSecret && settings.clientSecret !== '__masked__') {
         showNotification('Client Secret is required', 'error');
         return;
       }

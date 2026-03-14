@@ -889,9 +889,62 @@ router.get('/backups', requireAuth, requireAdmin, async (req, res) => {
     const monthlyDay = await DatabaseManager.getSetting('maintenance_monthly_day') || 1;
     const monthlyHour = await DatabaseManager.getSetting('maintenance_monthly_hour') || 4;
     
-    res.render('admin-backups', {
+    // Get backups list
+    let backups = [];
+    let totalSize = '0 B';
+    let latestBackupDate = 'Never';
+    
+    const backupsDir = path.join(__dirname, '..', 'config', 'backups');
+    try {
+      const files = await fs.readdir(backupsDir);
+      const dbBackups = files.filter(f => f.endsWith('.db'));
+      
+      let totalBytes = 0;
+      for (const file of dbBackups) {
+        const filePath = path.join(backupsDir, file);
+        const stats = await fs.stat(filePath);
+        
+        backups.push({
+          id: file,
+          name: file,
+          date: stats.mtime,
+          size: stats.size
+        });
+        totalBytes += stats.size;
+      }
+      
+      // Sort by date descending
+      backups.sort((a, b) => b.date - a.date);
+      
+      // Calculate total size
+      if (totalBytes > 0) {
+        if (totalBytes > 1073741824) {
+          totalSize = (totalBytes / 1073741824).toFixed(2) + ' GB';
+        } else if (totalBytes > 1048576) {
+          totalSize = (totalBytes / 1048576).toFixed(2) + ' MB';
+        } else if (totalBytes > 1024) {
+          totalSize = (totalBytes / 1024).toFixed(2) + ' KB';
+        } else {
+          totalSize = totalBytes + ' B';
+        }
+      }
+      
+      // Get latest backup date
+      if (backups.length > 0) {
+        const latestDate = new Date(backups[0].date);
+        latestBackupDate = latestDate.toLocaleString();
+      }
+    } catch (err) {
+      console.log('Backups directory not found');
+      await fs.mkdir(backupsDir, { recursive: true });
+    }
+    
+    res.render('admin/backups', {
       user: req.session.user,
       csrfToken: res.locals.csrfToken,
+      backups: backups,
+      totalSize: totalSize,
+      latestBackupDate: latestBackupDate,
       backupConfig: {
         retention: backupRetention,
         monthlyDay: monthlyDay,

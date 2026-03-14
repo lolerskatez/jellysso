@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Elements
   const createBackupBtn = document.getElementById('createBackupBtn');
-  const importBackupBtn = document.getElementById('importBackupBtn');
+  const uploadBackupBtn = document.getElementById('uploadBackupBtn');
   const backupFileInput = document.getElementById('backupFileInput');
   const refreshBtn = document.getElementById('refreshBtn');
   const restoreModal = document.getElementById('restoreModal');
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (data.success) {
         showNotification(data.message || 'Backup created successfully!', 'success');
-        setTimeout(() => loadBackups(), 1500);
+        setTimeout(() => location.reload(), 1500);
       } else {
         showNotification(data.message || 'Failed to create backup', 'error');
       }
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (data.success) {
         showNotification(data.message || 'Backup deleted successfully!', 'success');
-        setTimeout(() => loadBackups(), 1500);
+        setTimeout(() => location.reload(), 1500);
       } else {
         showNotification(data.message || 'Failed to delete backup', 'error');
       }
@@ -284,9 +284,9 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    if (importBackupBtn) {
-      importBackupBtn.disabled = true;
-      importBackupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+    if (uploadBackupBtn) {
+      uploadBackupBtn.disabled = true;
+      uploadBackupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
     }
 
     try {
@@ -303,16 +303,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (data.success) {
         showNotification(data.message || 'Backup imported successfully!', 'success');
-        setTimeout(() => loadBackups(), 1500);
+        setTimeout(() => location.reload(), 1500);
       } else {
         showNotification(data.message || 'Failed to import backup', 'error');
       }
     } catch (error) {
       showNotification('Error: ' + error.message, 'error');
     } finally {
-      if (importBackupBtn) {
-        importBackupBtn.disabled = false;
-        importBackupBtn.innerHTML = '<i class="fas fa-upload"></i> Import Backup';
+      if (uploadBackupBtn) {
+        uploadBackupBtn.disabled = false;
+        uploadBackupBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Backup';
       }
       // Reset file input
       if (backupFileInput) backupFileInput.value = '';
@@ -324,8 +324,8 @@ document.addEventListener('DOMContentLoaded', function() {
     createBackupBtn.addEventListener('click', createBackup);
   }
 
-  if (importBackupBtn) {
-    importBackupBtn.addEventListener('click', () => {
+  if (uploadBackupBtn) {
+    uploadBackupBtn.addEventListener('click', () => {
       if (backupFileInput) backupFileInput.click();
     });
   }

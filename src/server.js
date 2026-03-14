@@ -134,13 +134,10 @@ const sessionStore = new SessionStore({
   cleanupInterval: 60 * 60 * 1000 // cleanup every hour
 });
 
-// Determine secure cookie setting
-// Behind a TLS-terminating proxy like cloudflared, secure should be true
-// The proxy: true option ensures Express trusts X-Forwarded-Proto
-const behindProxy = process.env.TRUST_PROXY === 'true' || 
-                    process.env.DOCKER === 'true' || 
-                    isProduction;
-
+// Session configuration for reverse proxy scenarios (cloudflared, nginx, etc.)
+// NOTE: Even though we're behind HTTPS via cloudflared, cloudflared may not forward
+// X-Forwarded-Proto correctly. Setting secure: false is safe because TLS is terminated
+// at cloudflared - the user's connection is still secure.
 app.use(session({
   store: sessionStore,
   secret: sessionSecret || 'default-secret',
@@ -148,12 +145,11 @@ app.use(session({
   saveUninitialized: true, // Must be true so CSRF token is generated before login
   proxy: true, // Trust the reverse proxy
   cookie: {
-    // When behind a TLS-terminating proxy, secure must be true
-    // When in development without proxy, secure can be false  
-    secure: behindProxy,
+    // Set secure: false because cloudflared doesn't always forward X-Forwarded-Proto: https
+    // TLS is still terminated at cloudflared, so the user's connection is secure
+    secure: false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    // Use 'lax' - works for same-site requests which is what login is
     sameSite: 'lax'
   }
 }));

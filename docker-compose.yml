@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  jellysso:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: jellysso
+    image: jellysso:latest
+    ports:
+      - "${APP_PORT:-3010}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Required secrets — generate each with: openssl rand -hex 32
+      - SESSION_SECRET=${SESSION_SECRET}
+      - SHARED_SECRET=${SHARED_SECRET}
+      - COOKIE_SECRET=${COOKIE_SECRET}
+      # Optional: public-facing URL of JellySSO (needed behind a reverse proxy)
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      # Optional: OIDC provider (set ENABLE_OIDC=true to activate)
+      - ENABLE_OIDC=${ENABLE_OIDC:-false}
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - EXTERNAL_OIDC_CLIENTS=${EXTERNAL_OIDC_CLIENTS:-}
+    restart: unless-stopped
+    networks:
+      - jellysso-network
+    volumes:
+      # All persistent data (setup.json, companion.db, backups/) lives here
+      - config:/app/src/config
+      # Application logs
+      - logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  config:
+    driver: local
+  logs:
+    driver: local
+
+networks:
+  jellysso-network:
+    driver: bridge

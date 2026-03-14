@@ -82,7 +82,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'default-jwt-secret') 
     console.error('   Generate one with: openssl rand -hex 32');
     process.exit(1);
   } else {
-    console.warn('⚠️  JWT_SECRET is not set — using insecure default. Set JWT_SECRET in .env for production.');
+    console.log('⚠️  JWT_SECRET is not set — using insecure default. Set JWT_SECRET in .env for production.');
   }
 }
 

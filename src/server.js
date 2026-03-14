@@ -459,11 +459,8 @@ app.get('/api/dashboard', requireWebAuth, async (req, res) => {
 
 // Basic routes (only accessible after setup)
 app.get('/', requireWebAuth, (req, res) => {
-  // Redirect authenticated users to admin dashboard
-  if (req.session.user && req.session.user.Policy?.IsAdministrator) {
-    return res.redirect('/admin/');
-  }
-  // Redirect non-admins to quickconnect
+  // All authenticated users go to quickconnect
+  // Admins can access /admin/ separately if needed
   res.redirect('/quickconnect');
 });
 

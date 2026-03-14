@@ -25,8 +25,6 @@ const requireSetupComplete = (req, res, next) => {
 
 // Login route - CSRF validated by global middleware
 router.post('/login', requireSetupComplete, async (req, res) => {
-  console.log('Login request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Login request body:', JSON.stringify(req.body, null, 2));
   const { username, password } = req.body;
   if (!username || !password) {
     await AuditLogger.log('LOGIN_ATTEMPT', 'unknown', `user:${username || 'unknown'}`, 
@@ -391,13 +389,6 @@ router.get('/oidc/callback', async (req, res) => {
     }
 
     const oidcConfig = await getOidcConfig();
-    console.log(`OIDC Config loaded:`, {
-      enabled: oidcConfig?.enabled,
-      adminGroup: oidcConfig?.adminGroup,
-      adminGroupMapping: oidcConfig?.adminGroupMapping,
-      all_keys: oidcConfig ? Object.keys(oidcConfig) : []
-    });
-    
     if (!oidcConfig || !oidcConfig.enabled) {
       return res.redirect('/login?error=oidc_disabled');
     }
@@ -449,7 +440,6 @@ router.get('/oidc/callback', async (req, res) => {
           headers: { Authorization: `Bearer ${tokens.access_token}` }
         });
         userInfoPayload = { ...payload, ...userinfoResponse.data };
-        console.log(`UserInfo endpoint returned:`, Object.keys(userinfoResponse.data));
       }
     } catch (err) {
       console.warn(`Failed to fetch userinfo endpoint: ${err.message}. Will use ID token claims only.`);
@@ -462,20 +452,10 @@ router.get('/oidc/callback', async (req, res) => {
     // Try to find or create user in Jellyfin
     const jellyfinConfig = SetupManager.getConfig();
     
-    // Log config details for debugging
-    console.log('Jellyfin Config loaded:', {
-      jellyfinUrl: jellyfinConfig.jellyfinUrl,
-      hasApiKey: !!jellyfinConfig.apiKey,
-      apiKeyLength: jellyfinConfig.apiKey ? jellyfinConfig.apiKey.length : 0,
-      apiKeyPrefix: jellyfinConfig.apiKey ? jellyfinConfig.apiKey.substring(0, 8) + '...' : 'N/A'
-    });
-    
     // Verify API key is configured
     if (!jellyfinConfig.apiKey) {
       console.warn('⚠️  Warning: Jellyfin API key is not configured. User auto-creation and group mapping may not work.');
       // Continue anyway - local auth should still work
-    } else {
-      console.log('✅ API key is configured and available');
     }
     
     const jellyfinApi = new JellyfinAPI(jellyfinConfig.jellyfinUrl, jellyfinConfig.apiKey);
@@ -547,28 +527,21 @@ router.get('/oidc/callback', async (req, res) => {
     // First, try to get groups from userinfo/JWT claims (standard locations)
     if (userInfoPayload.groups && Array.isArray(userInfoPayload.groups)) {
       userGroups = userInfoPayload.groups;
-      console.log(`Groups extracted from userinfo/JWT 'groups' claim: ${userGroups.join(', ')}`);
     } else if (userInfoPayload.roles && Array.isArray(userInfoPayload.roles)) {
       userGroups = userInfoPayload.roles;
-      console.log(`Groups extracted from userinfo/JWT 'roles' claim: ${userGroups.join(', ')}`);
     } else if (userInfoPayload.group && typeof userInfoPayload.group === 'string') {
       userGroups = [userInfoPayload.group];
-      console.log(`Groups extracted from userinfo/JWT 'group' claim: ${userGroups.join(', ')}`);
     } else if (userInfoPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/groups']) {
       // Some IdPs use SAML-style claim names
       const groups = userInfoPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/groups'];
       userGroups = Array.isArray(groups) ? groups : [groups];
-      console.log(`Groups extracted from SAML-style claim: ${userGroups.join(', ')}`);
     } else {
       // Log what we're getting from the payload for debugging
-      console.log(`No standard groups claim found. Available claims: ${Object.keys(userInfoPayload).join(', ')}`);
     }
     
     const adminGroupMapping = oidcConfig.adminGroupMapping || oidcConfig.adminGroup || [];
     const adminGroups = Array.isArray(adminGroupMapping) ? adminGroupMapping : [adminGroupMapping];
     
-    console.log(`Admin group configuration: ${JSON.stringify(adminGroups)}`);
-    console.log(`User groups extracted: ${JSON.stringify(userGroups)}`);
     
     // Check if user is in admin group
     const isAdminFromGroups = adminGroups && adminGroups.length > 0 && 
@@ -578,7 +551,6 @@ router.get('/oidc/callback', async (req, res) => {
         )
       );
     
-    console.log(`Admin check result from OIDC groups: isAdmin=${isAdminFromGroups}`);
 
     // Apply group/role mapping to Jellyfin if user exists and API key is available
     if (jellyfinUser && jellyfinConfig.apiKey) {

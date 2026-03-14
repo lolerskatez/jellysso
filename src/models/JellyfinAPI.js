@@ -7,13 +7,6 @@ class JellyfinAPI {
     this.cache = new Map(); // Simple in-memory cache
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     
-    // Log API key info for debugging
-    if (apiKey) {
-      console.log(`🔑 JellyfinAPI initialized with API key (first 16 chars: ${apiKey.substring(0, 16)}...)`);
-    } else {
-      console.log('⚠️  JellyfinAPI initialized WITHOUT API key');
-    }
-    
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 30000, // 30 second timeout

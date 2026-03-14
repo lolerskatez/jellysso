@@ -149,11 +149,12 @@ app.use(session({
   proxy: true, // Trust the reverse proxy
   cookie: {
     // When behind a TLS-terminating proxy, secure must be true
-    // When in development without proxy, secure can be false
+    // When in development without proxy, secure can be false  
     secure: behindProxy,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: behindProxy ? 'none' : 'lax' // 'none' needed for cross-origin with secure
+    // Use 'lax' - works for same-site requests which is what login is
+    sameSite: 'lax'
   }
 }));
 

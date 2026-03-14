@@ -12,7 +12,7 @@ const SessionStore = require('./models/SessionStore');
 const CacheManager = require('./models/CacheManager');
 const PluginManager = require('./models/PluginManager');
 const JellyfinAPI = require('./models/JellyfinAPI');
-const { csrfProtection, setCsrfToken } = require('./middleware/csrf');
+const { csrfProtection, setCsrfToken, csrfErrorHandler } = require('./middleware/csrf');
 const crypto = require('crypto');
 require('dotenv').config();
 
@@ -264,7 +264,29 @@ app.use(async (req, res, next) => {
     const enabled = await securityConfig.isCsrfEnabled();
     if (!enabled) return next();
   } catch (_) { /* default to enforcing on error */ }
-  csrfProtection(req, res, next);
+  
+  // Wrap CSRF middleware to catch errors (especially important for reverse proxies)
+  csrfProtection(req, res, (err) => {
+    if (err && err.code === 'EBADCSRFTOKEN') {
+      logger.debug('CSRF token validation failed', {
+        path: req.path,
+        method: req.method,
+        origin: req.get('Origin'),
+        referer: req.get('Referer'),
+        'x-forwarded-proto': req.get('X-Forwarded-Proto'),
+        'x-forwarded-host': req.get('X-Forwarded-Host'),
+        'x-forwarded-for': req.get('X-Forwarded-For'),
+        hasSession: !!req.session,
+        hasSessionId: !!req.sessionID
+      });
+      return res.status(403).json({ 
+        error: 'CSRF token validation failed',
+        message: 'Invalid security token. Please try again.'
+      });
+    }
+    if (err) return next(err);
+    next();
+  });
 });
 
 // Routes
@@ -449,6 +471,10 @@ app.get('/download', (req, res) => {
     res.status(401).send('Unauthorized');
   }
 });
+
+// CSRF error handler middleware - catches CSRF token validation failures
+// This is especially important when behind reverse proxies like cloudflare/cloudflared
+app.use(csrfErrorHandler);
 
 // Initialize plugin system
 (async () => {

@@ -344,6 +344,50 @@
       margin: var(--spacing-xl) 0 var(--spacing-md) 0;
     }
 
+    /* ── Collapsible setup sections ────────────────────────────────────── */
+    .section-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-lg);
+      margin-bottom: var(--spacing-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-md) var(--spacing-lg);
+      cursor: pointer;
+      user-select: none;
+      gap: var(--spacing-md);
+      transition: background var(--transition);
+    }
+    .section-header:hover { background: var(--bg-secondary); }
+    .section-header-title {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin: 0;
+    }
+    .section-header-title i { color: var(--primary); }
+    .section-chevron {
+      color: var(--text-secondary);
+      transition: transform 0.25s ease;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .section-group.open .section-chevron { transform: rotate(180deg); }
+    .section-body {
+      display: none;
+      padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
+    .section-group.open .section-body { display: block; }
+
     @media (max-width: 640px) {
       .platform-tabs { gap: 0; }
       .platform-tab { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.875rem; }
@@ -450,8 +494,12 @@
                ANDROID TV / FIRE TV
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel active" id="panel-androidtv">
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Install the <strong>Jellyfin for Android TV</strong> app from the Google Play Store, Amazon Appstore, or your device's app store.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">Launch the app. On the welcome screen select <strong>Add Server</strong>.</div></li>
@@ -462,14 +510,20 @@
                 <li class="step"><span class="step-num">7</span><div class="step-content">The TV app will automatically sign in — no password required.</div></li>
               </ol>
               <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Fire TV: if you can't type the full server URL easily with a remote, use the Fire TV's built-in browser or a phone to complete initial setup via QuickConnect — no typing needed on the TV after entering the server address once.</span></div>
+              </div>
             </div>
 
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-wifi"></i> Local vs. remote access</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-wifi"></i> Local vs. remote access</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content"><strong>On your home network:</strong> Use the <strong>Jellyfin Server URL (Internal)</strong> (<code><%= jellyfinUrl %></code>) if your TV can't reach the public URL. Both devices must be on the same network.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content"><strong>Away from home:</strong> Use the <strong>Jellyfin Public URL</strong> (<code><%= jellyfinPublicUrl || 'not configured' %></code>). This requires your Jellyfin server to be accessible from the internet via port forwarding, a reverse proxy, or a VPN.</div></li>
               </ol>
+              </div>
             </div>
 
             <p class="common-issues-title">Common issues</p>
@@ -518,8 +572,12 @@
                iOS & ANDROID MOBILE
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel" id="panel-mobile">
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Install the Jellyfin app: <strong>Swiftfin</strong> (iOS/tvOS) or <strong>Jellyfin for Android</strong> from your app store.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">Open the app and select <strong>Add Server</strong> or <strong>Connect Manually</strong>.</div></li>
@@ -529,15 +587,21 @@
                 <li class="step"><span class="step-num">6</span><div class="step-content">Alternatively: open <code><%= appUrl %></code> in your mobile browser and log in via SSO, then use QuickConnect to authorize the native app.</div></li>
               </ol>
               <div class="tip-box"><i class="fas fa-lightbulb"></i><span>iOS 14+ and newer Android versions may block plain HTTP (non-HTTPS) connections to external servers. If you get connection errors only on mobile (not on desktop), try switching to HTTPS with a valid certificate.</span></div>
+              </div>
             </div>
 
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-key"></i> SSO login on mobile</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-key"></i> SSO login on mobile</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Native Jellyfin apps don't have a built-in SSO/OIDC button. Open <strong><code><%= appUrl %></code> in your mobile browser</strong> and log in via the SSO button there.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">After logging in via the browser, tap the <strong>QuickConnect</strong> tile on your user dashboard, then enter the code shown in the Jellyfin app.</div></li>
                 <li class="step"><span class="step-num">3</span><div class="step-content">The app will be signed in without needing a password. You only need to do this once per device — the app stores the access token.</div></li>
               </ol>
+              </div>
             </div>
 
             <p class="common-issues-title">Common issues</p>
@@ -582,23 +646,33 @@
                WEB BROWSER
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel" id="panel-web">
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-globe"></i> Accessing Jellyfin via browser</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-globe"></i> Accessing Jellyfin via browser</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">To use SSO login, open the JellySSO login page: <span class="copy-pill inline-pill" data-url="<%= appUrl %>"><i class="fas fa-copy"></i><%= appUrl %></span> — click <strong>Sign in with SSO</strong> to authenticate through your identity provider.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">To access Jellyfin directly (username/password login), go to: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
                 <li class="step"><span class="step-num">3</span><div class="step-content">After SSO login you will have an authenticated session on your Jellyfin server. Bookmark <code><%= appUrl %></code> for SSO sign-in or <code><%= clientUrl %></code> for direct Jellyfin access.</div></li>
               </ol>
+              </div>
             </div>
 
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-qrcode"></i> Authorizing another device from the browser</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-qrcode"></i> Authorizing another device from the browser</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Make sure you are logged in — either via <code><%= appUrl %></code> (SSO login) or directly at <code><%= clientUrl %></code>.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">On the device you want to authorize (TV, phone app), go to its login screen and select <strong>Quick Connect</strong>. Note the 6-character code.</div></li>
                 <li class="step"><span class="step-num">3</span><div class="step-content">In your browser, navigate to <a href="/quickconnect" style="color:var(--primary)"><strong><%= appUrl %>/quickconnect</strong></a>.</div></li>
                 <li class="step"><span class="step-num">4</span><div class="step-content">Enter the code from the device and click <strong>Authorize</strong>. The device will be logged in instantly.</div></li>
               </ol>
+              </div>
             </div>
 
             <p class="common-issues-title">Common issues</p>
@@ -660,8 +734,12 @@
                DESKTOP
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel" id="panel-desktop">
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-desktop"></i> Desktop app setup</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-desktop"></i> Desktop app setup</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Download the <strong>Jellyfin Media Player</strong> (JMP) from <a href="https://github.com/jellyfin/jellyfin-media-player/releases" target="_blank" rel="noopener" style="color:var(--primary)">jellyfin/jellyfin-media-player</a> for Windows, macOS, or Linux.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content">On the welcome screen, click <strong>Add Server</strong> and enter the Jellyfin server URL: <span class="copy-pill inline-pill" data-url="<%= clientUrl %>"><i class="fas fa-copy"></i><%= clientUrl || '(Jellyfin URL not configured)' %></span></div></li>
@@ -669,19 +747,59 @@
                 <li class="step"><span class="step-num">4</span><div class="step-content">Alternatively, access the <strong>Jellyfin web client</strong> directly: navigate to <code><%= clientUrl %></code> in Chrome, Firefox, Edge, or Safari. For SSO login, use <code><%= appUrl %></code> instead.</div></li>
               </ol>
               <div class="tip-box"><i class="fas fa-lightbulb"></i><span>Jellyfin Media Player embeds a Chromium-based web interface, so the browser and desktop app experience is nearly identical. Consider using the browser first to verify everything works before installing the desktop app.</span></div>
+              </div>
             </div>
 
-            <div class="setup-section">
-              <h2 class="setup-section-title"><i class="fas fa-tv"></i> Other clients (Kodi, Infuse, etc.)</h2>
+            <div class="section-group open">
+              <div class="section-header">
+                <h2 class="section-header-title"><i class="fas fa-tv"></i> Other clients (Kodi, Infuse, etc.)</h2>
+                <i class="fas fa-chevron-down section-chevron"></i>
+              </div>
+              <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content"><strong>Kodi (Jellyfin for Kodi add-on):</strong> Install the add-on, then in its settings set the Jellyfin server address to <code><%= clientUrl || jellyfinUrl %></code>. Use your Jellyfin username and password; QuickConnect is not currently supported in the Kodi add-on.</div></li>
                 <li class="step"><span class="step-num">2</span><div class="step-content"><strong>Infuse (iOS/tvOS):</strong> Add a <em>Jellyfin</em> share and enter the server URL as <code><%= clientUrl || jellyfinUrl %></code> with your Jellyfin username and password.</div></li>
                 <li class="step"><span class="step-num">3</span><div class="step-content"><strong>Finamp (music client):</strong> Same server URL — enter <code><%= clientUrl || jellyfinUrl %></code> and authenticate with username/password.</div></li>
                 <li class="step"><span class="step-num">4</span><div class="step-content">For clients that don't support QuickConnect: you need a standard Jellyfin username and password. If your account is SSO-only (password locked), ask an admin to set a local password for you in <strong>Admin → User Management</strong>.</div></li>
               </ol>
+              </div>
             </div>
 
             <p class="common-issues-title">Common issues</p>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon red"><i class="fas fa-plug"></i></div>
+                  <div><div class="issue-title">Can't connect to server</div><div class="issue-subtitle">App times out or shows "Unable to connect"</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Confirm the server URL in the app is the Jellyfin server address (<code><%= clientUrl || jellyfinUrl %></code>), not the JellySSO address.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">Test reachability by opening <code><%= clientUrl || jellyfinUrl %>/System/Info/Public</code> in a browser — you should get a JSON response with server info.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">If using HTTPS, ensure the certificate is from a trusted CA. Self-signed certs are rejected by most clients. Use a Let's Encrypt certificate via a reverse proxy.</div></li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="issue-group">
+              <div class="issue-header">
+                <div class="issue-header-left">
+                  <div class="issue-icon orange"><i class="fas fa-film"></i></div>
+                  <div><div class="issue-title">Video won't play / codec errors</div><div class="issue-subtitle">Playback fails or shows transcoding errors</div></div>
+                </div>
+                <i class="fas fa-chevron-down issue-chevron"></i>
+              </div>
+              <div class="issue-body">
+                <ol class="steps">
+                  <li class="step"><span class="step-num">1</span><div class="step-content">Jellyfin Media Player supports direct play for most modern codecs (H.264, H.265, AV1). If a file won't play, check the <strong>Jellyfin dashboard → Active Devices</strong> — it will show whether Jellyfin is transcoding and why.</div></li>
+                  <li class="step"><span class="step-num">2</span><div class="step-content">In JMP settings, try enabling or disabling <strong>hardware-accelerated decoding</strong> — some GPUs don't support H.265 or HDR transcoding, and toggling this off forces software decoding.</div></li>
+                  <li class="step"><span class="step-num">3</span><div class="step-content">For Kodi: ensure the Jellyfin add-on and Kodi are both up to date. Kodi uses its own codec pipeline, so install any required codec packs for your platform.</div></li>
+                </ol>
+              </div>
+            </div>
 
             <div class="issue-group">
               <div class="issue-header">

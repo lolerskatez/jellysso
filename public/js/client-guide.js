@@ -42,10 +42,17 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // ── Accordion sections ─────────────────────────────────────────────────────
+  // ── Accordion sections (common issues) ────────────────────────────────────
   document.querySelectorAll('.issue-header').forEach(function (header) {
     header.addEventListener('click', function () {
       header.closest('.issue-group').classList.toggle('open');
+    });
+  });
+
+  // ── Accordion sections (setup sections) ───────────────────────────────────
+  document.querySelectorAll('.section-header').forEach(function (header) {
+    header.addEventListener('click', function () {
+      header.closest('.section-group').classList.toggle('open');
     });
   });
 

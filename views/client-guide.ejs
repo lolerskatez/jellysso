@@ -362,12 +362,6 @@
       user-select: none;
       gap: var(--spacing-md);
       transition: background var(--transition);
-      /* button reset */
-      width: 100%;
-      border: none;
-      background: none;
-      text-align: left;
-      font: inherit;
     }
     .section-header:hover { background: var(--bg-secondary); }
     .section-header-title {
@@ -409,7 +403,7 @@
         <div class="header-left">
           <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
             <i class="fas fa-bars"></i>
-          </button>
+          </div>
           <h1 class="header-title">Jellyfin Client Setup Guide</h1>
         </div>
       </header>
@@ -501,10 +495,10 @@
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel active" id="panel-androidtv">
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Install the <strong>Jellyfin for Android TV</strong> app from the Google Play Store, Amazon Appstore, or your device's app store.</div></li>
@@ -520,10 +514,10 @@
             </div>
 
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-wifi"></i> Local vs. remote access</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content"><strong>On your home network:</strong> Use the <strong>Jellyfin Server URL (Internal)</strong> (<code><%= jellyfinUrl %></code>) if your TV can't reach the public URL. Both devices must be on the same network.</div></li>
@@ -579,10 +573,10 @@
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel" id="panel-mobile">
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-plus-circle"></i> First-time setup</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Install the Jellyfin app: <strong>Swiftfin</strong> (iOS/tvOS) or <strong>Jellyfin for Android</strong> from your app store.</div></li>
@@ -597,10 +591,10 @@
             </div>
 
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-key"></i> SSO login on mobile</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Native Jellyfin apps don't have a built-in SSO/OIDC button. Open <strong><code><%= appUrl %></code> in your mobile browser</strong> and log in via the SSO button there.</div></li>
@@ -653,10 +647,10 @@
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel" id="panel-web">
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-globe"></i> Accessing Jellyfin via browser</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">To use SSO login, open the JellySSO login page: <span class="copy-pill inline-pill" data-url="<%= appUrl %>"><i class="fas fa-copy"></i><%= appUrl %></span> — click <strong>Sign in with SSO</strong> to authenticate through your identity provider.</div></li>
@@ -667,10 +661,10 @@
             </div>
 
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-qrcode"></i> Authorizing another device from the browser</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Make sure you are logged in — either via <code><%= appUrl %></code> (SSO login) or directly at <code><%= clientUrl %></code>.</div></li>
@@ -741,10 +735,10 @@
           ════════════════════════════════════════════════════════════ -->
           <div class="platform-panel" id="panel-desktop">
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-desktop"></i> Desktop app setup</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content">Download the <strong>Jellyfin Media Player</strong> (JMP) from <a href="https://github.com/jellyfin/jellyfin-media-player/releases" target="_blank" rel="noopener" style="color:var(--primary)">jellyfin/jellyfin-media-player</a> for Windows, macOS, or Linux.</div></li>
@@ -757,10 +751,10 @@
             </div>
 
             <div class="section-group">
-              <button class="section-header" type="button">
+              <div class="section-header">
                 <h2 class="section-header-title"><i class="fas fa-tv"></i> Other clients (Kodi, Infuse, etc.)</h2>
                 <i class="fas fa-chevron-down section-chevron"></i>
-              </button>
+              </div>
               <div class="section-body">
               <ol class="steps">
                 <li class="step"><span class="step-num">1</span><div class="step-content"><strong>Kodi (Jellyfin for Kodi add-on):</strong> Install the add-on, then in its settings set the Jellyfin server address to <code><%= clientUrl || jellyfinUrl %></code>. Use your Jellyfin username and password; QuickConnect is not currently supported in the Kodi add-on.</div></li>

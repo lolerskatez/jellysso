@@ -42,18 +42,28 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // ── Accordion sections (common issues) ────────────────────────────────────
-  document.querySelectorAll('.issue-header').forEach(function (header) {
-    header.addEventListener('click', function () {
-      header.closest('.issue-group').classList.toggle('open');
-    });
-  });
+  // ── Accordion sections (both setup and issue) ─────────────────────────────
+  // Use event delegation for reliable accordion handling
+  document.addEventListener('click', function (e) {
+    // Handle section headers (setup sections)
+    var sectionHeader = e.target.closest('.section-header');
+    if (sectionHeader) {
+      var sectionGroup = sectionHeader.closest('.section-group');
+      if (sectionGroup) {
+        sectionGroup.classList.toggle('open');
+      }
+      return;
+    }
 
-  // ── Accordion sections (setup sections) ───────────────────────────────────
-  document.querySelectorAll('.section-header').forEach(function (header) {
-    header.addEventListener('click', function () {
-      header.closest('.section-group').classList.toggle('open');
-    });
+    // Handle issue headers (common issues)
+    var issueHeader = e.target.closest('.issue-header');
+    if (issueHeader) {
+      var issueGroup = issueHeader.closest('.issue-group');
+      if (issueGroup) {
+        issueGroup.classList.toggle('open');
+      }
+      return;
+    }
   });
 
 });

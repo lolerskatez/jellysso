@@ -9,8 +9,6 @@ const { csrfProtection } = require('../middleware/csrf');
 const jwt = require('jsonwebtoken');
 const { getBaseUrl } = require('../utils/urlHelper');
 
-const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
-
 // Middleware to require setup to be complete
 const requireSetupComplete = (req, res, next) => {
   if (!SetupManager.isSetupComplete()) {
@@ -143,8 +141,8 @@ router.get('/validate-sso', (req, res) => {
   const apiKey = req.headers['x-api-key'];
   
   // Check API key (must match the apiKey configured in setup)
-  const expectedKey = process.env.SHARED_SECRET || 'default-shared-secret';
-  if (apiKey !== expectedKey) {
+  const expectedKey = SetupManager.getConfig().apiKey;
+  if (!expectedKey || apiKey !== expectedKey) {
     return res.status(401).json({ valid: false, error: 'Invalid API key' });
   }
   

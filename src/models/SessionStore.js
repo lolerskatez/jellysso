@@ -64,6 +64,9 @@ class SessionStore extends session.Store {
    * Get session by ID
    */
   get(sid, callback) {
+    if (!DatabaseManager.db || !DatabaseManager.isReady) {
+      return callback(null, null);
+    }
     const query = 'SELECT sess FROM sessions WHERE sid = ? AND expires > datetime("now")';
     
     DatabaseManager.db.get(query, [sid], (err, row) => {
@@ -90,6 +93,10 @@ class SessionStore extends session.Store {
   set(sid, sess, callback) {
     callback = callback || function() {};
 
+    if (!DatabaseManager.db || !DatabaseManager.isReady) {
+      return callback();
+    }
+
     const expiresAt = new Date(Date.now() + this.options.expirationTime);
     const sessJson = JSON.stringify(sess);
 
@@ -106,6 +113,10 @@ class SessionStore extends session.Store {
    */
   destroy(sid, callback) {
     callback = callback || function() {};
+
+    if (!DatabaseManager.db || !DatabaseManager.isReady) {
+      return callback();
+    }
 
     const query = 'DELETE FROM sessions WHERE sid = ?';
     DatabaseManager.db.run(query, [sid], callback);

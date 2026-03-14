@@ -41,11 +41,10 @@ class JellyfinAPI {
   }
 
   async authenticateByName(username, password) {
+    // Save original headers BEFORE try so catch block can restore them
+    const originalHeaders = { ...this.client.defaults.headers };
     try {
       console.log(`Attempting authentication to ${this.baseURL}/Users/AuthenticateByName for user: ${username}`);
-      
-      // Temporarily modify headers for authentication
-      const originalHeaders = { ...this.client.defaults.headers };
       this.client.defaults.headers = {
         'Content-Type': 'application/json',
         'X-Emby-Authorization': 'MediaBrowser Client="Jellyfin Companion", Device="Setup Wizard", DeviceId="setup-001", Version="1.0.0"'

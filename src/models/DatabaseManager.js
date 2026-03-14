@@ -162,7 +162,7 @@ class DatabaseManager {
   getSetting(key) {
     return new Promise((resolve, reject) => {
       this.db.get('SELECT value, type FROM settings WHERE key = ?', [key], (err, row) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         if (!row) {
           resolve(null);
         } else {
@@ -188,7 +188,7 @@ class DatabaseManager {
         'INSERT OR REPLACE INTO settings (key, value, type, updatedAt) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
         [key, storedValue, type],
         (err) => {
-          if (err) reject(err);
+          if (err) return reject(err);
           else resolve(true);
         }
       );
@@ -201,7 +201,7 @@ class DatabaseManager {
   getAllSettings() {
     return new Promise((resolve, reject) => {
       this.db.all('SELECT key, value, type FROM settings', (err, rows) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         const settings = {};
         rows?.forEach(row => {
           try {
@@ -224,7 +224,7 @@ class DatabaseManager {
         'INSERT INTO audit_logs (action, userId, resource, status, ip, details) VALUES (?, ?, ?, ?, ?, ?)',
         [action, userId || 'system', resource, status, ip, JSON.stringify(details)],
         (err) => {
-          if (err) reject(err);
+          if (err) return reject(err);
           else resolve(true);
         }
       );
@@ -268,7 +268,7 @@ class DatabaseManager {
       params.push(Math.min(options.limit || 100, 10000));
 
       this.db.all(query, params, (err, rows) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         const logs = rows?.map(row => ({
           ...row,
           details: row.details ? JSON.parse(row.details) : {}
@@ -284,7 +284,7 @@ class DatabaseManager {
   clearAllAuditLogs() {
     return new Promise((resolve, reject) => {
       this.db.run('DELETE FROM audit_logs', [], function(err) {
-        if (err) reject(err);
+        if (err) return reject(err);
         else resolve(this.changes);
       });
     });
@@ -302,7 +302,7 @@ class DatabaseManager {
         'DELETE FROM audit_logs WHERE timestamp < ?',
         [cutoffDate.toISOString()],
         function(err) {
-          if (err) reject(err);
+          if (err) return reject(err);
           else resolve(this.changes);
         }
       );
@@ -322,7 +322,7 @@ class DatabaseManager {
         FROM audit_logs
         GROUP BY status
       `, (err, rows) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         const stats = {
           total: 0,
           byStatus: {},
@@ -344,7 +344,7 @@ class DatabaseManager {
   query(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         else resolve(rows || []);
       });
     });
@@ -356,7 +356,7 @@ class DatabaseManager {
   queryOne(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         else resolve(row || null);
       });
     });
@@ -368,7 +368,7 @@ class DatabaseManager {
   queryCount(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         else resolve(row?.count || 0);
       });
     });
@@ -381,7 +381,7 @@ class DatabaseManager {
     return new Promise((resolve, reject) => {
       if (this.db) {
         this.db.close((err) => {
-          if (err) reject(err);
+          if (err) return reject(err);
           else resolve();
         });
       } else {

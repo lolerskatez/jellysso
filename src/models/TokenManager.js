@@ -63,8 +63,8 @@ class TokenManager {
   verifyToken(token) {
     try {
       return jwt.verify(token, this.jwtSecret, {
-        issuer: 'jellyfin-companion',
-        audience: 'jellyfin-companion-app'
+        issuer: 'jellysso',
+        audience: 'jellysso-app'
       });
     } catch (error) {
       if (error.name === 'TokenExpiredError') {

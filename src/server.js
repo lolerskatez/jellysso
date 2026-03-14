@@ -75,6 +75,17 @@ if (isProduction && (!sessionSecret || sessionSecret === 'default-secret')) {
   process.exit(1);
 }
 
+// Warn if JWT_SECRET is missing or using the insecure default
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'default-jwt-secret') {
+  if (isProduction) {
+    console.error('❌ JWT_SECRET is not set or is using the insecure default value.');
+    console.error('   Generate one with: openssl rand -hex 32');
+    process.exit(1);
+  } else {
+    console.warn('⚠️  JWT_SECRET is not set — using insecure default. Set JWT_SECRET in .env for production.');
+  }
+}
+
 // Initialize session store (database-backed for persistence and clustering)
 const sessionStore = new SessionStore({
   expirationTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -326,7 +337,7 @@ app.get('/', requireWebAuth, (req, res) => {
   res.redirect('/quickconnect');
 });
 
-app.get('/login', csrfProtection, async (req, res) => {
+app.get('/login', async (req, res) => {
   // If already logged in, redirect to quickconnect
   if (req.session && req.session.user) {
     return res.redirect('/quickconnect');

@@ -134,23 +134,26 @@ const sessionStore = new SessionStore({
   cleanupInterval: 60 * 60 * 1000 // cleanup every hour
 });
 
-// Determine if secure cookies should be used
-// In development: check for Docker or reverse proxy indicators
-// trust proxy is set above, so if X-Forwarded-Proto indicates HTTPS, we should use secure cookies
-const useSecureCookies = isProduction || process.env.DOCKER === 'true' || process.env.TRUST_PROXY === 'true';
+// Determine secure cookie setting
+// Behind a TLS-terminating proxy like cloudflared, secure should be true
+// The proxy: true option ensures Express trusts X-Forwarded-Proto
+const behindProxy = process.env.TRUST_PROXY === 'true' || 
+                    process.env.DOCKER === 'true' || 
+                    isProduction;
 
 app.use(session({
   store: sessionStore,
   secret: sessionSecret || 'default-secret',
   resave: false,
-  saveUninitialized: true, // Must be true so CSRF token is generated even before login
+  saveUninitialized: true, // Must be true so CSRF token is generated before login
+  proxy: true, // Trust the reverse proxy
   cookie: {
-    // Use secure cookies if in production, Docker, or behind a trusted proxy
-    // This ensures cookies work correctly behind HTTPS reverse proxies
-    secure: useSecureCookies,
+    // When behind a TLS-terminating proxy, secure must be true
+    // When in development without proxy, secure can be false
+    secure: behindProxy,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax' // Use 'lax' for better reverse proxy compatibility
+    sameSite: behindProxy ? 'none' : 'lax' // 'none' needed for cross-origin with secure
   }
 }));
 
@@ -256,8 +259,20 @@ app.use((req, res, next) => {
 });
 
 // CSRF protection — reads csrf_protection toggle from DB; applies immediately when toggled.
-// Always skipped for setup routes (unauthenticated), logout, and admin routes (protected by auth).
+// Skipped for: setup routes, logout, admin routes, and temporarily login for reverse proxy debugging
 app.use(async (req, res, next) => {
+  // Log session info on login attempts for debugging
+  if (req.path === '/api/auth/login' && req.method === 'POST') {
+    console.log('🔐 Login attempt debug:', {
+      sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
+      hasSession: !!req.session,
+      hasCsrfSecret: !!(req.session?.csrfSecret),
+      'x-csrf-token': req.get('x-csrf-token') ? 'provided' : 'missing',
+      'x-forwarded-proto': req.get('X-Forwarded-Proto') || 'not set',
+      cookieHeader: req.get('Cookie') ? 'present' : 'missing'
+    });
+  }
+
   if (req.path.startsWith('/setup') ||
       (req.path === '/api/auth/logout' && req.method === 'POST') ||
       req.path.startsWith('/admin/') ||
@@ -273,6 +288,21 @@ app.use(async (req, res, next) => {
   // Wrap CSRF middleware to catch errors (especially important for reverse proxies)
   csrfProtection(req, res, (err) => {
     if (err && err.code === 'EBADCSRFTOKEN') {
+      // Detailed logging for debugging reverse proxy CSRF issues
+      console.log('❌ CSRF Token Validation Failed:', {
+        path: req.path,
+        method: req.method,
+        'x-csrf-token': req.get('x-csrf-token') ? req.get('x-csrf-token').substring(0, 20) + '...' : 'MISSING',
+        'x-forwarded-proto': req.get('X-Forwarded-Proto') || 'not set',
+        'x-forwarded-host': req.get('X-Forwarded-Host') || 'not set',
+        hasSession: !!req.session,
+        sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
+        hasCsrfSecret: req.session?.csrfSecret ? 'yes' : 'NO - THIS IS THE PROBLEM',
+        reqSecure: req.secure,
+        reqProtocol: req.protocol,
+        cookies: Object.keys(req.cookies || {})
+      });
+      
       logger.debug('CSRF token validation failed', {
         path: req.path,
         method: req.method,
@@ -294,7 +324,8 @@ app.use(async (req, res, next) => {
         debug: {
           hasSession: !!req.session,
           tokenProvided: !!req.get('x-csrf-token'),
-          sessionCookie: req.session ? 'exists' : 'missing'
+          sessionCookie: req.session ? 'exists' : 'missing',
+          hasCsrfSecret: !!(req.session?.csrfSecret)
         }
       });
     }
@@ -445,6 +476,17 @@ app.get('/login', async (req, res) => {
     return res.redirect('/quickconnect');
   }
   
+  // Debug logging for session/CSRF on login page
+  const csrfToken = req.csrfToken();
+  console.log('📄 Login page rendered:', {
+    sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
+    hasCsrfSecret: !!(req.session?.csrfSecret),
+    csrfTokenGenerated: csrfToken ? csrfToken.substring(0, 20) + '...' : 'FAILED',
+    'x-forwarded-proto': req.get('X-Forwarded-Proto') || 'not set',
+    secure: req.secure,
+    protocol: req.protocol
+  });
+  
   // Get and clear any error message
   const errorMessage = req.session.errorMessage;
   if (req.session.errorMessage) {
@@ -468,7 +510,7 @@ app.get('/login', async (req, res) => {
     console.error('OIDC config error:', err);
   }
   
-  res.render('login', { csrfToken: req.csrfToken(), errorMessage, oidcEnabled, oidcProviderName });
+  res.render('login', { csrfToken, errorMessage, oidcEnabled, oidcProviderName });
 });
 
 app.get('/quickconnect', requireWebAuth, csrfProtection, (req, res) => {

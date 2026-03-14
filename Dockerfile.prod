@@ -44,6 +44,11 @@ RUN mkdir -p logs && \
 # Switch to non-root user
 USER jellyfin
 
+# Environment variables for reverse proxy support
+ENV TRUST_PROXY=true
+ENV DOCKER=true
+ENV NODE_ENV=production
+
 # Expose port
 EXPOSE 3000
 

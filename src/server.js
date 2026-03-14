@@ -13,7 +13,60 @@ const CacheManager = require('./models/CacheManager');
 const PluginManager = require('./models/PluginManager');
 const JellyfinAPI = require('./models/JellyfinAPI');
 const { csrfProtection, setCsrfToken } = require('./middleware/csrf');
+const crypto = require('crypto');
 require('dotenv').config();
+
+// Auto-generate secrets if missing
+function ensureSecrets() {
+  const envPath = path.join(__dirname, '..', '.env');
+  let envContent = '';
+  let needsUpdate = false;
+  
+  // Read existing .env if it exists
+  if (fs.existsSync(envPath)) {
+    envContent = fs.readFileSync(envPath, 'utf8');
+  }
+  
+  const envLines = envContent.split('\n').filter(line => line.trim());
+  const secrets = {};
+  
+  // Parse existing secrets
+  envLines.forEach(line => {
+    const [key, value] = line.split('=');
+    if (key) secrets[key.trim()] = value?.trim() || '';
+  });
+  
+  // Generate JWT_SECRET if missing or default
+  if (!secrets.JWT_SECRET || secrets.JWT_SECRET === 'default-jwt-secret') {
+    secrets.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+    needsUpdate = true;
+    console.log('✅ Generated new JWT_SECRET');
+  }
+  
+  // Generate SESSION_SECRET if missing or default
+  if (!secrets.SESSION_SECRET || secrets.SESSION_SECRET === 'default-secret') {
+    secrets.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
+    needsUpdate = true;
+    console.log('✅ Generated new SESSION_SECRET');
+  }
+  
+  // Write back to .env if any secrets were generated
+  if (needsUpdate) {
+    const newEnvContent = Object.entries(secrets)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n') + 
+      (envLines.length > 0 && !Object.keys(secrets).includes('NODE_ENV') ? '\nNODE_ENV=development' : '');
+    
+    fs.writeFileSync(envPath, newEnvContent);
+    console.log('💾 Saved secrets to .env');
+    
+    // Reload dotenv to use the new values
+    require('dotenv').config({ override: true });
+  }
+}
+
+// Ensure secrets exist before any other initialization
+ensureSecrets();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,23 +120,12 @@ app.use(helmet({
 
 app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB
 
-// Fail fast in production if SESSION_SECRET is missing or is the insecure default
+// Fail fast in production if SESSION_SECRET is missing
 const sessionSecret = process.env.SESSION_SECRET;
 if (isProduction && (!sessionSecret || sessionSecret === 'default-secret')) {
-  console.error('❌ SESSION_SECRET is not set or is using the insecure default value.');
-  console.error('   Generate one with: openssl rand -hex 32');
+  console.error('❌ Unable to generate SESSION_SECRET in production.');
+  console.error('   Please set SESSION_SECRET manually in .env with: openssl rand -hex 32');
   process.exit(1);
-}
-
-// Warn if JWT_SECRET is missing or using the insecure default
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'default-jwt-secret') {
-  if (isProduction) {
-    console.error('❌ JWT_SECRET is not set or is using the insecure default value.');
-    console.error('   Generate one with: openssl rand -hex 32');
-    process.exit(1);
-  } else {
-    console.log('⚠️  JWT_SECRET is not set — using insecure default. Set JWT_SECRET in .env for production.');
-  }
 }
 
 // Initialize session store (database-backed for persistence and clustering)

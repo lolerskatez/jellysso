@@ -18,9 +18,37 @@ document.addEventListener('DOMContentLoaded', function() {
   const statusMessage = document.getElementById('statusMessage');
   const sidebarToggle = document.getElementById('sidebarToggle');
 
-  // Get CSRF token
-  function getCsrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  // Get CSRF token - tries meta tag first, then fetches if needed
+  // Important: This ensures session is established and fresh token is available
+  async function getCsrfToken() {
+    let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    // If no token in meta, try to fetch one
+    if (!token) {
+      try {
+        const response = await fetch('/api/csrf-token', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include' // Important: send cookies for session
+        });
+        if (response.ok) {
+          const data = await response.json();
+          token = data.csrf_token;
+          // Update the meta tag for future requests
+          let metaTag = document.querySelector('meta[name="csrf-token"]');
+          if (!metaTag) {
+            metaTag = document.createElement('meta');
+            metaTag.name = 'csrf-token';
+            document.head.appendChild(metaTag);
+          }
+          metaTag.content = token;
+        }
+      } catch (e) {
+        console.warn('Failed to fetch CSRF token:', e);
+      }
+    }
+    
+    return token || '';
   }
 
   // Sidebar toggle for mobile
@@ -85,12 +113,16 @@ document.addEventListener('DOMContentLoaded', function() {
       showStatus('Authorizing device...', 'info');
 
       try {
+        // Get CSRF token (try meta first, then fetch if needed)
+        const csrfToken = await getCsrfToken();
+
         const response = await fetch('/api/quickconnect/authorize', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'csrf-token': getCsrfToken()
+            'x-csrf-token': csrfToken
           },
+          credentials: 'include', // Important: send cookies with requests
           body: JSON.stringify({ code: code })
         });
 
@@ -101,6 +133,12 @@ document.addEventListener('DOMContentLoaded', function() {
           codeInput.value = '';
         } else {
           showStatus(data.message || 'Authorization failed. Please check the code and try again.', 'error');
+          
+          // If CSRF error, try to fetch a fresh token for next attempt
+          if (response.status === 400 && data.error?.includes('CSRF')) {
+            console.log('CSRF token invalid, attempting to fetch fresh token...');
+            await getCsrfToken();
+          }
         }
       } catch (error) {
         console.error('Authorization error:', error);
@@ -122,5 +160,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Focus on load
     codeInput.focus();
   }
+
+  // Fetch initial CSRF token to ensure session is established
+  // This is critical for mobile browsers to establish proper session cookies
+  getCsrfToken().catch(e => console.warn('Failed to initialize CSRF token:', e));
 
 });

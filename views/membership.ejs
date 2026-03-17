@@ -234,20 +234,6 @@
       color: #92400e;
       margin-bottom: var(--spacing-lg);
     }
-    #otpCountdownBar {
-      width: 100%;
-      height: 4px;
-      background: var(--border-color);
-      border-radius: 2px;
-      margin-top: 8px;
-      overflow: hidden;
-    }
-    #otpCountdownFill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 1s linear;
-      background: #22c55e;
-    }
   </style>
 </head>
 <body>
@@ -479,61 +465,56 @@
           <!-- Temporary Jellyfin Password Card (SSO only) -->
           <div class="card">
             <div class="card-header">
-              <i class="fas fa-clock"></i>
-              <h2>Temporary Jellyfin Password</h2>
+              <i class="fas fa-key"></i>
+              <h2>Jellyfin Password</h2>
             </div>
             <div class="card-body">
               <div id="otpAlert" class="alert"></div>
 
               <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:var(--spacing-lg)">
                 Jellyfin apps and devices require a password to log in. Because your account
-                uses SSO, you can generate a short-lived temporary password here. It expires
-                in&nbsp;<strong>15&nbsp;minutes</strong> and cannot be recovered after this page is closed.
+                uses SSO, you can generate a password here. Save it somewhere safe —
+                it won't be shown again. You can always generate a new one, which will
+                replace the old password and sign out any devices currently using it.
               </p>
 
-              <!-- State A: no active OTP -->
+              <!-- State A: no password generated yet -->
               <div id="otpStateNone">
                 <button class="btn btn-primary" id="generateOtpBtn" onclick="generateOTP()">
-                  <i class="fas fa-plus-circle"></i> Generate Temporary Password
+                  <i class="fas fa-plus-circle"></i> Generate Password
                 </button>
               </div>
 
-              <!-- State B: OTP just generated (plaintext visible) -->
+              <!-- State B: just generated (plaintext visible once) -->
               <div id="otpStateNew" style="display:none">
                 <div class="otp-warning">
                   <i class="fas fa-exclamation-triangle" style="margin-top:2px"></i>
-                  <span>Copy this password now — it will <strong>not</strong> be shown again after you leave this page.</span>
+                  <span>Save this password now — it will <strong>not</strong> be shown again.</span>
                 </div>
                 <div class="otp-box">
-                  <div class="otp-label">Your temporary password</div>
+                  <div class="otp-label">Your Jellyfin password</div>
                   <div class="otp-code" id="otpCodeText"></div>
-                  <div class="otp-meta">Expires&nbsp;<strong id="otpExpiryText"></strong></div>
-                  <div id="otpCountdownBar"><div id="otpCountdownFill"></div></div>
                 </div>
                 <div class="otp-copy-row">
                   <button class="btn btn-secondary" onclick="copyOTP()">
                     <i class="fas fa-copy"></i> Copy Password
                   </button>
-                  <button class="btn btn-danger" onclick="revokeOTP()">
-                    <i class="fas fa-ban"></i> Revoke Now
+                  <button class="btn btn-primary" onclick="dismissOTP()">
+                    <i class="fas fa-check"></i> Done, I've saved it
                   </button>
                 </div>
               </div>
 
-              <!-- State C: OTP active but plaintext no longer available -->
+              <!-- State C: password exists, plaintext no longer available -->
               <div id="otpStateActive" style="display:none">
                 <div class="otp-box">
-                  <div class="otp-label">Active temporary password</div>
+                  <div class="otp-label">Jellyfin password</div>
                   <div class="otp-code" style="letter-spacing:0.2em;color:var(--text-secondary)">&#8226;&#8226;&#8226;&#8226;&nbsp;&#8226;&#8226;&#8226;&#8226;</div>
-                  <div class="otp-meta">Expires&nbsp;<strong id="otpActiveExpiryText"></strong></div>
-                  <div id="otpCountdownBar2"><div id="otpCountdownFill2" style="height:4px;border-radius:2px;transition:width 1s linear;background:#22c55e"></div></div>
+                  <div class="otp-meta">Generated&nbsp;<strong id="otpCreatedText"></strong></div>
                 </div>
-                <div style="display:flex;gap:var(--spacing-sm);margin-top:var(--spacing-md)">
-                  <button class="btn btn-primary" onclick="generateOTP()">
-                    <i class="fas fa-sync-alt"></i> Regenerate
-                  </button>
-                  <button class="btn btn-danger" onclick="revokeOTP()">
-                    <i class="fas fa-ban"></i> Revoke
+                <div style="margin-top:var(--spacing-md)">
+                  <button class="btn btn-secondary" onclick="generateOTP()">
+                    <i class="fas fa-sync-alt"></i> Regenerate Password
                   </button>
                 </div>
               </div>
@@ -687,39 +668,11 @@
     });
   }
 
-  /* ── OTP (SSO users only) ────────────────────────────── */
-  let _otpCountdownTimer = null;
-  let _otpExpiresAt = null;
-  const OTP_TOTAL_SECS = 15 * 60;
-
+  /* ── Generated Jellyfin Password (SSO users only) ──────── */
   function _otpShowState(state) { // 'none' | 'new' | 'active'
     document.getElementById('otpStateNone').style.display   = state === 'none'   ? '' : 'none';
     document.getElementById('otpStateNew').style.display    = state === 'new'    ? '' : 'none';
     document.getElementById('otpStateActive').style.display = state === 'active' ? '' : 'none';
-  }
-
-  function _startCountdown(expiresAt, codeEl, fillEl) {
-    clearInterval(_otpCountdownTimer);
-    _otpExpiresAt = new Date(expiresAt);
-
-    function tick() {
-      const secsLeft = Math.max(0, Math.floor((_otpExpiresAt - Date.now()) / 1000));
-      const mm = String(Math.floor(secsLeft / 60)).padStart(2, '0');
-      const ss = String(secsLeft % 60).padStart(2, '0');
-      if (codeEl) codeEl.textContent = `in ${mm}:${ss}`;
-      const pct = Math.max(0, (secsLeft / OTP_TOTAL_SECS) * 100);
-      if (fillEl) {
-        fillEl.style.width = pct + '%';
-        fillEl.style.background = pct > 40 ? '#22c55e' : pct > 15 ? '#f97316' : '#ef4444';
-      }
-      if (secsLeft <= 0) {
-        clearInterval(_otpCountdownTimer);
-        _otpShowState('none');
-        showAlert('otpAlert', 'Temporary password expired.', 'error');
-      }
-    }
-    tick();
-    _otpCountdownTimer = setInterval(tick, 1000);
   }
 
   async function generateOTP() {
@@ -732,13 +685,10 @@
       });
       const data = await res.json();
       if (!data.success) {
-        showAlert('otpAlert', data.message || 'Failed to generate temporary password.', 'error');
+        showAlert('otpAlert', data.message || 'Failed to generate password.', 'error');
         return;
       }
-      document.getElementById('otpCodeText').textContent = data.otp;
-      _startCountdown(data.expiresAt,
-        document.getElementById('otpExpiryText'),
-        document.getElementById('otpCountdownFill'));
+      document.getElementById('otpCodeText').textContent = data.password;
       _otpShowState('new');
     } catch (err) {
       showAlert('otpAlert', 'Network error — please try again.', 'error');
@@ -757,28 +707,21 @@
     });
   }
 
-  async function revokeOTP() {
-    clearInterval(_otpCountdownTimer);
-    try {
-      await fetch('/api/me/otp', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
-      });
-    } catch (_) { /* best-effort */ }
-    _otpShowState('none');
-    showAlert('otpAlert', 'Temporary password revoked.', 'success');
+  function dismissOTP() {
+    _otpShowState('active');
   }
 
   if (IS_OIDC) {
-    // On page load — check if there is already an active token (from another session/tab)
+    // On page load — check if a generated password already exists
     (async () => {
       try {
         const res = await fetch('/api/me/otp');
         const data = await res.json();
-        if (data.hasToken) {
-          _startCountdown(data.expiresAt,
-            document.getElementById('otpActiveExpiryText'),
-            document.getElementById('otpCountdownFill2'));
+        if (data.hasPassword) {
+          const el = document.getElementById('otpCreatedText');
+          if (el && data.createdAt) {
+            el.textContent = new Date(data.createdAt).toLocaleDateString();
+          }
           _otpShowState('active');
         } else {
           _otpShowState('none');

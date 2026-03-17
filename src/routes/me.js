@@ -150,104 +150,48 @@ router.post('/password', requireAuth, csrfProtection, async (req, res) => {
 
 /**
  * GET /api/me/otp
- * Returns OTP status (active/expired) without exposing the plaintext.
- * Automatically cleans up an expired token and resets the Jellyfin password.
+ * Returns whether a generated password exists for this SSO user.
  */
 router.get('/otp', requireAuth, async (req, res) => {
   if (req.session.authMethod !== 'oidc') {
-    return res.status(403).json({ success: false, message: 'Temporary passwords are only available for SSO accounts.' });
+    return res.status(403).json({ success: false, message: 'Only available for SSO accounts.' });
   }
-
   try {
     const record = await OTPManager.getRecord(req.session.user.Id);
-    if (!record) return res.json({ hasToken: false });
-
-    const now = new Date();
-    const expires = new Date(record.expiresAt);
-
-    if (expires <= now) {
-      // Expired — silently clean up: reset Jellyfin password to random garbage
-      const config = SetupManager.getConfig();
-      const adminApi = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
-      await adminApi.resetUserPassword(req.session.user.Id, crypto.randomBytes(32).toString('hex')).catch(() => {});
-      await OTPManager.revoke(req.session.user.Id);
-      return res.json({ hasToken: false });
-    }
-
-    res.json({
-      hasToken: true,
-      expiresAt: record.expiresAt,
-      createdAt: record.createdAt
-    });
+    if (!record) return res.json({ hasPassword: false });
+    res.json({ hasPassword: true, createdAt: record.createdAt });
   } catch (err) {
-    console.error('OTP status error:', err.message);
+    console.error('Generated password status error:', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
 /**
  * POST /api/me/otp
- * Generate a new one-time temporary Jellyfin password for an SSO user.
- * The plaintext is returned exactly once here and never stored.
+ * Generate (or regenerate) a Jellyfin password for an SSO user.
+ * Plaintext returned exactly once — never stored.
  */
 router.post('/otp', requireAuth, csrfProtection, async (req, res) => {
   if (req.session.authMethod !== 'oidc') {
-    return res.status(403).json({ success: false, message: 'Temporary passwords are only available for SSO accounts.' });
+    return res.status(403).json({ success: false, message: 'Only available for SSO accounts.' });
   }
-
   try {
     const userId = req.session.user.Id;
     const config = SetupManager.getConfig();
     const adminApi = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
 
-    // Invalidate any existing OTP first — reset Jellyfin password to unusable random value
-    const existing = await OTPManager.getRecord(userId);
-    if (existing) {
-      await adminApi.resetUserPassword(userId, crypto.randomBytes(32).toString('hex')).catch(() => {});
-      await OTPManager.revoke(userId);
-    }
+    const { password, createdAt } = await OTPManager.create(userId);
+    await adminApi.resetUserPassword(userId, password);
 
-    // Generate fresh OTP and push it as the Jellyfin password
-    const { otp, expiresAt } = await OTPManager.create(userId);
-    await adminApi.resetUserPassword(userId, otp);
+    await AuditLogger.log('GENERATED_PASSWORD_CREATED', userId, 'user:password',
+      { createdAt }, 'success', req.ip);
 
-    await AuditLogger.log('OTP_GENERATED', userId, 'user:otp',
-      { expiresAt }, 'success', req.ip);
-
-    // Return plaintext exactly once — not stored anywhere after this response
-    res.json({ success: true, otp, expiresAt });
+    res.json({ success: true, password, createdAt });
   } catch (err) {
-    console.error('OTP generation error:', err.message);
-    await AuditLogger.log('OTP_GENERATION_ERROR', req.session.user?.Id, 'user:otp',
+    console.error('Generated password error:', err.message);
+    await AuditLogger.log('GENERATED_PASSWORD_ERROR', req.session.user?.Id, 'user:password',
       { error: err.message }, 'failure', req.ip);
-    res.status(500).json({ success: false, message: err.message || 'Failed to generate temporary password.' });
-  }
-});
-
-/**
- * DELETE /api/me/otp
- * Revoke the active OTP immediately, resetting the Jellyfin password.
- */
-router.delete('/otp', requireAuth, csrfProtection, async (req, res) => {
-  if (req.session.authMethod !== 'oidc') {
-    return res.status(403).json({ success: false, message: 'Not applicable.' });
-  }
-
-  try {
-    const userId = req.session.user.Id;
-    const config = SetupManager.getConfig();
-    const adminApi = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
-
-    // Reset Jellyfin password to random garbage so the OTP can't be reused
-    await adminApi.resetUserPassword(userId, crypto.randomBytes(32).toString('hex')).catch(() => {});
-    await OTPManager.revoke(userId);
-
-    await AuditLogger.log('OTP_REVOKED', userId, 'user:otp', {}, 'success', req.ip);
-
-    res.json({ success: true, message: 'Temporary password revoked.' });
-  } catch (err) {
-    console.error('OTP revoke error:', err.message);
-    res.status(500).json({ success: false, message: err.message || 'Failed to revoke temporary password.' });
+    res.status(500).json({ success: false, message: err.message || 'Failed to generate password.' });
   }
 });
 

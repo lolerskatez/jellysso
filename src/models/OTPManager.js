@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+﻿const crypto = require('crypto');
 const DatabaseManager = require('./DatabaseManager');
 
 // Alphabet excludes visually ambiguous characters: 0, 1, I, L, O
@@ -12,7 +12,7 @@ class OTPManager {
    * Called once at server startup alongside other schema initializers.
    */
   static async initializeSchema() {
-    await DatabaseManager.run(`
+    await DatabaseManager.query(`
       CREATE TABLE IF NOT EXISTS otp_tokens (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,
         userId    TEXT    UNIQUE NOT NULL,
@@ -25,7 +25,7 @@ class OTPManager {
 
   /**
    * Generate a cryptographically random OTP from an unambiguous character set.
-   * Returns the plaintext string — store only the hash, never the plaintext.
+   * Returns the plaintext string â€” store only the hash, never the plaintext.
    */
   static _generate() {
     let otp = '';
@@ -48,7 +48,7 @@ class OTPManager {
     const hash = this._hash(otp);
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
-    await DatabaseManager.run(
+    await DatabaseManager.query(
       `INSERT OR REPLACE INTO otp_tokens (userId, tokenHash, expiresAt)
        VALUES (?, ?, ?)`,
       [userId, hash, expiresAt]
@@ -62,7 +62,7 @@ class OTPManager {
    * Returns null if no record exists.
    */
   static async getRecord(userId) {
-    return DatabaseManager.get(
+    return DatabaseManager.queryOne(
       'SELECT userId, expiresAt, createdAt FROM otp_tokens WHERE userId = ?',
       [userId]
     );
@@ -81,7 +81,7 @@ class OTPManager {
    * Delete the OTP record for a user (revoke).
    */
   static async revoke(userId) {
-    await DatabaseManager.run(
+    await DatabaseManager.query(
       'DELETE FROM otp_tokens WHERE userId = ?',
       [userId]
     );
@@ -91,7 +91,7 @@ class OTPManager {
    * Purge all expired OTP records (for maintenance).
    */
   static async purgeExpired() {
-    await DatabaseManager.run(
+    await DatabaseManager.query(
       `DELETE FROM otp_tokens WHERE expiresAt <= datetime('now')`
     );
   }

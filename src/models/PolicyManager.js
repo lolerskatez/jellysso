@@ -1,4 +1,4 @@
-const DatabaseManager = require('./DatabaseManager');
+﻿const DatabaseManager = require('./DatabaseManager');
 const JellyfinAPI = require('./JellyfinAPI');
 const SetupManager = require('./SetupManager');
 
@@ -42,7 +42,7 @@ class PolicyManager {
   static async initializeSchema() {
     try {
       // User policies table
-      await DatabaseManager.run(`
+      await DatabaseManager.query(`
         CREATE TABLE IF NOT EXISTS user_policies (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           userId TEXT UNIQUE NOT NULL,
@@ -56,7 +56,7 @@ class PolicyManager {
       `);
 
       // Device whitelist table
-      await DatabaseManager.run(`
+      await DatabaseManager.query(`
         CREATE TABLE IF NOT EXISTS device_whitelist (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           userId TEXT NOT NULL,
@@ -70,7 +70,7 @@ class PolicyManager {
       `);
 
       // Policy enforcement audit table
-      await DatabaseManager.run(`
+      await DatabaseManager.query(`
         CREATE TABLE IF NOT EXISTS policy_audit (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           userId TEXT NOT NULL,
@@ -84,7 +84,7 @@ class PolicyManager {
         )
       `);
 
-      console.log('✅ Policy schema initialized');
+      console.log('âœ… Policy schema initialized');
     } catch (error) {
       console.error('Error initializing policy schema:', error);
     }
@@ -95,7 +95,7 @@ class PolicyManager {
    */
   static async getUserPolicy(userId) {
     try {
-      let policy = await DatabaseManager.get(
+      let policy = await DatabaseManager.queryOne(
         'SELECT * FROM user_policies WHERE userId = ?',
         [userId]
       );
@@ -105,13 +105,13 @@ class PolicyManager {
         const defaultTier = 'standard';
         const tier = this.TIERS[defaultTier];
         
-        await DatabaseManager.run(
+        await DatabaseManager.query(
           `INSERT INTO user_policies (userId, tier, maxConcurrentStreams)
            VALUES (?, ?, ?)`,
           [userId, defaultTier, tier.maxStreams]
         );
 
-        policy = await DatabaseManager.get(
+        policy = await DatabaseManager.queryOne(
           'SELECT * FROM user_policies WHERE userId = ?',
           [userId]
         );
@@ -136,7 +136,7 @@ class PolicyManager {
       const tierConfig = this.TIERS[tier];
       const policy = await this.getUserPolicy(userId);
 
-      await DatabaseManager.run(
+      await DatabaseManager.query(
         `UPDATE user_policies 
          SET tier = ?, maxConcurrentStreams = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE userId = ?`,
@@ -233,7 +233,7 @@ class PolicyManager {
    */
   static async isDeviceWhitelisted(userId, deviceId) {
     try {
-      const whitelisted = await DatabaseManager.get(
+      const whitelisted = await DatabaseManager.queryOne(
         'SELECT * FROM device_whitelist WHERE userId = ? AND deviceId = ?',
         [userId, deviceId]
       );
@@ -249,7 +249,7 @@ class PolicyManager {
    */
   static async whitelistDevice(userId, deviceId, deviceName = null, deviceType = null) {
     try {
-      await DatabaseManager.run(
+      await DatabaseManager.query(
         `INSERT OR REPLACE INTO device_whitelist (userId, deviceId, deviceName, deviceType)
          VALUES (?, ?, ?, ?)`,
         [userId, deviceId, deviceName, deviceType]
@@ -267,7 +267,7 @@ class PolicyManager {
    */
   static async unwhitelistDevice(userId, deviceId) {
     try {
-      await DatabaseManager.run(
+      await DatabaseManager.query(
         'DELETE FROM device_whitelist WHERE userId = ? AND deviceId = ?',
         [userId, deviceId]
       );
@@ -284,7 +284,7 @@ class PolicyManager {
    */
   static async getWhitelistedDevices(userId) {
     try {
-      const devices = await DatabaseManager.all(
+      const devices = await DatabaseManager.query(
         'SELECT * FROM device_whitelist WHERE userId = ? ORDER BY allowedAt DESC',
         [userId]
       );
@@ -300,7 +300,7 @@ class PolicyManager {
    */
   static async setDeviceWhitelistEnabled(userId, enabled) {
     try {
-      await DatabaseManager.run(
+      await DatabaseManager.query(
         `UPDATE user_policies
          SET deviceWhitelistEnabled = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE userId = ?`,
@@ -387,7 +387,7 @@ class PolicyManager {
    */
   static async setEnforceAccessSchedule(userId, enforce) {
     try {
-      await DatabaseManager.run(
+      await DatabaseManager.query(
         `UPDATE user_policies
          SET enforceAccessSchedule = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE userId = ?`,
@@ -410,7 +410,7 @@ class PolicyManager {
    */
   static async logPolicyAudit(userId, policyType, action, reason = null, deviceId = null, sessionId = null, ipAddress = null) {
     try {
-      await DatabaseManager.run(
+      await DatabaseManager.query(
         `INSERT INTO policy_audit (userId, policyType, action, reason, deviceId, sessionId, ipAddress)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [userId, policyType, action, reason, deviceId, sessionId, ipAddress]
@@ -425,7 +425,7 @@ class PolicyManager {
    */
   static async getAuditLog(userId, limit = 100) {
     try {
-      const logs = await DatabaseManager.all(
+      const logs = await DatabaseManager.query(
         `SELECT * FROM policy_audit WHERE userId = ?
          ORDER BY createdAt DESC LIMIT ?`,
         [userId, limit]
@@ -442,7 +442,7 @@ class PolicyManager {
    */
   static async getAllPolicies() {
     try {
-      const policies = await DatabaseManager.all(
+      const policies = await DatabaseManager.query(
         `SELECT p.*, COUNT(DISTINCT dw.deviceId) as whitelistedDeviceCount
          FROM user_policies p
          LEFT JOIN device_whitelist dw ON p.userId = dw.userId

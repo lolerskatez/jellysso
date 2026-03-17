@@ -100,7 +100,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for theme
-      scriptSrc: ["'self'", 'https://static.cloudflareinsights.com'], // Allow Cloudflare Insights
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com'], // Allow Cloudflare Insights + inline scripts in EJS templates
+      scriptSrcAttr: ["'unsafe-inline'"], // Allow onclick/onsubmit attributes
       imgSrc: ["'self'", 'data:'],
       fontSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", 'https://cloudflareinsights.com'], // Allow Cloudflare Insights API calls
@@ -109,7 +110,6 @@ app.use(helmet({
       formAction: ["'self'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"],
-      scriptSrcAttr: ["'none'"]
     },
     useDefaults: false // Disable default directives including upgrade-insecure-requests
   },

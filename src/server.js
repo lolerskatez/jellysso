@@ -367,6 +367,7 @@ app.use('/api/plugin', require('./routes/plugin'));
 app.use('/api/playback', require('./routes/playback'));
 app.use('/api/admin/playback', require('./routes/admin-playback'));
 app.use('/api/policy', require('./routes/policy'));
+app.use('/api/me', require('./routes/me'));
 app.use('/policy', require('./routes/user-policy'));
 app.use('/setup', require('./routes/setup'));
 
@@ -538,6 +539,35 @@ app.get('/plugin', requireWebAuth, (req, res) => {
 
 app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
   res.render('playback', { user: req.session.user, csrfToken: req.csrfToken(), currentPage: 'playback' });
+});
+
+app.get('/membership', requireWebAuth, csrfProtection, async (req, res) => {
+  const PolicyManager = require('./models/PolicyManager');
+  const UserProfileManager = require('./models/UserProfileManager');
+  try {
+    const [policy, profile] = await Promise.all([
+      PolicyManager.getUserPolicy(req.session.user.Id).catch(() => null),
+      UserProfileManager.getProfile(req.session.user.Id).catch(() => null)
+    ]);
+    res.render('membership', {
+      user: req.session.user,
+      csrfToken: req.csrfToken(),
+      currentPage: 'membership',
+      policy,
+      profile,
+      isOidc: req.session.authMethod === 'oidc'
+    });
+  } catch (err) {
+    logger.error('Membership page error:', err);
+    res.render('membership', {
+      user: req.session.user,
+      csrfToken: req.csrfToken(),
+      currentPage: 'membership',
+      policy: null,
+      profile: null,
+      isOidc: req.session.authMethod === 'oidc'
+    });
+  }
 });
 
 app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) => {

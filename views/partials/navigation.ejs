@@ -47,6 +47,14 @@
       </a>
     </div>
 
+    <!-- My Membership (for all non-admin users; admins may also access it) -->
+    <div class="nav-item">
+      <a href="/membership" class="nav-link <%= currentPage === 'membership' ? 'active' : '' %>">
+        <i class="fas fa-id-card"></i>
+        My Membership
+      </a>
+    </div>
+
     <!-- Admin Tools Section (only for admins) -->
     <% if (user?.Policy?.IsAdministrator) { %>
       <div style="margin: var(--spacing-lg) 0; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: var(--spacing-md);">
@@ -99,6 +107,12 @@
         <a href="/admin/playback-sessions" class="nav-link <%= currentPage === 'admin-playback-sessions' ? 'active' : '' %>">
           <i class="fas fa-play-circle"></i>
           Playback Administration
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/policy" class="nav-link <%= currentPage === 'admin-policy' ? 'active' : '' %>">
+          <i class="fas fa-shield-alt"></i>
+          Policy Management
         </a>
       </div>
     <% } %>

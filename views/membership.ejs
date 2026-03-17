@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <title>My Membership - <%= locals.appName || 'JellySSO' %></title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .membership-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+    }
+    @media (max-width: 900px) {
+      .membership-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: var(--spacing-lg) var(--spacing-xl);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+
+    .card-header i { color: var(--primary); font-size: 1.1rem; }
+
+    .card-body { padding: var(--spacing-xl); }
+
+    /* Tier badge */
+    .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .tier-free     { background: rgba(148,163,184,0.2); color: #475569; }
+    .tier-standard { background: rgba(59,130,246,0.15); color: #1d4ed8; }
+    .tier-premium  { background: rgba(139,92,246,0.15); color: #6d28d9; }
+    .tier-family   { background: rgba(239,68,68,0.15);  color: #b91c1c; }
+    .tier-admin    { background: rgba(245,158,11,0.15); color: #92400e; }
+
+    /* Stream meter */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-md) 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: var(--text-secondary); font-size: 0.875rem; }
+    .stat-value { font-weight: 600; color: var(--gray-900); }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .status-pill.enabled  { background: rgba(16,185,129,0.12); color: #065f46; }
+    .status-pill.disabled { background: rgba(148,163,184,0.15); color: #64748b; }
+
+    /* Form elements */
+    .form-group { margin-bottom: var(--spacing-lg); }
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--gray-700);
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 0.9375rem;
+      background: white;
+      color: var(--gray-900);
+      box-sizing: border-box;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
+    }
+    .form-group input:disabled {
+      background: var(--bg-light);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+    }
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border: none; border-radius: var(--border-radius); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: opacity 0.15s, background 0.15s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--bg-light); color: var(--gray-700); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: var(--border-color); }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { opacity: 0.9; }
+
+    .alert {
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      font-size: 0.9rem;
+      display: none;
+      margin-bottom: var(--spacing-lg);
+    }
+    .alert.show { display: block; }
+    .alert-success { background: rgba(16,185,129,0.1); color: #065f46; border: 1px solid rgba(16,185,129,0.3); }
+    .alert-error   { background: rgba(239,68,68,0.1);  color: #b91c1c;  border: 1px solid rgba(239,68,68,0.3); }
+
+    .section-divider {
+      margin: var(--spacing-xl) 0 var(--spacing-lg);
+      padding-bottom: var(--spacing-sm);
+      border-bottom: 2px solid var(--border-color);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    .password-strength {
+      height: 4px;
+      border-radius: 2px;
+      margin-top: 6px;
+      background: var(--border-color);
+      overflow: hidden;
+    }
+    .password-strength-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s, background 0.3s;
+      width: 0%;
+    }
+
+    .sso-notice {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--border-radius);
+      font-size: 0.875rem;
+      color: #1d4ed8;
+      margin-bottom: var(--spacing-lg);
+    }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <%- include('partials/navigation', { user, currentPage: 'membership' }) %>
+
+  <main class="main-content">
+    <header class="header">
+      <div class="header-left">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="header-title">My Membership</h1>
+      </div>
+      <div class="header-right">
+        <span style="color:var(--text-secondary);font-size:0.9rem">
+          <i class="fas fa-user-circle" style="margin-right:5px"></i><%= user.Name %>
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <!-- Global alert banner -->
+      <div id="globalAlert" class="alert"></div>
+
+      <div class="membership-grid">
+
+        <!-- LEFT COLUMN: Subscription info -->
+        <div style="display:flex;flex-direction:column;gap:var(--spacing-lg)">
+
+          <!-- Subscription Card -->
+          <div class="card">
+            <div class="card-header">
+              <i class="fas fa-id-card"></i>
+              <h2>Subscription</h2>
+            </div>
+            <div class="card-body">
+              <div class="stat-row">
+                <span class="stat-label">Current Tier</span>
+                <span class="stat-value">
+                  <span id="tierBadge" class="tier-badge tier-<%= policy ? policy.tier : 'standard' %>">
+                    <i class="fas fa-star"></i>
+                    <%= policy ? policy.tier.charAt(0).toUpperCase() + policy.tier.slice(1) : 'Standard' %>
+                  </span>
+                </span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Concurrent Streams</span>
+                <span class="stat-value" id="maxStreams">
+                  <%= policy ? (policy.maxConcurrentStreams >= 999 ? 'Unlimited' : policy.maxConcurrentStreams) : '2' %>
+                </span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Device Whitelist</span>
+                <span class="stat-value">
+                  <span class="status-pill <%= policy && policy.deviceWhitelistEnabled ? 'enabled' : 'disabled' %>">
+                    <i class="fas fa-<%= policy && policy.deviceWhitelistEnabled ? 'check' : 'times' %>"></i>
+                    <%= policy && policy.deviceWhitelistEnabled ? 'Active' : 'Off' %>
+                  </span>
+                </span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Access Schedule</span>
+                <span class="stat-value">
+                  <span class="status-pill <%= policy && policy.enforceAccessSchedule ? 'enabled' : 'disabled' %>">
+                    <i class="fas fa-<%= policy && policy.enforceAccessSchedule ? 'check' : 'times' %>"></i>
+                    <%= policy && policy.enforceAccessSchedule ? 'Enforced' : 'Off' %>
+                  </span>
+                </span>
+              </div>
+              <% if (policy && policy.updatedAt) { %>
+              <div class="stat-row">
+                <span class="stat-label">Last Updated</span>
+                <span class="stat-value" style="font-size:0.85rem;color:var(--text-secondary)">
+                  <%= new Date(policy.updatedAt).toLocaleDateString() %>
+                </span>
+              </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Account Info Card -->
+          <div class="card">
+            <div class="card-header">
+              <i class="fas fa-info-circle"></i>
+              <h2>Account Info</h2>
+            </div>
+            <div class="card-body">
+              <div class="stat-row">
+                <span class="stat-label">Jellyfin Username</span>
+                <span class="stat-value"><%= user.Name %></span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Account Type</span>
+                <span class="stat-value">
+                  <% if (isOidc) { %>
+                    <span class="status-pill enabled"><i class="fas fa-key"></i> SSO</span>
+                  <% } else { %>
+                    <span class="status-pill disabled"><i class="fas fa-user"></i> Local</span>
+                  <% } %>
+                </span>
+              </div>
+              <% if (profile && profile.email) { %>
+              <div class="stat-row">
+                <span class="stat-label">Email</span>
+                <span class="stat-value"><%= profile.email %></span>
+              </div>
+              <% } %>
+            </div>
+          </div>
+
+        </div><!-- /left column -->
+
+        <!-- RIGHT COLUMN: Edit Profile & Password -->
+        <div style="display:flex;flex-direction:column;gap:var(--spacing-lg)">
+
+          <!-- Edit Profile Card -->
+          <div class="card">
+            <div class="card-header">
+              <i class="fas fa-user-edit"></i>
+              <h2>Edit Profile</h2>
+            </div>
+            <div class="card-body">
+              <div id="profileAlert" class="alert"></div>
+
+              <% if (isOidc) { %>
+              <div class="sso-notice">
+                <i class="fas fa-info-circle"></i>
+                Your account is managed via SSO. Username changes must be made through your identity provider.
+              </div>
+              <% } %>
+
+              <form id="profileForm" onsubmit="saveProfile(event)">
+                <div class="section-divider">Display Name</div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName"
+                      value="<%= profile && profile.first_name ? profile.first_name : '' %>"
+                      placeholder="First name" autocomplete="given-name">
+                  </div>
+                  <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName"
+                      value="<%= profile && profile.last_name ? profile.last_name : '' %>"
+                      placeholder="Last name" autocomplete="family-name">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="displayName">Display Name</label>
+                  <input type="text" id="displayName" name="displayName"
+                    value="<%= profile && profile.display_name ? profile.display_name : '' %>"
+                    placeholder="How your name appears to others">
+                  <div class="field-hint">Overrides first/last name if set.</div>
+                </div>
+
+                <div class="form-group">
+                  <label for="email">Email Address</label>
+                  <input type="email" id="email" name="email"
+                    value="<%= profile && profile.email ? profile.email : '' %>"
+                    placeholder="your@email.com" autocomplete="email">
+                </div>
+
+                <% if (!isOidc) { %>
+                <div class="section-divider">Jellyfin Username</div>
+                <div class="form-group">
+                  <label for="jellyfinUsername">Username</label>
+                  <input type="text" id="jellyfinUsername" name="jellyfinUsername"
+                    value="<%= user.Name %>" autocomplete="username"
+                    placeholder="Jellyfin login username">
+                  <div class="field-hint">This is the username you use to log in to Jellyfin.</div>
+                </div>
+                <% } %>
+
+                <div style="display:flex;gap:var(--spacing-md);margin-top:var(--spacing-lg)">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Profile
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Change Password Card -->
+          <% if (!isOidc) { %>
+          <div class="card">
+            <div class="card-header">
+              <i class="fas fa-lock"></i>
+              <h2>Change Password</h2>
+            </div>
+            <div class="card-body">
+              <div id="passwordAlert" class="alert"></div>
+              <form id="passwordForm" onsubmit="changePassword(event)" autocomplete="off">
+                <div class="form-group">
+                  <label for="currentPassword">Current Password</label>
+                  <input type="password" id="currentPassword" name="currentPassword"
+                    placeholder="Enter your current password" autocomplete="current-password" required>
+                </div>
+                <div class="form-group">
+                  <label for="newPassword">New Password</label>
+                  <input type="password" id="newPassword" name="newPassword"
+                    placeholder="At least 8 characters" autocomplete="new-password"
+                    oninput="checkPasswordStrength(this.value)" required>
+                  <div class="password-strength">
+                    <div class="password-strength-bar" id="strengthBar"></div>
+                  </div>
+                  <div class="field-hint" id="strengthLabel"></div>
+                </div>
+                <div class="form-group">
+                  <label for="confirmPassword">Confirm New Password</label>
+                  <input type="password" id="confirmPassword" name="confirmPassword"
+                    placeholder="Repeat new password" autocomplete="new-password" required>
+                </div>
+                <div style="display:flex;gap:var(--spacing-md);margin-top:var(--spacing-lg)">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-key"></i> Update Password
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="resetPasswordForm()">
+                    <i class="fas fa-times"></i> Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <% } %>
+
+        </div><!-- /right column -->
+      </div><!-- /membership-grid -->
+    </div><!-- /page-content -->
+  </main>
+</div><!-- /app-container -->
+
+<script>
+  const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const IS_OIDC = <%= isOidc ? 'true' : 'false' %>;
+  const USER_ID = '<%= user.Id %>';
+  const CURRENT_USERNAME = '<%= user.Name %>';
+
+  function showAlert(containerId, message, type) {
+    const el = document.getElementById(containerId);
+    el.textContent = message;
+    el.className = `alert alert-${type} show`;
+    setTimeout(() => { el.classList.remove('show'); }, 5000);
+  }
+
+  /* ── Save Profile ─────────────────────────────────────── */
+  async function saveProfile(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+
+    const body = {
+      firstName:    document.getElementById('firstName').value.trim(),
+      lastName:     document.getElementById('lastName').value.trim(),
+      displayName:  document.getElementById('displayName').value.trim(),
+      email:        document.getElementById('email').value.trim()
+    };
+
+    if (!IS_OIDC) {
+      body.jellyfinUsername = document.getElementById('jellyfinUsername').value.trim();
+    }
+
+    // Basic email validation
+    if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+      showAlert('profileAlert', 'Please enter a valid email address.', 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/me/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('profileAlert', 'Profile saved successfully.', 'success');
+        if (!IS_OIDC && body.jellyfinUsername && body.jellyfinUsername !== CURRENT_USERNAME) {
+          showAlert('globalAlert', 'Username changed — you will be logged out shortly.', 'success');
+          setTimeout(() => { window.location.href = '/login'; }, 2500);
+        }
+      } else {
+        showAlert('profileAlert', data.message || 'Failed to save profile.', 'error');
+      }
+    } catch (err) {
+      showAlert('profileAlert', 'Network error — please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ── Change Password ──────────────────────────────────── */
+  async function changePassword(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    const newPw  = document.getElementById('newPassword').value;
+    const confPw = document.getElementById('confirmPassword').value;
+
+    if (newPw.length < 8) {
+      showAlert('passwordAlert', 'New password must be at least 8 characters.', 'error');
+      return;
+    }
+    if (newPw !== confPw) {
+      showAlert('passwordAlert', 'Passwords do not match.', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/me/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+        body: JSON.stringify({
+          currentPassword: document.getElementById('currentPassword').value,
+          newPassword: newPw
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('passwordAlert', 'Password updated successfully.', 'success');
+        resetPasswordForm();
+      } else {
+        showAlert('passwordAlert', data.message || 'Failed to update password.', 'error');
+      }
+    } catch (err) {
+      showAlert('passwordAlert', 'Network error — please try again.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function resetPasswordForm() {
+    document.getElementById('passwordForm').reset();
+    document.getElementById('strengthBar').style.width = '0%';
+    document.getElementById('strengthLabel').textContent = '';
+  }
+
+  /* ── Password strength meter ─────────────────────────── */
+  function checkPasswordStrength(pw) {
+    let score = 0;
+    if (pw.length >= 8)  score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw))   score++;
+    if (/[0-9]/.test(pw))   score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    const bar   = document.getElementById('strengthBar');
+    const label = document.getElementById('strengthLabel');
+    const levels = [
+      { w: '20%',  bg: '#ef4444', text: 'Very weak'  },
+      { w: '40%',  bg: '#f97316', text: 'Weak'       },
+      { w: '60%',  bg: '#eab308', text: 'Fair'       },
+      { w: '80%',  bg: '#22c55e', text: 'Good'       },
+      { w: '100%', bg: '#16a34a', text: 'Strong'     }
+    ];
+    const level = levels[Math.min(score, 4)];
+    bar.style.width      = pw.length ? level.w  : '0%';
+    bar.style.background = pw.length ? level.bg : '';
+    label.textContent    = pw.length ? level.text : '';
+  }
+
+  /* ── Mobile sidebar toggle ───────────────────────────── */
+  const mobileToggle = document.getElementById('mobileMenuToggle');
+  if (mobileToggle) {
+    mobileToggle.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.toggle('open');
+      document.getElementById('sidebarOverlay')?.classList.toggle('active');
+    });
+  }
+</script>
+</body>
+</html>

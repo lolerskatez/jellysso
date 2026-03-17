@@ -688,97 +688,94 @@
   }
 
   /* ── OTP (SSO users only) ────────────────────────────── */
-  if (IS_OIDC) {
-    let _otpCountdownTimer = null;
-    let _otpExpiresAt = null;   // Date of the active OTP (state B or C)
-    const OTP_TOTAL_SECS = 15 * 60;
+  let _otpCountdownTimer = null;
+  let _otpExpiresAt = null;
+  const OTP_TOTAL_SECS = 15 * 60;
 
-    function _otpShowState(state) { // 'none' | 'new' | 'active'
-      document.getElementById('otpStateNone').style.display   = state === 'none'   ? '' : 'none';
-      document.getElementById('otpStateNew').style.display    = state === 'new'    ? '' : 'none';
-      document.getElementById('otpStateActive').style.display = state === 'active' ? '' : 'none';
-    }
+  function _otpShowState(state) { // 'none' | 'new' | 'active'
+    document.getElementById('otpStateNone').style.display   = state === 'none'   ? '' : 'none';
+    document.getElementById('otpStateNew').style.display    = state === 'new'    ? '' : 'none';
+    document.getElementById('otpStateActive').style.display = state === 'active' ? '' : 'none';
+  }
 
-    function _startCountdown(expiresAt, codeEl, fillEl) {
-      clearInterval(_otpCountdownTimer);
-      _otpExpiresAt = new Date(expiresAt);
+  function _startCountdown(expiresAt, codeEl, fillEl) {
+    clearInterval(_otpCountdownTimer);
+    _otpExpiresAt = new Date(expiresAt);
 
-      function tick() {
-        const secsLeft = Math.max(0, Math.floor((_otpExpiresAt - Date.now()) / 1000));
-        const mm = String(Math.floor(secsLeft / 60)).padStart(2, '0');
-        const ss = String(secsLeft % 60).padStart(2, '0');
-        if (codeEl) codeEl.textContent = `in ${mm}:${ss}`;
-        const pct = Math.max(0, (secsLeft / OTP_TOTAL_SECS) * 100);
-        if (fillEl) {
-          fillEl.style.width = pct + '%';
-          fillEl.style.background = pct > 40 ? '#22c55e' : pct > 15 ? '#f97316' : '#ef4444';
-        }
-        if (secsLeft <= 0) {
-          clearInterval(_otpCountdownTimer);
-          _otpShowState('none');
-          showAlert('otpAlert', 'Temporary password expired.', 'error');
-        }
+    function tick() {
+      const secsLeft = Math.max(0, Math.floor((_otpExpiresAt - Date.now()) / 1000));
+      const mm = String(Math.floor(secsLeft / 60)).padStart(2, '0');
+      const ss = String(secsLeft % 60).padStart(2, '0');
+      if (codeEl) codeEl.textContent = `in ${mm}:${ss}`;
+      const pct = Math.max(0, (secsLeft / OTP_TOTAL_SECS) * 100);
+      if (fillEl) {
+        fillEl.style.width = pct + '%';
+        fillEl.style.background = pct > 40 ? '#22c55e' : pct > 15 ? '#f97316' : '#ef4444';
       }
-      tick();
-      _otpCountdownTimer = setInterval(tick, 1000);
-    }
-
-    async function generateOTP() {
-      const btn = document.getElementById('generateOtpBtn') || event?.currentTarget;
-      if (btn) btn.disabled = true;
-      try {
-        const res = await fetch('/api/me/otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
-        });
-        const data = await res.json();
-        if (!data.success) {
-          showAlert('otpAlert', data.message || 'Failed to generate temporary password.', 'error');
-          return;
-        }
-        // Display state B (plaintext)
-        document.getElementById('otpCodeText').textContent = data.otp;
-        _startCountdown(data.expiresAt,
-          document.getElementById('otpExpiryText'),
-          document.getElementById('otpCountdownFill'));
-        _otpShowState('new');
-      } catch (err) {
-        showAlert('otpAlert', 'Network error — please try again.', 'error');
-      } finally {
-        if (btn) btn.disabled = false;
+      if (secsLeft <= 0) {
+        clearInterval(_otpCountdownTimer);
+        _otpShowState('none');
+        showAlert('otpAlert', 'Temporary password expired.', 'error');
       }
     }
+    tick();
+    _otpCountdownTimer = setInterval(tick, 1000);
+  }
 
-    function copyOTP() {
-      const code = document.getElementById('otpCodeText')?.textContent;
-      if (!code) return;
-      navigator.clipboard.writeText(code).then(() => {
-        showAlert('otpAlert', 'Password copied to clipboard.', 'success');
-      }).catch(() => {
-        // Fallback for browsers that block clipboard without HTTPS
-        showAlert('otpAlert', `Password: ${code}`, 'success');
+  async function generateOTP() {
+    const btn = document.getElementById('generateOtpBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await fetch('/api/me/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
       });
+      const data = await res.json();
+      if (!data.success) {
+        showAlert('otpAlert', data.message || 'Failed to generate temporary password.', 'error');
+        return;
+      }
+      document.getElementById('otpCodeText').textContent = data.otp;
+      _startCountdown(data.expiresAt,
+        document.getElementById('otpExpiryText'),
+        document.getElementById('otpCountdownFill'));
+      _otpShowState('new');
+    } catch (err) {
+      showAlert('otpAlert', 'Network error — please try again.', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
     }
+  }
 
-    async function revokeOTP() {
-      clearInterval(_otpCountdownTimer);
-      try {
-        await fetch('/api/me/otp', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
-        });
-      } catch (_) { /* best-effort */ }
-      _otpShowState('none');
-      showAlert('otpAlert', 'Temporary password revoked.', 'success');
-    }
+  function copyOTP() {
+    const code = document.getElementById('otpCodeText')?.textContent;
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+      showAlert('otpAlert', 'Password copied to clipboard.', 'success');
+    }).catch(() => {
+      showAlert('otpAlert', `Password: ${code}`, 'success');
+    });
+  }
 
+  async function revokeOTP() {
+    clearInterval(_otpCountdownTimer);
+    try {
+      await fetch('/api/me/otp', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
+      });
+    } catch (_) { /* best-effort */ }
+    _otpShowState('none');
+    showAlert('otpAlert', 'Temporary password revoked.', 'success');
+  }
+
+  if (IS_OIDC) {
     // On page load — check if there is already an active token (from another session/tab)
     (async () => {
       try {
         const res = await fetch('/api/me/otp');
         const data = await res.json();
         if (data.hasToken) {
-          // Show state C — plaintext unavailable after page reload
           _startCountdown(data.expiresAt,
             document.getElementById('otpActiveExpiryText'),
             document.getElementById('otpCountdownFill2'));
@@ -790,7 +787,7 @@
         _otpShowState('none');
       }
     })();
-  } // end IS_OIDC OTP block
+  }
 </script>
 </body>
 </html>

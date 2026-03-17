@@ -44,7 +44,13 @@ The application will be available at `http://localhost:3000`
 - Search and filtering
 - Activity logs
 - Admin permission enforcement
-- Policy configuration
+
+### 📋 Policy Management
+- **Tier-Based streaming limits** - Control concurrent streams (Free/Standard/Premium/Family)
+- **Device whitelisting** - Restrict playback to approved devices
+- **Access scheduling** - Time-based access windows (optional)
+- **Comprehensive auditing** - Track all policy changes and access attempts
+- **Admin dashboard** - Manage user policies and view audit logs
 
 ### ⚙️ Settings & Configuration
 - Application settings (theme, language, notifications)
@@ -77,6 +83,7 @@ The application will be available at `http://localhost:3000`
 | **SessionStore** | Persistent session management | src/models/SessionStore.js |
 | **CacheManager** | In-memory LRU caching | src/models/CacheManager.js |
 | **PluginManager** | Plugin system orchestration | src/models/PluginManager.js |
+| **PolicyManager** | User policy enforcement | src/models/PolicyManager.js |
 | **AuditLogger** | Activity tracking | src/models/AuditLogger.js |
 | **JellyfinAPI** | Jellyfin integration | src/models/JellyfinAPI.js |
 | **DatabaseManager** | SQLite operations | src/models/DatabaseManager.js |
@@ -269,6 +276,9 @@ See `DEPLOYMENT_GUIDE.md` for comprehensive production deployment instructions.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
 - [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) - System design details
 - [AUTHENTICATION_INFRASTRUCTURE.md](AUTHENTICATION_INFRASTRUCTURE.md) - Authentication details
+- [POLICY_MANAGEMENT_GUIDE.md](POLICY_MANAGEMENT_GUIDE.md) - User policy management system
+- [POLICY_API_DOCUMENTATION.md](POLICY_API_DOCUMENTATION.md) - Policy API endpoints
+- [POLICY_QUICK_REFERENCE.md](POLICY_QUICK_REFERENCE.md) - Policy integration quick reference
 
 ---
 

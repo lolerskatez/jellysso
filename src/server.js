@@ -11,6 +11,7 @@ const PerformanceMonitor = require('./models/PerformanceMonitor');
 const SessionStore = require('./models/SessionStore');
 const CacheManager = require('./models/CacheManager');
 const PluginManager = require('./models/PluginManager');
+const PolicyManager = require('./models/PolicyManager');
 const JellyfinAPI = require('./models/JellyfinAPI');
 const { csrfProtection, setCsrfToken, csrfErrorHandler } = require('./middleware/csrf');
 const crypto = require('crypto');
@@ -365,6 +366,7 @@ app.use('/api/audit', require('./routes/audit'));
 app.use('/api/plugin', require('./routes/plugin'));
 app.use('/api/playback', require('./routes/playback'));
 app.use('/api/admin/playback', require('./routes/admin-playback'));
+app.use('/api/policy', require('./routes/policy'));
 app.use('/setup', require('./routes/setup'));
 
 // OIDC routes - enable if you need external identity provider support
@@ -570,10 +572,14 @@ app.use(csrfErrorHandler);
 // Initialize plugin system
 (async () => {
   try {
+    // Initialize policy system
+    await PolicyManager.initializeSchema();
+    console.log('✅ Policy system initialized');
+
     await PluginManager.initialize();
     console.log('✅ Plugin system ready');
   } catch (error) {
-    console.error('Plugin initialization failed:', error);
+    console.error('Initialization failed:', error);
   }
 })();
 

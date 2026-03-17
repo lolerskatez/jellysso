@@ -10,28 +10,21 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .playback-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: var(--spacing-xl);
-    }
-
     .playback-header {
       margin-bottom: var(--spacing-xl);
-    }
-
-    .playback-header h1 {
-      font-size: 2rem;
-      margin: 0 0 var(--spacing-sm) 0;
-      color: var(--gray-900);
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
     }
 
-    .playback-header p {
+    .playback-header h1 {
       margin: 0;
-      color: var(--text-secondary);
+      font-size: 1.75rem;
+      color: var(--gray-900);
+    }
+
+    .playback-header h1 i {
+      color: var(--primary);
     }
 
     .sessions-grid {
@@ -268,10 +261,6 @@
         grid-template-columns: 1fr;
       }
 
-      .playback-container {
-        padding: var(--spacing-lg);
-      }
-
       .control-btn {
         min-width: 70px;
         padding: var(--spacing-sm) var(--spacing-md);
@@ -346,44 +335,87 @@
   </style>
 </head>
 <body>
-  <%- include('./partials/header') %>
-  
-  <div class="playback-container">
-    <div class="playback-header">
-      <h1>
-        <i class="fas fa-play-circle"></i>
-        Playback Control
-      </h1>
-      <p>Manage your active video playback sessions</p>
-    </div>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'playback' }) %>
 
-    <!-- Messages -->
-    <div id="messages"></div>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="btn btn-secondary btn-sm" id="sidebarToggle" style="display: none;">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-play-circle"></i>
+            Playback Control
+          </h1>
+        </div>
+        <div class="header-right">
+          <% if (typeof user !== 'undefined' && user) { %>
+            <div class="user-info">
+              <div class="user-avatar">
+                <%= user.Name.charAt(0).toUpperCase() %>
+              </div>
+              <div>
+                <div style="font-weight: 600; font-size: 0.9375rem;"><%= user.Name %></div>
+                <div style="font-size: 0.8125rem; color: var(--text-secondary);">
+                  <%= user.Policy?.IsAdministrator ? '👑 Administrator' : 'User' %>
+                </div>
+              </div>
+            </div>
+            <button id="logoutBtn" class="btn btn-secondary btn-sm">
+              <i class="fas fa-sign-out-alt"></i>
+              <span style="display: none;">Logout</span>
+            </button>
+          <% } else { %>
+            <a href="/login" class="btn btn-primary btn-sm">
+              <i class="fas fa-sign-in-alt"></i>
+              Login
+            </a>
+          <% } %>
+        </div>
+      </header>
 
-    <!-- Loading State -->
-    <div id="loading" class="loading" style="display: none;">
-      <div class="spinner"></div>
-      Loading playback sessions...
-    </div>
+      <!-- Page Content -->
+      <div class="page-content">
+        <div style="margin-bottom: var(--spacing-lg);">
+          <p style="color: var(--text-secondary); margin: 0;">Manage your active video playback sessions</p>
+        </div>
 
-    <!-- Sessions Grid -->
-    <div id="sessions-container" class="sessions-grid" style="display: none;">
-      <!-- Sessions will be loaded here -->
-    </div>
+        <!-- Messages -->
+        <div id="messages"></div>
 
-    <!-- No Sessions State -->
-    <div id="no-sessions" class="no-sessions" style="display: none;">
-      <i class="fas fa-pause-circle"></i>
-      <h2>No Active Sessions</h2>
-      <p>You don't have any active playback sessions at the moment.</p>
-    </div>
+        <!-- Loading State -->
+        <div id="loading" class="loading" style="display: none;">
+          <div class="spinner"></div>
+          Loading playback sessions...
+        </div>
+
+        <!-- Sessions Grid -->
+        <div id="sessions-container" class="sessions-grid" style="display: none;">
+          <!-- Sessions will be loaded here -->
+        </div>
+
+        <!-- No Sessions State -->
+        <div id="no-sessions" class="no-sessions" style="display: none;">
+          <i class="fas fa-pause-circle"></i>
+          <h2>No Active Sessions</h2>
+          <p>You don't have any active playback sessions at the moment.</p>
+        </div>
+      </div>
+    </main>
   </div>
 
-  <%- include('./partials/footer') %>
-
+  <script src="/js/mobile-nav.js"></script>
   <script>
     const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
     let sessionRefreshInterval;
+
+    // Logout handler
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+      window.location.href = '/api/auth/logout';
+    });
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {

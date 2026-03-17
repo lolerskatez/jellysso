@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playback Administration - JellySSO</title>
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
+    <style>
+        .admin-playback-container {
+            padding: 20px;
+        }
+
+        .playback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .playback-header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-refresh {
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.3s;
+        }
+
+        .btn-refresh:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-refresh.loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bulk-controls {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-danger {
+            padding: 8px 16px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .filters-section {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filters-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-background);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .sessions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .user-section {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .user-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background 0.3s;
+        }
+
+        .user-header:hover {
+            background: var(--primary-dark);
+        }
+
+        .user-header.collapsed::before {
+            content: '▼';
+            display: inline-block;
+            transform: rotate(-90deg);
+            margin-right: 10px;
+            transition: transform 0.3s;
+        }
+
+        .user-header.expanded::before {
+            content: '▼';
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .user-header-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .user-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-session-count {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .user-sessions {
+            display: grid;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .session-card {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 60px 1fr 150px;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .session-thumbnail {
+            width: 60px;
+            height: 90px;
+            background: #333;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 24px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .session-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .session-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .session-title {
+            font-weight: bold;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .session-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-playing {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-paused {
+            background: #f39c12;
+            color: white;
+        }
+
+        .status-stopped {
+            background: #7f8c8d;
+            color: white;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+        }
+
+        .progress-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .session-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-btn {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            background: var(--card-background);
+            color: var(--text-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .control-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .control-btn.stop {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .control-btn.stop:hover {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            background: #27ae60;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .session-card {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .bulk-controls {
+                flex-direction: column;
+            }
+
+            .session-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .header-controls {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navigation') %>
+
+    <div class="app-container">
+        <main class="main-content">
+            <div class="admin-playback-container">
+                <!-- Header -->
+                <div class="playback-header">
+                    <div>
+                        <h1><i class="fas fa-play-circle"></i> Playback Administration</h1>
+                        <p style="margin: 5px 0 0 0; color: var(--text-secondary); font-size: 14px;">Monitor and control all active playback sessions</p>
+                    </div>
+                    <div class="header-controls">
+                        <button class="btn-refresh" onclick="refreshSessions()" id="refreshBtn">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Total Sessions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Active (Playing)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Paused</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Unique Users</div>
+                    </div>
+                </div>
+
+                <!-- Bulk Controls -->
+                <div class="bulk-controls">
+                    <button class="btn-danger" onclick="stopAllSessions()" id="stopAllBtn">
+                        <i class="fas fa-stop-circle"></i> Stop All Sessions
+                    </button>
+                    <span style="color: var(--text-secondary); font-size: 12px; align-self: center;">
+                        Use only during maintenance or emergency situations
+                    </span>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-section">
+                    <h3><i class="fas fa-filter"></i> Filters</h3>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="filterUser">User</label>
+                            <input type="text" id="filterUser" placeholder="Filter by username...">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterStatus">Status</label>
+                            <select id="filterStatus">
+                                <option value="">All Status</option>
+                                <option value="playing">Playing</option>
+                                <option value="paused">Paused</option>
+                                <option value="stopped">Stopped</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterDevice">Device</label>
+                            <input type="text" id="filterDevice" placeholder="Filter by device...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sessions List -->
+                <div class="sessions-list" id="sessionsList">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading sessions...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <%- include('partials/mobile-nav') %>
+
+    <script src="/js/mobile-nav.js"></script>
+    <script>
+        // CSRF Token
+        const csrfToken = '<%= csrfToken %>';
+        let allSessions = [];
+
+        // Format time in ticks to MM:SS
+        function formatTime(ticks) {
+            if (!ticks) return '0:00';
+            const seconds = Math.floor(ticks / 10000000);
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Get session status badge
+        function getStatusBadge(session) {
+            if (session.playbackState?.isPlaying) {
+                return `<span class="session-status status-playing"><i class="fas fa-play"></i> Playing</span>`;
+            } else if (session.playbackState?.isPaused) {
+                return `<span class="session-status status-paused"><i class="fas fa-pause"></i> Paused</span>`;
+            } else {
+                return `<span class="session-status status-stopped"><i class="fas fa-stop"></i> Stopped</span>`;
+            }
+        }
+
+        // Calculate progress percentage
+        function getProgressPercentage(session) {
+            if (!session.nowPlayingItem?.duration || !session.playbackState?.positionTicks) {
+                return 0;
+            }
+            return (session.playbackState.positionTicks / session.nowPlayingItem.duration) * 100;
+        }
+
+        // Load and display sessions
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/admin/playback/sessions');
+                if (!response.ok) throw new Error('Failed to load sessions');
+
+                const data = await response.json();
+                allSessions = data.sessions || [];
+
+                // Load stats
+                loadStats();
+
+                // Render sessions
+                renderSessions(allSessions);
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                showNotification('Failed to load playback sessions: ' + error.message, 'error');
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/admin/playback/sessions/stats');
+                if (!response.ok) throw new Error('Failed to load stats');
+
+                const data = await response.json();
+                const stats = data.stats;
+
+                document.querySelectorAll('.stat-card')[0].querySelector('.stat-value').textContent = stats.totalSessions;
+                document.querySelectorAll('.stat-card')[1].querySelector('.stat-value').textContent = stats.activeSessions;
+                document.querySelectorAll('.stat-card')[2].querySelector('.stat-value').textContent = stats.pausedSessions;
+                document.querySelectorAll('.stat-card')[3].querySelector('.stat-value').textContent = stats.uniqueUsers;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Render sessions grouped by user
+        function renderSessions(sessions) {
+            const listContainer = document.getElementById('sessionsList');
+
+            if (sessions.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <p>No active playback sessions</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group sessions by user
+            const userGroups = {};
+            sessions.forEach(session => {
+                if (!userGroups[session.userId]) {
+                    userGroups[session.userId] = {
+                        userId: session.userId,
+                        userName: session.userName,
+                        sessions: []
+                    };
+                }
+                userGroups[session.userId].sessions.push(session);
+            });
+
+            // Render user sections
+            let html = '';
+            Object.values(userGroups).forEach((userGroup, index) => {
+                const userInitial = userGroup.userName.charAt(0).toUpperCase();
+                html += `
+                    <div class="user-section">
+                        <div class="user-header expanded" onclick="toggleUserSection(this)">
+                            <div class="user-header-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <div class="user-name">${escapeHtml(userGroup.userName)}</div>
+                                <div class="user-session-count">${userGroup.sessions.length} session${userGroup.sessions.length !== 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                        <div class="user-sessions" style="display: block;">
+                            ${userGroup.sessions.map(session => createSessionCard(session, userGroup.userName)).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            listContainer.innerHTML = html;
+        }
+
+        // Create session card HTML
+        function createSessionCard(session, userName) {
+            const progress = getProgressPercentage(session);
+            const currentTime = formatTime(session.playbackState?.positionTicks || 0);
+            const totalTime = formatTime(session.nowPlayingItem?.duration || 0);
+            const thumbnail = session.nowPlayingItem?.primaryImageTag 
+                ? `https://${window.location.host}/Image/Primary?tag=${session.nowPlayingItem.primaryImageTag}&itemId=${session.nowPlayingItem.id}`
+                : '';
+
+            return `
+                <div class="session-card" data-session-id="${session.sessionId}">
+                    <div class="session-thumbnail">
+                        ${thumbnail ? `<img src="${thumbnail}" alt="${session.nowPlayingItem?.name}">` : '<i class="fas fa-film"></i>'}
+                    </div>
+                    <div class="session-info">
+                        <div class="session-title" title="${session.nowPlayingItem?.name || 'Unknown'}">${escapeHtml(session.nowPlayingItem?.name || 'Unknown')}</div>
+                        <div class="session-meta">
+                            <div class="meta-item" title="Device: ${session.deviceName}">
+                                <i class="fas fa-mobile-alt"></i> ${escapeHtml(session.deviceName)}
+                            </div>
+                            <div class="meta-item" title="App: ${session.appName}">
+                                <i class="fas fa-window-restore"></i> ${escapeHtml(session.appName)}
+                            </div>
+                            <div class="meta-item">${getStatusBadge(session)}</div>
+                            <div class="meta-item" title="Client: ${session.client}">
+                                <i class="fas fa-info-circle"></i> ${escapeHtml(session.client || 'Unknown')}
+                            </div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%;"></div>
+                            </div>
+                            <div class="progress-time">${currentTime} / ${totalTime}</div>
+                        </div>
+                    </div>
+                    <div class="session-controls">
+                        ${session.playbackState?.isPlaying ? `
+                            <button class="control-btn" onclick="pauseSession('${session.sessionId}', '${escapeHtml(userName)}')">
+                                <i class="fas fa-pause"></i> Pause
+                            </button>
+                        ` : ''}
+                        ${!session.playbackState?.isPlaying ? `
+                            <button class="control-btn" onclick="resumeSession('${session.sessionId}', '${escapeHtml(userName)}')">
+                                <i class="fas fa-play"></i> Resume
+                            </button>
+                        ` : ''}
+                        <button class="control-btn stop" onclick="stopSession('${session.sessionId}', '${escapeHtml(userName)}')">
+                            <i class="fas fa-stop"></i> Stop
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Toggle user section expanded/collapsed
+        function toggleUserSection(header) {
+            header.classList.toggle('expanded');
+            header.classList.toggle('collapsed');
+            const sessions = header.nextElementSibling;
+            sessions.style.display = header.classList.contains('expanded') ? 'grid' : 'none';
+        }
+
+        // Control functions
+        async function pauseSession(sessionId, userName) {
+            await controlSession(sessionId, 'pause', userName);
+        }
+
+        async function resumeSession(sessionId, userName) {
+            await controlSession(sessionId, 'resume', userName);
+        }
+
+        async function stopSession(sessionId, userName) {
+            await controlSession(sessionId, 'stop', userName);
+        }
+
+        async function controlSession(sessionId, action, userName) {
+            try {
+                const response = await fetch(`/api/admin/playback/${sessionId}/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) throw new Error('Failed to ' + action);
+
+                const data = await response.json();
+                showNotification(`${action.charAt(0).toUpperCase() + action.slice(1)} on ${userName}'s session`, 'success');
+                
+                // Refresh after a short delay
+                setTimeout(loadSessions, 500);
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification(`Failed to ${action} session: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopAllSessions() {
+            if (!confirm('Are you sure? This will stop ALL active playback sessions across the system.')) {
+                return;
+            }
+
+            try {
+                document.getElementById('stopAllBtn').disabled = true;
+                const response = await fetch('/api/admin/playback/stop-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ reason: 'Admin initiated stop all' })
+                });
+
+                if (!response.ok) throw new Error('Failed to stop all sessions');
+
+                const data = await response.json();
+                showNotification(`Stopped ${data.stopped} playback sessions`, 'success');
+                
+                // Refresh after a short delay
+                setTimeout(loadSessions, 500);
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification(`Failed to stop all sessions: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('stopAllBtn').disabled = false;
+            }
+        }
+
+        async function refreshSessions() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('loading');
+            await loadSessions();
+            btn.classList.remove('loading');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 4000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSessions();
+            // Auto-refresh every 10 seconds
+            setInterval(loadSessions, 10000);
+        });
+    </script>
+</body>
+</html>

@@ -364,6 +364,7 @@ app.use('/api/activity', require('./routes/activity'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/plugin', require('./routes/plugin'));
 app.use('/api/playback', require('./routes/playback'));
+app.use('/api/admin/playback', require('./routes/admin-playback'));
 app.use('/setup', require('./routes/setup'));
 
 // OIDC routes - enable if you need external identity provider support
@@ -533,7 +534,18 @@ app.get('/plugin', requireWebAuth, (req, res) => {
 });
 
 app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
-  res.render('playback', { user: req.session.user, csrfToken: req.csrfToken() });
+  res.render('playback', { user: req.session.user, csrfToken: req.csrfToken(), currentPage: 'playback' });
+});
+
+app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) => {
+  // Verify user is admin
+  if (!req.session.user?.Policy?.IsAdministrator) {
+    return res.status(403).render('error', { 
+      message: 'Admin access required',
+      details: 'You must be an administrator to access playback administration.'
+    });
+  }
+  res.render('admin-playback-sessions', { user: req.session.user, csrfToken: req.csrfToken(), currentPage: 'admin-playback-sessions' });
 });
 
 // Admin dashboard routes

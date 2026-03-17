@@ -1887,4 +1887,21 @@ router.get('/client-guide', requireAuth, (req, res) => {
   });
 });
 
+// ============================================================================
+// POLICY MANAGEMENT
+// ============================================================================
+
+// Policy management page - admin only
+router.get('/policy', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    res.render('admin/policy', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    console.error('Policy management page error:', error);
+    res.status(500).render('error', { message: 'Error loading policy page', code: 500 });
+  }
+});
+
 module.exports = router;

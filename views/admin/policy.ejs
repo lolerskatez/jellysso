@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Management - JellySSO Admin</title>
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .search-box button {
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .policies-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .policies-table thead {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .policies-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .policies-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .policies-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .policies-table tbody tr:hover {
+            background: var(--table-row-hover);
+        }
+
+        .user-id {
+            font-weight: bold;
+            color: var(--text-color);
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .tier-free { background: #95a5a6; color: white; }
+        .tier-standard { background: #3498db; color: white; }
+        .tier-premium { background: #9b59b6; color: white; }
+        .tier-family { background: #e74c3c; color: white; }
+        .tier-admin { background: #f39c12; color: white; }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .btn-edit {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            opacity: 0.9;
+        }
+
+        .btn-audit {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-audit:hover {
+            opacity: 0.9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--border-color);
+            color: var(--text-color);
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            opacity: 0.8;
+        }
+
+        .status-msg {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status-msg.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-msg.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .devices-preview {
+            background: var(--table-row-bg);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navigation', { user, currentPage: 'admin-policy' }) %>
+
+    <div class="admin-container">
+        <h1><i class="fas fa-shield-alt"></i> User Policy Management</h1>
+
+        <!-- Status Messages -->
+        <div id="statusMsg" class="status-msg"></div>
+
+        <!-- Header Actions -->
+        <div class="header-actions">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by user ID or name..." />
+                <button onclick="searchPolicies()"><i class="fas fa-search"></i> Search</button>
+            </div>
+            <button class="btn-primary" onclick="refreshPolicies()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+
+        <!-- Policies Table -->
+        <div style="overflow-x: auto;">
+            <table class="policies-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Tier</th>
+                        <th>Max Streams</th>
+                        <th>Device WL</th>
+                        <th>Schedule</th>
+                        <th>Devices</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="policiesTableBody">
+                    <tr>
+                        <td colspan="8" class="loading">
+                            <i class="fas fa-spinner"></i> Loading policies...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" style="display: none;">
+            <div class="empty-state">
+                <i class="fas fa-list"></i>
+                <p>No policies found</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Policy Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit User Policy</h2>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            
+            <form onsubmit="savePolicyChanges(event)">
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="text" id="editUserId" readonly />
+                </div>
+
+                <div class="form-group">
+                    <label>Subscription Tier</label>
+                    <select id="editTier" onchange="updateMaxStreams()">
+                        <option value="free">Free (1 stream)</option>
+                        <option value="standard">Standard (2 streams)</option>
+                        <option value="premium">Premium (4 streams)</option>
+                        <option value="family">Family (6 streams)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Max Concurrent Streams</label>
+                    <input type="number" id="editMaxStreams" readonly />
+                </div>
+
+                <div style="background: var(--table-row-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <div class="setting-row">
+                        <span class="setting-label">Device Whitelist Enforcement</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="editDeviceWL" onchange="updatePolicySettings()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <span class="setting-label">Access Schedule Enforcement</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="editSchedule" onchange="updatePolicySettings()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Whitelisted Devices</label>
+                    <div id="editDevicesList" class="devices-preview">
+                        Loading devices...
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Audit Log Modal -->
+    <div id="auditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>User Audit Log</h2>
+                <button class="modal-close" onclick="closeModal('auditModal')">&times;</button>
+            </div>
+            
+            <div id="auditLogContent" style="max-height: 60vh; overflow-y: auto;">
+                <div class="loading">
+                    <i class="fas fa-spinner"></i> Loading audit log...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin-policy.js"></script>
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPolicies();
+        });
+    </script>
+</body>
+</html>

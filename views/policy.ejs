@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Settings - JellySSO</title>
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .policy-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .policy-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .policy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+
+        .policy-header h2 {
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge-tier {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tier-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .tier-box {
+            padding: 15px;
+            background: var(--table-row-bg);
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .tier-box label {
+            font-weight: bold;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .tier-box .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .tier-description {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .device-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--table-row-bg);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .device-item:last-child {
+            border-bottom: none;
+        }
+
+        .device-info {
+            flex: 1;
+        }
+
+        .device-name {
+            font-weight: bold;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .device-type {
+            font-size: 12px;
+            color: white;
+            background: var(--primary-color);
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+
+        .device-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .device-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-remove {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .btn-remove:hover {
+            background: #c0392b;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            opacity: 0.9;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .add-device-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+            align-items: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .audit-log {
+            margin-top: 15px;
+        }
+
+        .audit-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: var(--table-row-bg);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .audit-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .audit-type {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .audit-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-msg {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .status-msg.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-msg.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-msg.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navigation', { user, currentPage: 'policy' }) %>
+
+    <div class="policy-container">
+        <h1><i class="fas fa-shield-alt"></i> Policy Settings</h1>
+
+        <!-- Status Messages -->
+        <div id="statusMsg" class="status-msg"></div>
+
+        <!-- Current Tier Section -->
+        <div class="policy-section">
+            <div class="policy-header">
+                <h2>Your Subscription Tier</h2>
+                <span class="badge badge-tier" id="tierBadge">Loading...</span>
+            </div>
+
+            <div class="tier-info">
+                <div class="tier-box">
+                    <label>Current Tier</label>
+                    <div class="value" id="tierName">Loading...</div>
+                    <div class="tier-description" id="tierDescription"></div>
+                </div>
+                <div class="tier-box">
+                    <label>Concurrent Streams Allowed</label>
+                    <div class="value" id="maxStreams">Loading...</div>
+                    <div class="tier-description">Maximum simultaneous playback sessions</div>
+                </div>
+            </div>
+
+            <div style="background: #f9f9f9; padding: 12px; border-radius: 4px; border-left: 3px solid var(--primary-color);">
+                <i class="fas fa-info-circle"></i>
+                <strong>Tiers Available:</strong>
+                <ul style="margin: 10px 0 0 20px; padding: 0;">
+                    <li><strong>Free:</strong> 1 concurrent stream</li>
+                    <li><strong>Standard:</strong> 2 concurrent streams</li>
+                    <li><strong>Premium:</strong> 4 concurrent streams</li>
+                    <li><strong>Family:</strong> 6 concurrent streams</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Device Whitelist Section -->
+        <div class="policy-section">
+            <div class="policy-header">
+                <h2>Whitelisted Devices</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="margin: 0;">
+                        <span style="margin-right: 8px;">Enforcement Enabled</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="deviceWhitelistToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </label>
+                </div>
+            </div>
+
+            <p style="color: var(--text-muted); margin-bottom: 15px;">
+                When enabled, playback is only allowed from whitelisted devices. Leave blank to allow all devices.
+            </p>
+
+            <!-- Add Device Form -->
+            <div class="add-device-form">
+                <div class="form-group" style="margin: 0;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Device Name</label>
+                    <input type="text" id="deviceName" placeholder="e.g., Living Room TV" />
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Device Type</label>
+                    <select id="deviceType">
+                        <option value="web">Web Browser</option>
+                        <option value="mobile">Mobile App</option>
+                        <option value="tv">Smart TV</option>
+                        <option value="desktop">Desktop App</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Current Device</label>
+                    <select id="currentDevice">
+                        <option value="">-- Select Device --</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="addDevice()">
+                    <i class="fas fa-plus"></i> Add Device
+                </button>
+            </div>
+
+            <!-- Device List -->
+            <div id="deviceList" style="margin-top: 15px;">
+                <div class="empty-state">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading devices...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Log Section -->
+        <div class="policy-section">
+            <div class="policy-header">
+                <h2>Activity Log</h2>
+                <button class="btn-primary" onclick="refreshAuditLog()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+
+            <div id="auditLog" style="margin-top: 15px;">
+                <div class="empty-state">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading activity...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/policy.js"></script>
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserPolicy();
+            loadWhitelistedDevices();
+            loadAuditLog();
+        });
+    </script>
+</body>
+</html>

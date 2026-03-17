@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Playback Control - Jellyfin Companion">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Playback Control - Jellyfin Companion</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .playback-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--spacing-xl);
+    }
+
+    .playback-header {
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .playback-header h1 {
+      font-size: 2rem;
+      margin: 0 0 var(--spacing-sm) 0;
+      color: var(--gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .playback-header p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+
+    .sessions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .session-card {
+      background: white;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+
+    .session-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary);
+    }
+
+    .session-thumbnail {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-300) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .session-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .session-thumbnail .status-badge {
+      position: absolute;
+      top: var(--spacing-md);
+      right: var(--spacing-md);
+      background: var(--primary);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--border-radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+    }
+
+    .status-badge.paused {
+      background: var(--warning);
+    }
+
+    .status-badge.stopped {
+      background: var(--danger);
+    }
+
+    .status-badge.playing {
+      background: var(--success);
+    }
+
+    .session-content {
+      padding: var(--spacing-lg);
+    }
+
+    .session-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0 0 var(--spacing-xs) 0;
+      color: var(--gray-900);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin: 0 0 var(--spacing-md) 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-info {
+      display: grid;
+      gap: var(--spacing-xs);
+      font-size: 0.875rem;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .session-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-secondary);
+    }
+
+    .session-info-label {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+    }
+
+    .session-info-label i {
+      width: 16px;
+      text-align: center;
+      color: var(--primary);
+    }
+
+    .session-progress {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-time {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: var(--spacing-xs);
+    }
+
+    .session-controls {
+      display: flex;
+      gap: var(--spacing-sm);
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      flex: 1;
+      min-width: 80px;
+      padding: var(--spacing-md);
+      border: none;
+      border-radius: var(--border-radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-xs);
+    }
+
+    .control-btn.primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .control-btn.primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .control-btn.secondary {
+      background: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .control-btn.secondary:hover {
+      background: var(--gray-200);
+    }
+
+    .control-btn.danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .control-btn.danger:hover {
+      background: #c82333;
+    }
+
+    .control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .no-sessions {
+      text-align: center;
+      padding: var(--spacing-4xl);
+      color: var(--text-secondary);
+    }
+
+    .no-sessions i {
+      font-size: 4rem;
+      color: var(--border-color);
+      margin-bottom: var(--spacing-lg);
+      display: block;
+    }
+
+    .no-sessions h2 {
+      font-size: 1.5rem;
+      margin: 0 0 var(--spacing-xs) 0;
+      color: var(--gray-900);
+    }
+
+    .no-sessions p {
+      margin: 0;
+      font-size: 0.9375rem;
+    }
+
+    .control-btn i {
+      font-size: 0.875rem;
+    }
+
+    @media (max-width: 768px) {
+      .sessions-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .playback-container {
+        padding: var(--spacing-lg);
+      }
+
+      .control-btn {
+        min-width: 70px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.8125rem;
+      }
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-3xl);
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--border-color);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s linear infinite;
+      margin-right: var(--spacing-md);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      background: var(--danger);
+      color: white;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+    }
+
+    .error-message i {
+      font-size: 1.25rem;
+    }
+
+    .success-message {
+      background: var(--success);
+      color: white;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .success-message i {
+      font-size: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('./partials/header') %>
+  
+  <div class="playback-container">
+    <div class="playback-header">
+      <h1>
+        <i class="fas fa-play-circle"></i>
+        Playback Control
+      </h1>
+      <p>Manage your active video playback sessions</p>
+    </div>
+
+    <!-- Messages -->
+    <div id="messages"></div>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading" style="display: none;">
+      <div class="spinner"></div>
+      Loading playback sessions...
+    </div>
+
+    <!-- Sessions Grid -->
+    <div id="sessions-container" class="sessions-grid" style="display: none;">
+      <!-- Sessions will be loaded here -->
+    </div>
+
+    <!-- No Sessions State -->
+    <div id="no-sessions" class="no-sessions" style="display: none;">
+      <i class="fas fa-pause-circle"></i>
+      <h2>No Active Sessions</h2>
+      <p>You don't have any active playback sessions at the moment.</p>
+    </div>
+  </div>
+
+  <%- include('./partials/footer') %>
+
+  <script>
+    const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
+    let sessionRefreshInterval;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSessions();
+      // Refresh sessions every 5 seconds
+      sessionRefreshInterval = setInterval(loadSessions, 5000);
+    });
+
+    async function loadSessions() {
+      const loading = document.getElementById('loading');
+      const container = document.getElementById('sessions-container');
+      const noSessions = document.getElementById('no-sessions');
+
+      loading.style.display = 'flex';
+      container.style.display = 'none';
+      noSessions.style.display = 'none';
+
+      try {
+        const response = await fetch('/api/playback/user/sessions', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        loading.style.display = 'none';
+
+        if (data.sessions && data.sessions.length > 0) {
+          renderSessions(data.sessions);
+          container.style.display = 'grid';
+        } else {
+          noSessions.style.display = 'block';
+        }
+      } catch (error) {
+        loading.style.display = 'none';
+        showError(`Failed to load sessions: ${error.message}`);
+        noSessions.style.display = 'block';
+      }
+    }
+
+    function renderSessions(sessions) {
+      const container = document.getElementById('sessions-container');
+      container.innerHTML = '';
+
+      sessions.forEach(session => {
+        const card = createSessionCard(session);
+        container.appendChild(card);
+      });
+    }
+
+    function createSessionCard(session) {
+      const card = document.createElement('div');
+      card.className = 'session-card';
+
+      const statusClass = session.playbackState?.isPlaying ? 'playing' 
+        : session.playbackState?.isPaused ? 'paused' 
+        : 'stopped';
+
+      const statusText = session.playbackState?.isPlaying ? 'Playing' 
+        : session.playbackState?.isPaused ? 'Paused' 
+        : 'Stopped';
+
+      const thumbnailUrl = session.nowPlayingItem?.primaryImageUrl || '';
+      const itemName = session.nowPlayingItem?.name || 'Unknown';
+      const itemType = session.nowPlayingItem?.type || 'Unknown';
+      const seriesInfo = session.nowPlayingItem?.seriesName 
+        ? `${session.nowPlayingItem.seriesName}` + 
+          (session.nowPlayingItem.seasonName ? ` - ${session.nowPlayingItem.seasonName}` : '') +
+          (session.nowPlayingItem.episodeNumber ? ` E${session.nowPlayingItem.episodeNumber}` : '')
+        : '';
+
+      // Calculate progress percentage
+      const duration = session.playbackState?.duration || 0;
+      const position = session.playbackState?.position || 0;
+      const progressPercent = duration > 0 ? Math.round((position / duration) * 100) : 0;
+
+      card.innerHTML = `
+        <div class="session-thumbnail">
+          ${thumbnailUrl ? `<img src="${thumbnailUrl}" alt="${itemName}">` : '<i class="fas fa-film"></i>'}
+          <div class="status-badge ${statusClass}">
+            <i class="fas fa-${statusClass === 'playing' ? 'play' : statusClass === 'paused' ? 'pause' : 'stop'}"></i>
+            ${statusText}
+          </div>
+        </div>
+        
+        <div class="session-content">
+          <div class="session-title">${itemName}</div>
+          ${seriesInfo ? `<div class="session-subtitle">${seriesInfo}</div>` : ''}
+          
+          <div class="session-info">
+            <div class="session-info-row">
+              <span class="session-info-label">
+                <i class="fas fa-tv"></i>
+                Device
+              </span>
+              <span>${session.deviceName || 'Unknown'}</span>
+            </div>
+            <div class="session-info-row">
+              <span class="session-info-label">
+                <i class="fas fa-mobile-alt"></i>
+                App
+              </span>
+              <span>${session.appName || 'Unknown'}</span>
+            </div>
+          </div>
+
+          ${session.playbackState ? `
+            <div class="session-progress">
+              <div class="progress-bar" onclick="seekSession('${session.sessionId}', event)">
+                <div class="progress-fill" style="width: ${progressPercent}%"></div>
+              </div>
+              <div class="progress-time">
+                <span>${formatTime(position)}</span>
+                <span>${formatTime(duration)}</span>
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="session-controls">
+            ${session.playbackState?.isPlaying ? `
+              <button class="control-btn secondary" onclick="pauseSession('${session.sessionId}')">
+                <i class="fas fa-pause"></i>
+                Pause
+              </button>
+            ` : `
+              <button class="control-btn primary" onclick="resumeSession('${session.sessionId}')">
+                <i class="fas fa-play"></i>
+                Play
+              </button>
+            `}
+            <button class="control-btn danger" onclick="stopSession('${session.sessionId}')">
+              <i class="fas fa-stop"></i>
+              Stop
+            </button>
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    async function pauseSession(sessionId) {
+      await sendCommand(sessionId, '/pause', 'Paused');
+    }
+
+    async function resumeSession(sessionId) {
+      await sendCommand(sessionId, '/resume', 'Resumed');
+    }
+
+    async function stopSession(sessionId) {
+      await sendCommand(sessionId, '/stop', 'Stopped');
+    }
+
+    async function sendCommand(sessionId, endpoint, action) {
+      try {
+        const realEndpoint = `/api/playback/${sessionId}${endpoint}`;
+        const realResponse = await fetch(realEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
+          },
+          credentials: 'include'
+        });
+
+        if (!realResponse.ok) {
+          throw new Error(`HTTP ${realResponse.status}`);
+        }
+
+        showSuccess(`Playback ${action.toLowerCase()} on device`);
+        await loadSessions();
+      } catch (error) {
+        showError(`Failed to ${action.toLowerCase()}: ${error.message}`);
+      }
+    }
+
+    function formatTime(ticks) {
+      if (!ticks) return '0:00';
+      // Convert from Jellyfin ticks (100-nanosecond intervals) to seconds
+      const seconds = Math.round(ticks / 10000000);
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function showError(message) {
+      const messagesDiv = document.getElementById('messages');
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i><span>${message}</span>`;
+      messagesDiv.appendChild(errorDiv);
+
+      setTimeout(() => {
+        errorDiv.remove();
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const messagesDiv = document.getElementById('messages');
+      const successDiv = document.createElement('div');
+      successDiv.className = 'success-message';
+      successDiv.innerHTML = `<i class="fas fa-check-circle"></i><span>${message}</span>`;
+      messagesDiv.appendChild(successDiv);
+
+      setTimeout(() => {
+        successDiv.remove();
+      }, 3000);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (sessionRefreshInterval) {
+        clearInterval(sessionRefreshInterval);
+      }
+    });
+  </script>
+</body>
+</html>

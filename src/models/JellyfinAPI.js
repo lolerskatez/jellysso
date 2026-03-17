@@ -380,6 +380,159 @@ class JellyfinAPI {
     }
   }
 
+  // ============ PLAYBACK SESSION MANAGEMENT ============
+
+  /**
+   * Get all active playback sessions
+   * Returns sessions for all users (admin only) or can be filtered by userId
+   */
+  async getActiveSessions(userId = null) {
+    try {
+      const response = await this.client.get('/Sessions');
+      let sessions = response.data;
+
+      // Filter by userId if provided
+      if (userId) {
+        sessions = sessions.filter(session => session.UserId === userId);
+      }
+
+      // Clean up and normalize session data
+      return sessions.map(session => ({
+        sessionId: session.Id,
+        userId: session.UserId,
+        userName: session.UserName,
+        deviceId: session.DeviceId,
+        deviceName: session.DeviceName,
+        appName: session.AppName || session.Client || 'Unknown',
+        appVersion: session.AppVersion || session.ApplicationVersion || 'Unknown',
+        isPlaying: session.NowPlayingItem ? true : false,
+        nowPlayingItem: session.NowPlayingItem ? {
+          id: session.NowPlayingItem.Id,
+          name: session.NowPlayingItem.Name,
+          type: session.NowPlayingItem.Type,
+          seriesName: session.NowPlayingItem.SeriesName,
+          seasonName: session.NowPlayingItem.SeasonName,
+          episodeNumber: session.NowPlayingItem.IndexNumber,
+          primaryImageUrl: session.NowPlayingItem.ImageTags?.Primary ? 
+            `/Items/${session.NowPlayingItem.Id}/Images/Primary?maxWidth=256&tag=${session.NowPlayingItem.ImageTags.Primary}` : null
+        } : null,
+        playbackState: session.PlayState ? {
+          position: session.PlayState.PositionTicks,
+          isPaused: session.PlayState.IsPaused,
+          isPlaying: !session.PlayState.IsPaused
+        } : null,
+        remoteAddress: session.RemoteAddr,
+        lastActivityDate: session.LastActivityDate
+      }));
+    } catch (error) {
+      throw new Error(`Failed to get active sessions: ${error.message}`);
+    }
+  }
+
+  /**
+   * Pause playback on a session
+   */
+  async pausePlayback(sessionId) {
+    try {
+      await this.client.post(`/Sessions/${sessionId}/Playing/Pause`);
+      return { success: true, message: 'Playback paused' };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found or already ended');
+      }
+      throw new Error(`Failed to pause playback: ${error.message}`);
+    }
+  }
+
+  /**
+   * Resume playback on a session
+   */
+  async resumePlayback(sessionId) {
+    try {
+      await this.client.post(`/Sessions/${sessionId}/Playing/Unpause`);
+      return { success: true, message: 'Playback resumed' };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found or already ended');
+      }
+      throw new Error(`Failed to resume playback: ${error.message}`);
+    }
+  }
+
+  /**
+   * Stop playback on a session
+   */
+  async stopPlayback(sessionId) {
+    try {
+      await this.client.post(`/Sessions/${sessionId}/Playing/Stop`);
+      return { success: true, message: 'Playback stopped' };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found or already ended');
+      }
+      throw new Error(`Failed to stop playback: ${error.message}`);
+    }
+  }
+
+  /**
+   * Seek to specific position in current playback
+   * @param {string} sessionId - Session ID
+   * @param {number} positionTicks - Position in 100-nanosecond ticks (e.g., 30 seconds = 300000000)
+   */
+  async seekPlayback(sessionId, positionTicks) {
+    try {
+      await this.client.post(`/Sessions/${sessionId}/Playing/Seek`, null, {
+        params: { seekPositionTicks: positionTicks }
+      });
+      return { success: true, message: 'Seeked to position' };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found or already ended');
+      }
+      throw new Error(`Failed to seek playback: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send a generic message/command to a session
+   * Can be used for key presses, navigation, etc.
+   * @param {string} sessionId - Session ID
+   * @param {string} messageType - Type of message (e.g., 'play', 'pause', 'next', 'previous')
+   * @param {object} data - Additional message data
+   */
+  async sendSessionMessage(sessionId, messageType, data = {}) {
+    try {
+      const messageBody = {
+        Header: 'Message',
+        MessageType: messageType,
+        ...data
+      };
+      
+      await this.client.post(`/Sessions/${sessionId}/Message`, messageBody);
+      return { success: true, message: `Message sent: ${messageType}` };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found');
+      }
+      throw new Error(`Failed to send message: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get session details
+   */
+  async getSessionDetails(sessionId) {
+    try {
+      const response = await this.client.get(`/Sessions/${sessionId}`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found');
+      }
+      throw new Error(`Failed to get session details: ${error.message}`);
+    }
+  }
+
   // Add more methods as needed
 }
 

@@ -363,6 +363,7 @@ app.use('/api/quickconnect', require('./routes/quickconnect'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/plugin', require('./routes/plugin'));
+app.use('/api/playback', require('./routes/playback'));
 app.use('/setup', require('./routes/setup'));
 
 // OIDC routes - enable if you need external identity provider support
@@ -529,6 +530,10 @@ app.get('/plugin', requireWebAuth, (req, res) => {
     jellyfinUrl: config.jellyfinUrl,
     webAppUrl: config.webAppPublicUrl
   });
+});
+
+app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
+  res.render('playback', { user: req.session.user, csrfToken: req.csrfToken() });
 });
 
 // Admin dashboard routes

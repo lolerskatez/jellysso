@@ -1,9 +1,14 @@
 ﻿const crypto = require('crypto');
 const DatabaseManager = require('./DatabaseManager');
 
-// Alphabet excludes visually ambiguous characters: 0, 1, I, L, O
-const GEN_CHARS = 'BCDEFGHJKMNPQRSTVWXYZ23456789';
-const GEN_LENGTH = 8;
+// Character pools — each pool guarantees at least one character in generated passwords.
+// Visually ambiguous characters excluded: 0, 1, I, L, O, l
+const GEN_UPPER   = 'BCDEFGHJKMNPQRSTVWXYZ';
+const GEN_LOWER   = 'bcdefghjkmnpqrstvwxyz';
+const GEN_DIGITS  = '23456789';
+const GEN_SPECIAL = '!@#$%^&*';
+const GEN_ALL     = GEN_UPPER + GEN_LOWER + GEN_DIGITS + GEN_SPECIAL;
+const GEN_LENGTH  = 16;
 
 /**
  * OTPManager - manages generated Jellyfin passwords for SSO users.
@@ -32,11 +37,27 @@ class OTPManager {
   }
 
   static _generate() {
-    let pw = '';
-    for (let i = 0; i < GEN_LENGTH; i++) {
-      pw += GEN_CHARS[crypto.randomInt(0, GEN_CHARS.length)];
+    // Guarantee at least one character from each required pool
+    const required = [
+      GEN_UPPER  [crypto.randomInt(0, GEN_UPPER.length)],
+      GEN_LOWER  [crypto.randomInt(0, GEN_LOWER.length)],
+      GEN_DIGITS [crypto.randomInt(0, GEN_DIGITS.length)],
+      GEN_SPECIAL[crypto.randomInt(0, GEN_SPECIAL.length)],
+    ];
+
+    // Fill remaining positions from the full combined pool
+    const rest = [];
+    for (let i = 0; i < GEN_LENGTH - required.length; i++) {
+      rest.push(GEN_ALL[crypto.randomInt(0, GEN_ALL.length)]);
     }
-    return pw;
+
+    // Fisher-Yates shuffle so required characters aren't always at the front
+    const chars = [...required, ...rest];
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = crypto.randomInt(0, i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    return chars.join('');
   }
 
   static _hash(pw) {

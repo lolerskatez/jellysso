@@ -102,7 +102,7 @@ class PolicyManager {
 
       // Create default policy for new users
       if (!policy) {
-        const defaultTier = 'standard';
+        const defaultTier = 'free';
         const tier = this.TIERS[defaultTier];
         
         await DatabaseManager.query(

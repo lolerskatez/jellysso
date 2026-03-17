@@ -181,19 +181,39 @@ router.post('/user/device-whitelist/enable', requireAuth, csrfProtection, async 
  */
 router.get('/admin/policies', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const policies = await PolicyManager.getAllPolicies();
+    const SetupManager = require('../models/SetupManager');
+    const JellyfinAPI = require('../models/JellyfinAPI');
+    const config = SetupManager.getConfig();
+    const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+
+    // Fetch all Jellyfin users and all DB policies in parallel
+    const [jellyfinUsers, dbPolicies] = await Promise.all([
+      jellyfin.getUsers(),
+      PolicyManager.getAllPolicies()
+    ]);
+
+    // Index DB policies by userId for O(1) lookup
+    const policyMap = new Map(dbPolicies.map(p => [p.userId, p]));
+
+    // Build merged list: every Jellyfin user gets a row, defaulting to free tier
+    const FREE_TIER = PolicyManager.TIERS['free'];
+    const policies = (jellyfinUsers || []).map(u => {
+      const p = policyMap.get(u.Id);
+      return {
+        userId: u.Id,
+        username: u.Name || u.Id,
+        tier: p ? p.tier : 'free',
+        maxConcurrentStreams: p ? p.maxConcurrentStreams : FREE_TIER.maxStreams,
+        deviceWhitelistEnabled: p ? !!p.deviceWhitelistEnabled : false,
+        enforceAccessSchedule: p ? !!p.enforceAccessSchedule : false,
+        whitelistedDeviceCount: p ? (p.whitelistedDeviceCount || 0) : 0,
+        updatedAt: p ? p.updatedAt : null
+      };
+    });
 
     res.json({
       success: true,
-      policies: policies.map(p => ({
-        userId: p.userId,
-        tier: p.tier,
-        maxConcurrentStreams: p.maxConcurrentStreams,
-        deviceWhitelistEnabled: !!p.deviceWhitelistEnabled,
-        enforceAccessSchedule: !!p.enforceAccessSchedule,
-        whitelistedDeviceCount: p.whitelistedDeviceCount || 0,
-        updatedAt: p.updatedAt
-      })),
+      policies,
       totalUsers: policies.length,
       availableTiers: PolicyManager.TIERS
     });

@@ -85,11 +85,14 @@ function renderPoliciesTable(policies) {
   
   let html = '';
   policies.forEach(policy => {
-    const updatedDate = new Date(policy.updatedAt).toLocaleDateString();
     
+    const updatedDisplay = policy.updatedAt ? new Date(policy.updatedAt).toLocaleDateString() : '<span style="color:var(--text-muted)">Never</span>';
     html += `
       <tr>
-        <td class="user-id">${escapeHtml(policy.userId.substring(0, 16))}${policy.userId.length > 16 ? '...' : ''}</td>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(policy.username || policy.userId)}</div>
+          <div class="user-id" style="font-size:11px;opacity:0.6;">${escapeHtml(policy.userId.substring(0, 20))}${policy.userId.length > 20 ? '...' : ''}</div>
+        </td>
         <td>
           <span class="tier-badge tier-${policy.tier}">
             ${policy.tier.toUpperCase()}
@@ -107,7 +110,7 @@ function renderPoliciesTable(policies) {
             '<i class="fas fa-times" style="color: #e74c3c;"></i>'}
         </td>
         <td>${policy.whitelistedDeviceCount || 0}</td>
-        <td style="font-size: 12px; color: var(--text-muted);">${updatedDate}</td>
+        <td style="font-size: 12px; color: var(--text-muted);">${updatedDisplay}</td>
         <td>
           <div class="actions-cell">
             <button class="btn-sm btn-edit" onclick="openEditModal('${escapeHtml(policy.userId)}')">
@@ -137,7 +140,8 @@ async function searchPolicies() {
   }
 
   const filtered = policiesCache.filter(policy =>
-    policy.userId.toLowerCase().includes(searchTerm)
+    policy.userId.toLowerCase().includes(searchTerm) ||
+    (policy.username && policy.username.toLowerCase().includes(searchTerm))
   );
 
   renderPoliciesTable(filtered);

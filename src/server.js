@@ -12,6 +12,7 @@ const SessionStore = require('./models/SessionStore');
 const CacheManager = require('./models/CacheManager');
 const PluginManager = require('./models/PluginManager');
 const PolicyManager = require('./models/PolicyManager');
+const OTPManager   = require('./models/OTPManager');
 const JellyfinAPI = require('./models/JellyfinAPI');
 const { csrfProtection, setCsrfToken, csrfErrorHandler } = require('./middleware/csrf');
 const crypto = require('crypto');
@@ -606,6 +607,10 @@ app.use(csrfErrorHandler);
     // Initialize policy system
     await PolicyManager.initializeSchema();
     console.log('✅ Policy system initialized');
+
+    // Initialize OTP system
+    await OTPManager.initializeSchema();
+    console.log('✅ OTP system initialized');
 
     await PluginManager.initialize();
     console.log('✅ Plugin system ready');

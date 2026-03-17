@@ -184,6 +184,70 @@
       color: #1d4ed8;
       margin-bottom: var(--spacing-lg);
     }
+
+    /* OTP display */
+    .otp-box {
+      background: #f8fafc;
+      border: 2px dashed var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      text-align: center;
+      margin-bottom: var(--spacing-lg);
+    }
+    .otp-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .otp-code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5em;
+      color: var(--gray-900);
+      word-break: break-all;
+    }
+    .otp-meta {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 10px;
+    }
+    .otp-meta strong { color: var(--gray-700); }
+    .otp-copy-row {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-md);
+    }
+    .otp-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md) var(--spacing-lg);
+      font-size: 0.85rem;
+      color: #92400e;
+      margin-bottom: var(--spacing-lg);
+    }
+    #otpCountdownBar {
+      width: 100%;
+      height: 4px;
+      background: var(--border-color);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    #otpCountdownFill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s linear;
+      background: #22c55e;
+    }
   </style>
 </head>
 <body>
@@ -411,6 +475,73 @@
           </div>
           <% } %>
 
+          <% if (isOidc) { %>
+          <!-- Temporary Jellyfin Password Card (SSO only) -->
+          <div class="card">
+            <div class="card-header">
+              <i class="fas fa-clock"></i>
+              <h2>Temporary Jellyfin Password</h2>
+            </div>
+            <div class="card-body">
+              <div id="otpAlert" class="alert"></div>
+
+              <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:var(--spacing-lg)">
+                Jellyfin apps and devices require a password to log in. Because your account
+                uses SSO, you can generate a short-lived temporary password here. It expires
+                in&nbsp;<strong>15&nbsp;minutes</strong> and cannot be recovered after this page is closed.
+              </p>
+
+              <!-- State A: no active OTP -->
+              <div id="otpStateNone">
+                <button class="btn btn-primary" id="generateOtpBtn" onclick="generateOTP()">
+                  <i class="fas fa-plus-circle"></i> Generate Temporary Password
+                </button>
+              </div>
+
+              <!-- State B: OTP just generated (plaintext visible) -->
+              <div id="otpStateNew" style="display:none">
+                <div class="otp-warning">
+                  <i class="fas fa-exclamation-triangle" style="margin-top:2px"></i>
+                  <span>Copy this password now — it will <strong>not</strong> be shown again after you leave this page.</span>
+                </div>
+                <div class="otp-box">
+                  <div class="otp-label">Your temporary password</div>
+                  <div class="otp-code" id="otpCodeText"></div>
+                  <div class="otp-meta">Expires&nbsp;<strong id="otpExpiryText"></strong></div>
+                  <div id="otpCountdownBar"><div id="otpCountdownFill"></div></div>
+                </div>
+                <div class="otp-copy-row">
+                  <button class="btn btn-secondary" onclick="copyOTP()">
+                    <i class="fas fa-copy"></i> Copy Password
+                  </button>
+                  <button class="btn btn-danger" onclick="revokeOTP()">
+                    <i class="fas fa-ban"></i> Revoke Now
+                  </button>
+                </div>
+              </div>
+
+              <!-- State C: OTP active but plaintext no longer available -->
+              <div id="otpStateActive" style="display:none">
+                <div class="otp-box">
+                  <div class="otp-label">Active temporary password</div>
+                  <div class="otp-code" style="letter-spacing:0.2em;color:var(--text-secondary)">&#8226;&#8226;&#8226;&#8226;&nbsp;&#8226;&#8226;&#8226;&#8226;</div>
+                  <div class="otp-meta">Expires&nbsp;<strong id="otpActiveExpiryText"></strong></div>
+                  <div id="otpCountdownBar2"><div id="otpCountdownFill2" style="height:4px;border-radius:2px;transition:width 1s linear;background:#22c55e"></div></div>
+                </div>
+                <div style="display:flex;gap:var(--spacing-sm);margin-top:var(--spacing-md)">
+                  <button class="btn btn-primary" onclick="generateOTP()">
+                    <i class="fas fa-sync-alt"></i> Regenerate
+                  </button>
+                  <button class="btn btn-danger" onclick="revokeOTP()">
+                    <i class="fas fa-ban"></i> Revoke
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <% } %>
+
         </div><!-- /right column -->
       </div><!-- /membership-grid -->
     </div><!-- /page-content -->
@@ -555,6 +686,111 @@
       document.getElementById('sidebarOverlay')?.classList.toggle('active');
     });
   }
+
+  /* ── OTP (SSO users only) ────────────────────────────── */
+  if (IS_OIDC) {
+    let _otpCountdownTimer = null;
+    let _otpExpiresAt = null;   // Date of the active OTP (state B or C)
+    const OTP_TOTAL_SECS = 15 * 60;
+
+    function _otpShowState(state) { // 'none' | 'new' | 'active'
+      document.getElementById('otpStateNone').style.display   = state === 'none'   ? '' : 'none';
+      document.getElementById('otpStateNew').style.display    = state === 'new'    ? '' : 'none';
+      document.getElementById('otpStateActive').style.display = state === 'active' ? '' : 'none';
+    }
+
+    function _startCountdown(expiresAt, codeEl, fillEl) {
+      clearInterval(_otpCountdownTimer);
+      _otpExpiresAt = new Date(expiresAt);
+
+      function tick() {
+        const secsLeft = Math.max(0, Math.floor((_otpExpiresAt - Date.now()) / 1000));
+        const mm = String(Math.floor(secsLeft / 60)).padStart(2, '0');
+        const ss = String(secsLeft % 60).padStart(2, '0');
+        if (codeEl) codeEl.textContent = `in ${mm}:${ss}`;
+        const pct = Math.max(0, (secsLeft / OTP_TOTAL_SECS) * 100);
+        if (fillEl) {
+          fillEl.style.width = pct + '%';
+          fillEl.style.background = pct > 40 ? '#22c55e' : pct > 15 ? '#f97316' : '#ef4444';
+        }
+        if (secsLeft <= 0) {
+          clearInterval(_otpCountdownTimer);
+          _otpShowState('none');
+          showAlert('otpAlert', 'Temporary password expired.', 'error');
+        }
+      }
+      tick();
+      _otpCountdownTimer = setInterval(tick, 1000);
+    }
+
+    async function generateOTP() {
+      const btn = document.getElementById('generateOtpBtn') || event?.currentTarget;
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/me/otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
+        });
+        const data = await res.json();
+        if (!data.success) {
+          showAlert('otpAlert', data.message || 'Failed to generate temporary password.', 'error');
+          return;
+        }
+        // Display state B (plaintext)
+        document.getElementById('otpCodeText').textContent = data.otp;
+        _startCountdown(data.expiresAt,
+          document.getElementById('otpExpiryText'),
+          document.getElementById('otpCountdownFill'));
+        _otpShowState('new');
+      } catch (err) {
+        showAlert('otpAlert', 'Network error — please try again.', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function copyOTP() {
+      const code = document.getElementById('otpCodeText')?.textContent;
+      if (!code) return;
+      navigator.clipboard.writeText(code).then(() => {
+        showAlert('otpAlert', 'Password copied to clipboard.', 'success');
+      }).catch(() => {
+        // Fallback for browsers that block clipboard without HTTPS
+        showAlert('otpAlert', `Password: ${code}`, 'success');
+      });
+    }
+
+    async function revokeOTP() {
+      clearInterval(_otpCountdownTimer);
+      try {
+        await fetch('/api/me/otp', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN }
+        });
+      } catch (_) { /* best-effort */ }
+      _otpShowState('none');
+      showAlert('otpAlert', 'Temporary password revoked.', 'success');
+    }
+
+    // On page load — check if there is already an active token (from another session/tab)
+    (async () => {
+      try {
+        const res = await fetch('/api/me/otp');
+        const data = await res.json();
+        if (data.hasToken) {
+          // Show state C — plaintext unavailable after page reload
+          _startCountdown(data.expiresAt,
+            document.getElementById('otpActiveExpiryText'),
+            document.getElementById('otpCountdownFill2'));
+          _otpShowState('active');
+        } else {
+          _otpShowState('none');
+        }
+      } catch (_) {
+        _otpShowState('none');
+      }
+    })();
+  } // end IS_OIDC OTP block
 </script>
 </body>
 </html>

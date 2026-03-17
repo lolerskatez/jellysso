@@ -14,6 +14,13 @@ const GEN_LENGTH = 8;
  */
 class OTPManager {
   static async initializeSchema() {
+    // Drop old schema that had expiresAt NOT NULL (safe — passwords can be regenerated)
+    const tableInfo = await DatabaseManager.query(`PRAGMA table_info(otp_tokens)`);
+    const hasExpiry = tableInfo.some(col => col.name === 'expiresAt');
+    if (hasExpiry) {
+      await DatabaseManager.query(`DROP TABLE otp_tokens`);
+    }
+
     await DatabaseManager.query(`
       CREATE TABLE IF NOT EXISTS otp_tokens (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,

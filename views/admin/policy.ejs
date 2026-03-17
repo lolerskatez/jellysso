@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/theme.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/fontawesome.css">
     <style>
         .admin-container {
             max-width: 1200px;
@@ -37,8 +37,8 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
-            background: var(--input-bg);
-            color: var(--text-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
         }
 
         .search-box button {
@@ -53,7 +53,7 @@
         .policies-table {
             width: 100%;
             border-collapse: collapse;
-            background: var(--card-bg);
+            background: var(--bg-primary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             overflow: hidden;
@@ -83,12 +83,12 @@
         }
 
         .policies-table tbody tr:hover {
-            background: var(--table-row-hover);
+            background: var(--bg-tertiary);
         }
 
         .user-id {
             font-weight: bold;
-            color: var(--text-color);
+            color: var(--text-primary);
             font-family: monospace;
             font-size: 12px;
         }
@@ -204,7 +204,7 @@
         }
 
         .modal-content {
-            background-color: var(--card-bg);
+            background-color: var(--bg-primary);
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -225,7 +225,7 @@
 
         .modal-header h2 {
             margin: 0;
-            color: var(--text-color);
+            color: var(--text-primary);
         }
 
         .modal-close {
@@ -244,7 +244,7 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: var(--text-color);
+            color: var(--text-primary);
         }
 
         .form-group input,
@@ -254,8 +254,8 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
-            background: var(--input-bg);
-            color: var(--text-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
             box-sizing: border-box;
         }
 
@@ -290,7 +290,7 @@
 
         .btn-secondary {
             background: var(--border-color);
-            color: var(--text-color);
+            color: var(--text-primary);
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
@@ -335,7 +335,7 @@
         }
 
         .devices-preview {
-            background: var(--table-row-bg);
+            background: var(--bg-tertiary);
             padding: 10px;
             border-radius: 4px;
             font-size: 12px;
@@ -355,7 +355,7 @@
         }
 
         .setting-label {
-            color: var(--text-color);
+            color: var(--text-primary);
             font-size: 14px;
         }
 
@@ -375,7 +375,7 @@
         <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
           <i class="fas fa-bars"></i>
         </button>
-        <h1 class="header-title"><i class="fas fa-shield-alt" style="margin-right:8px;color:var(--primary-color)"></i>Policy Management</h1>
+        <h1 class="header-title"><i class="fas fa-shield-alt" style="margin-right:8px;color:var(--primary)"></i>Policy Management</h1>
       </div>
     </header>
     <div class="page-content">
@@ -457,7 +457,7 @@
                     <input type="number" id="editMaxStreams" readonly />
                 </div>
 
-                <div style="background: var(--table-row-bg); padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                     <div class="setting-row">
                         <span class="setting-label">Device Whitelist Enforcement</span>
                         <label class="toggle-switch">
@@ -507,6 +507,7 @@
     </div>
 
     <script src="/js/admin-policy.js"></script>
+    <script src="/js/mobile-nav.js"></script>
     <script>
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {

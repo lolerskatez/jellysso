@@ -384,8 +384,8 @@ async function openAuditModal(userId) {
         const typeDisplay = formatPolicyType(log.type);
         
         auditHtml += `
-          <li style="padding: 10px; border-bottom: 1px solid var(--border-color); background: var(--table-row-bg); margin-bottom: 8px; border-radius: 4px;">
-            <div style="font-weight: bold; color: var(--text-color);">
+          <li style="padding: 10px; border-bottom: 1px solid var(--border-color); background: var(--bg-tertiary); margin-bottom: 8px; border-radius: 4px;">
+            <div style="font-weight: bold; color: var(--text-primary);">
               ${typeDisplay}: ${log.action}
             </div>
             <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">

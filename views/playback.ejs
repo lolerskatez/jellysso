@@ -291,6 +291,57 @@
       to { transform: rotate(360deg); }
     }
 
+    .track-controls {
+      background: var(--gray-100);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-md);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+
+    .track-control {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .track-control label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+    }
+
+    .track-control select {
+      padding: var(--spacing-sm) var(--spacing-md);
+      border: 1px solid var(--border-color);
+      background: white;
+      border-radius: var(--border-radius-sm);
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .track-control select:hover {
+      border-color: var(--primary);
+    }
+
+    .track-control select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 160, 252, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      .track-controls {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .error-message {
       background: var(--danger);
       color: white;
@@ -540,6 +591,21 @@
             </div>
           ` : ''}
 
+          <div class="track-controls" id="tracks-${session.sessionId}" style="display: none;">
+            <div class="track-control">
+              <label for="audio-${session.sessionId}">Audio Track</label>
+              <select id="audio-${session.sessionId}" onchange="changeAudioTrack('${session.sessionId}', this.value)">
+                <option value="">Loading...</option>
+              </select>
+            </div>
+            <div class="track-control">
+              <label for="subtitle-${session.sessionId}">Subtitles</label>
+              <select id="subtitle-${session.sessionId}" onchange="changeSubtitleTrack('${session.sessionId}', this.value)">
+                <option value="">Loading...</option>
+              </select>
+            </div>
+          </div>
+
           <div class="session-controls">
             ${session.playbackState?.isPlaying ? `
               <button class="control-btn secondary" onclick="pauseSession('${session.sessionId}')">
@@ -552,6 +618,18 @@
                 Play
               </button>
             `}
+            <button class="control-btn secondary" onclick="skipPrevious('${session.sessionId}')" title="Skip to previous">
+              <i class="fas fa-step-backward"></i>
+              Prev
+            </button>
+            <button class="control-btn secondary" onclick="skipNext('${session.sessionId}')" title="Skip to next">
+              <i class="fas fa-step-forward"></i>
+              Next
+            </button>
+            <button class="control-btn secondary" onclick="toggleTracks('${session.sessionId}')" title="Show track options">
+              <i class="fas fa-closed-captioning"></i>
+              Tracks
+            </button>
             <button class="control-btn danger" onclick="stopSession('${session.sessionId}')">
               <i class="fas fa-stop"></i>
               Stop
@@ -559,6 +637,11 @@
           </div>
         </div>
       `;
+
+      card.dataset.sessionId = session.sessionId;
+      
+      // Load tracks after card is added
+      setTimeout(() => loadSessionTracks(session.sessionId), 100);
 
       return card;
     }
@@ -629,6 +712,182 @@
       setTimeout(() => {
         successDiv.remove();
       }, 3000);
+    }
+
+    /**
+     * PHASE 3: Track Selection Functions
+     */
+
+    async function loadSessionTracks(sessionId) {
+      try {
+        const response = await fetch(`/api/playback/user/${sessionId}/tracks`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          console.error('Failed to load tracks:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+        const tracks = data.tracks;
+
+        // Populate audio track dropdown
+        const audioSelect = document.getElementById(`audio-${sessionId}`);
+        if (audioSelect && tracks.audioTracks) {
+          audioSelect.innerHTML = '';
+          tracks.audioTracks.forEach(track => {
+            const option = document.createElement('option');
+            option.value = track.id;
+            option.textContent = track.displayName;
+            if (track.id === tracks.currentAudioTrack) {
+              option.selected = true;
+            }
+            audioSelect.appendChild(option);
+          });
+        }
+
+        // Populate subtitle track dropdown
+        const subtitleSelect = document.getElementById(`subtitle-${sessionId}`);
+        if (subtitleSelect && tracks.subtitleTracks) {
+          subtitleSelect.innerHTML = '';
+          
+          // Add "No Subtitles" option
+          const noneOption = document.createElement('option');
+          noneOption.value = '-1';
+          noneOption.textContent = '(No Subtitles)';
+          if (tracks.currentSubtitleTrack === null || tracks.currentSubtitleTrack === undefined) {
+            noneOption.selected = true;
+          }
+          subtitleSelect.appendChild(noneOption);
+
+          // Add subtitle options
+          tracks.subtitleTracks.forEach(track => {
+            const option = document.createElement('option');
+            option.value = track.id;
+            option.textContent = track.displayName;
+            if (track.id === tracks.currentSubtitleTrack) {
+              option.selected = true;
+            }
+            subtitleSelect.appendChild(option);
+          });
+        }
+
+        // Show track controls if tracks are available
+        const tracksContainer = document.getElementById(`tracks-${sessionId}`);
+        if (tracksContainer && (tracks.audioTracks.length > 0 || tracks.subtitleTracks.length > 0)) {
+          tracksContainer.style.display = 'grid';
+        }
+      } catch (error) {
+        console.error('Error loading tracks:', error);
+      }
+    }
+
+    function toggleTracks(sessionId) {
+      const tracksContainer = document.getElementById(`tracks-${sessionId}`);
+      if (tracksContainer) {
+        tracksContainer.style.display = tracksContainer.style.display === 'none' ? 'grid' : 'none';
+      }
+    }
+
+    async function changeAudioTrack(sessionId, trackIndex) {
+      if (!trackIndex) return;
+
+      try {
+        const response = await fetch(`/api/playback/user/${sessionId}/audio/${trackIndex}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        showSuccess('Audio track changed');
+      } catch (error) {
+        showError(`Failed to change audio track: ${error.message}`);
+        // Reload tracks to revert selection
+        loadSessionTracks(sessionId);
+      }
+    }
+
+    async function changeSubtitleTrack(sessionId, trackIndex) {
+      if (trackIndex === undefined || trackIndex === '') return;
+
+      try {
+        const response = await fetch(`/api/playback/user/${sessionId}/subtitles/${trackIndex}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        showSuccess(trackIndex === '-1' ? 'Subtitles disabled' : 'Subtitle track changed');
+      } catch (error) {
+        showError(`Failed to change subtitle track: ${error.message}`);
+        // Reload tracks to revert selection
+        loadSessionTracks(sessionId);
+      }
+    }
+
+    async function skipNext(sessionId) {
+      try {
+        const response = await fetch(`/api/playback/user/${sessionId}/skip/next`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        showSuccess('Skipped to next item');
+        // Reload sessions to show new item
+        setTimeout(loadSessions, 1000);
+      } catch (error) {
+        showError(`Failed to skip to next: ${error.message}`);
+      }
+    }
+
+    async function skipPrevious(sessionId) {
+      try {
+        const response = await fetch(`/api/playback/user/${sessionId}/skip/previous`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        showSuccess('Skipped to previous item');
+        // Reload sessions to show new item
+        setTimeout(loadSessions, 1000);
+      } catch (error) {
+        showError(`Failed to skip to previous: ${error.message}`);
+      }
     }
 
     // Cleanup on page unload

@@ -390,4 +390,216 @@ router.get('/playback/user/:userId/sessions', requireAuth, requireAdmin, async (
   }
 });
 
+/**
+ * PHASE 3: ADVANCED ADMIN FEATURES
+ * Admin-level subtitle/audio selection, queue management
+ */
+
+/**
+ * GET /admin/playback/:sessionId/tracks
+ * Get available audio and subtitle tracks for any session
+ */
+router.get('/playback/:sessionId/tracks', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    const tracks = await jellyfin.getAvailableTracks(sessionId);
+
+    await AuditLogger.log('ADMIN_PLAYBACK_VIEW_TRACKS', req.session.user?.Id, `admin:playback:${sessionId}`, 
+      { audioTracks: tracks.audioTracks.length, subtitleTracks: tracks.subtitleTracks.length }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      tracks
+    });
+  } catch (error) {
+    console.error('Error getting available tracks:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /admin/playback/:sessionId/audio/:trackIndex
+ * Admin: Change audio track on any session
+ */
+router.post('/playback/:sessionId/audio/:trackIndex', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId, trackIndex } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Get session info for audit logging
+    const allSessions = await jellyfin.getActiveSessions();
+    const session = allSessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    await jellyfin.setAudioTrack(sessionId, parseInt(trackIndex));
+
+    await AuditLogger.log('ADMIN_PLAYBACK_AUDIO_CHANGED', req.session.user?.Id, `admin:playback:${sessionId}`, 
+      { trackIndex, userName: session.userName, deviceName: session.deviceName }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: `Audio track changed to ${trackIndex} on ${session.deviceName}`
+    });
+  } catch (error) {
+    console.error('Error changing audio track:', error.message);
+    
+    await AuditLogger.log('ADMIN_PLAYBACK_AUDIO_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
+      { error: error.message }, 'failure', req.ip);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /admin/playback/:sessionId/subtitles/:trackIndex
+ * Admin: Change subtitle track on any session (-1 to disable)
+ */
+router.post('/playback/:sessionId/subtitles/:trackIndex', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId, trackIndex } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Get session info for audit logging
+    const allSessions = await jellyfin.getActiveSessions();
+    const session = allSessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    await jellyfin.setSubtitleTrack(sessionId, parseInt(trackIndex));
+
+    await AuditLogger.log('ADMIN_PLAYBACK_SUBTITLES_CHANGED', req.session.user?.Id, `admin:playback:${sessionId}`, 
+      { trackIndex, userName: session.userName, deviceName: session.deviceName }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: trackIndex === '-1' ? `Subtitles disabled on ${session.deviceName}` : `Subtitle track changed to ${trackIndex} on ${session.deviceName}`
+    });
+  } catch (error) {
+    console.error('Error changing subtitle track:', error.message);
+    
+    await AuditLogger.log('ADMIN_PLAYBACK_SUBTITLES_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
+      { error: error.message }, 'failure', req.ip);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /admin/playback/:sessionId/skip/next
+ * Admin: Skip to next item on any session
+ */
+router.post('/playback/:sessionId/skip/next', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Get session info for audit logging
+    const allSessions = await jellyfin.getActiveSessions();
+    const session = allSessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    await jellyfin.skipNext(sessionId);
+
+    await AuditLogger.log('ADMIN_PLAYBACK_SKIP_NEXT', req.session.user?.Id, `admin:playback:${sessionId}`, 
+      { userName: session.userName, deviceName: session.deviceName }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: `Skipped to next on ${session.deviceName}`
+    });
+  } catch (error) {
+    console.error('Error skipping to next:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /admin/playback/:sessionId/skip/previous
+ * Admin: Skip to previous item on any session
+ */
+router.post('/playback/:sessionId/skip/previous', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Get session info for audit logging
+    const allSessions = await jellyfin.getActiveSessions();
+    const session = allSessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    await jellyfin.skipPrevious(sessionId);
+
+    await AuditLogger.log('ADMIN_PLAYBACK_SKIP_PREVIOUS', req.session.user?.Id, `admin:playback:${sessionId}`, 
+      { userName: session.userName, deviceName: session.deviceName }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: `Skipped to previous on ${session.deviceName}`
+    });
+  } catch (error) {
+    console.error('Error skipping to previous:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

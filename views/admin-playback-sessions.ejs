@@ -390,6 +390,35 @@
             cursor: not-allowed;
         }
 
+        .track-controls-section {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .track-select {
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            background: var(--card-background);
+            color: var(--text-color);
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .track-label {
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
+            display: block;
+        }
+
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -721,12 +750,142 @@
                                 <i class="fas fa-play"></i> Resume
                             </button>
                         ` : ''}
+                        <button class="control-btn" onclick="skipPreviousAdmin('${session.sessionId}', '${escapeHtml(userName)}')" title="Skip to previous">
+                            <i class="fas fa-step-backward"></i> Prev
+                        </button>
+                        <button class="control-btn" onclick="skipNextAdmin('${session.sessionId}', '${escapeHtml(userName)}')" title="Skip to next">
+                            <i class="fas fa-step-forward"></i> Next
+                        </button>
+                        <button class="control-btn" onclick="toggleSessionTracks('${session.sessionId}')" title="Show track options">
+                            <i class="fas fa-closed-captioning"></i> Tracks
+                        </button>
                         <button class="control-btn stop" onclick="stopSession('${session.sessionId}', '${escapeHtml(userName)}')">
                             <i class="fas fa-stop"></i> Stop
                         </button>
                     </div>
+                    <div class="track-controls-section" id="tracks-${session.sessionId}" style="display: none;">
+                        <div>
+                            <span class="track-label">Audio Track</span>
+                            <select class="track-select" id="audio-${session.sessionId}" onchange="changeAdminAudioTrack('${session.sessionId}', this.value)">
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span class="track-label">Subtitles</span>
+                            <select class="track-select" id="subtitle-${session.sessionId}" onchange="changeAdminSubtitleTrack('${session.sessionId}', this.value)">
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             `;
+        }
+
+        // Load tracks for a session in admin view
+        async function loadAdminSessionTracks(sessionId) {
+            try {
+                const response = await fetch(`/api/admin/playback/${sessionId}/tracks`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const tracks = data.tracks;
+
+                const audioSelect = document.getElementById(`audio-${sessionId}`);
+                if (audioSelect && tracks.audioTracks) {
+                    audioSelect.innerHTML = '';
+                    tracks.audioTracks.forEach(track => {
+                        const option = document.createElement('option');
+                        option.value = track.id;
+                        option.textContent = track.displayName;
+                        if (track.id === tracks.currentAudioTrack) {
+                            option.selected = true;
+                        }
+                        audioSelect.appendChild(option);
+                    });
+                }
+
+                const subtitleSelect = document.getElementById(`subtitle-${sessionId}`);
+                if (subtitleSelect && tracks.subtitleTracks) {
+                    subtitleSelect.innerHTML = '';
+                    
+                    const noneOption = document.createElement('option');
+                    noneOption.value = '-1';
+                    noneOption.textContent = '(No Subtitles)';
+                    if (tracks.currentSubtitleTrack === null || tracks.currentSubtitleTrack === undefined) {
+                        noneOption.selected = true;
+                    }
+                    subtitleSelect.appendChild(noneOption);
+
+                    tracks.subtitleTracks.forEach(track => {
+                        const option = document.createElement('option');
+                        option.value = track.id;
+                        option.textContent = track.displayName;
+                        if (track.id === tracks.currentSubtitleTrack) {
+                            option.selected = true;
+                        }
+                        subtitleSelect.appendChild(option);
+                    });
+                }
+
+                const tracksContainer = document.getElementById(`tracks-${sessionId}`);
+                if (tracksContainer && (tracks.audioTracks.length > 0 || tracks.subtitleTracks.length > 0)) {
+                    tracksContainer.style.display = 'grid';
+                }
+            } catch (error) {
+                console.error('Error loading admin tracks:', error);
+            }
+        }
+
+        function toggleSessionTracks(sessionId) {
+            const tracksContainer = document.getElementById(`tracks-${sessionId}`);
+            if (tracksContainer) {
+                if (tracksContainer.style.display === 'none') {
+                    tracksContainer.style.display = 'grid';
+                    loadAdminSessionTracks(sessionId);
+                } else {
+                    tracksContainer.style.display = 'none';
+                }
+            }
+        }
+
+        async function changeAdminAudioTrack(sessionId, trackIndex) {
+            if (!trackIndex) return;
+
+            try {
+                const response = await fetch(`/api/admin/playback/${sessionId}/audio/${trackIndex}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to change audio track');
+                showNotification('Audio track changed', 'success');
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'error');
+                loadAdminSessionTracks(sessionId);
+            }
+        }
+
+        async function changeAdminSubtitleTrack(sessionId, trackIndex) {
+            if (trackIndex === undefined || trackIndex === '') return;
+
+            try {
+                const response = await fetch(`/api/admin/playback/${sessionId}/subtitles/${trackIndex}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to change subtitle track');
+                showNotification(trackIndex === '-1' ? 'Subtitles disabled' : 'Subtitle track changed', 'success');
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'error');
+                loadAdminSessionTracks(sessionId);
+            }
         }
 
         // Toggle user section expanded/collapsed
@@ -802,6 +961,39 @@
                 showNotification(`Failed to stop all sessions: ${error.message}`, 'error');
             } finally {
                 document.getElementById('stopAllBtn').disabled = false;
+            }
+        }
+
+        async function skipNextAdmin(sessionId, userName) {
+            await skipSessionAdmin(sessionId, 'next', userName);
+        }
+
+        async function skipPreviousAdmin(sessionId, userName) {
+            await skipSessionAdmin(sessionId, 'previous', userName);
+        }
+
+        async function skipSessionAdmin(sessionId, direction, userName) {
+            try {
+                const endpoint = direction === 'next' ? '/next' : '/previous';
+                const response = await fetch(`/api/admin/playback/${sessionId}/skip${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) throw new Error(`Failed to skip ${direction}`);
+
+                const data = await response.json();
+                showNotification(`Skipped ${direction} on ${userName}'s session`, 'success');
+                
+                // Refresh after a short delay
+                setTimeout(loadSessions, 1000);
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification(`Failed to skip ${direction}: ${error.message}`, 'error');
             }
         }
 

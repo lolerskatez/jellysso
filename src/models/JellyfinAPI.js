@@ -533,6 +533,155 @@ class JellyfinAPI {
     }
   }
 
+  /**
+   * Get available audio and subtitle tracks for current item
+   * @param {string} sessionId - Session ID
+   */
+  async getAvailableTracks(sessionId) {
+    try {
+      const session = await this.getSessionDetails(sessionId);
+      
+      if (!session.NowPlayingItem) {
+        return {
+          audioTracks: [],
+          subtitleTracks: [],
+          currentAudioTrack: null,
+          currentSubtitleTrack: null
+        };
+      }
+
+      const item = session.NowPlayingItem;
+      
+      return {
+        audioTracks: item.MediaStreams?.filter(s => s.Type === 'Audio').map(s => ({
+          id: s.Index,
+          language: s.Language || 'Unknown',
+          codec: s.Codec || 'Unknown',
+          displayName: `${s.Language || 'Unknown'} (${s.Codec || 'Unknown'})`,
+          channels: s.Channels,
+          bitRate: s.BitRate
+        })) || [],
+        subtitleTracks: item.MediaStreams?.filter(s => s.Type === 'Subtitle').map(s => ({
+          id: s.Index,
+          language: s.Language || 'Unknown',
+          codec: s.Codec || 'Unknown',
+          displayName: `${s.Language || 'Unknown'} (${s.Codec || 'Unknown'})`,
+          isDefault: s.IsDefault,
+          isForced: s.IsForced
+        })) || [],
+        currentAudioTrack: session.PlayState?.AudioStreamIndex,
+        currentSubtitleTrack: session.PlayState?.SubtitleStreamIndex
+      };
+    } catch (error) {
+      throw new Error(`Failed to get available tracks: ${error.message}`);
+    }
+  }
+
+  /**
+   * Change audio track
+   * @param {string} sessionId - Session ID
+   * @param {number} audioTrackIndex - Audio track index
+   */
+  async setAudioTrack(sessionId, audioTrackIndex) {
+    try {
+      await this.client.post(`/Sessions/${sessionId}/Playing/SetAudioStreamIndex`, null, {
+        params: { index: audioTrackIndex }
+      });
+      return { success: true, message: `Audio track changed to ${audioTrackIndex}` };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found');
+      }
+      throw new Error(`Failed to change audio track: ${error.message}`);
+    }
+  }
+
+  /**
+   * Change subtitle track
+   * @param {string} sessionId - Session ID
+   * @param {number} subtitleTrackIndex - Subtitle track index (-1 to disable)
+   */
+  async setSubtitleTrack(sessionId, subtitleTrackIndex) {
+    try {
+      await this.client.post(`/Sessions/${sessionId}/Playing/SetSubtitleStreamIndex`, null, {
+        params: { index: subtitleTrackIndex }
+      });
+      return { success: true, message: `Subtitle track changed to ${subtitleTrackIndex}` };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('Session not found');
+      }
+      throw new Error(`Failed to change subtitle track: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get current playlist/queue information
+   * @param {string} sessionId - Session ID
+   */
+  async getPlaylistInfo(sessionId) {
+    try {
+      const session = await this.getSessionDetails(sessionId);
+      
+      // Jellyfin doesn't have a direct queue endpoint for sessions
+      // Return current item and basic queue info from session
+      return {
+        currentItemIndex: 0, // Jellyfin's session API doesn't expose queue position
+        currentItem: session.NowPlayingItem ? {
+          id: session.NowPlayingItem.Id,
+          name: session.NowPlayingItem.Name,
+          type: session.NowPlayingItem.Type,
+          duration: session.NowPlayingItem.RunTimeTicks
+        } : null,
+        queueLength: 1, // Jellyfin sessions don't expose queue length in basic API
+        supportsQueue: false // Would need Jellyfin Playlist API for full queue management
+      };
+    } catch (error) {
+      throw new Error(`Failed to get playlist info: ${error.message}`);
+    }
+  }
+
+  /**
+   * Skip to next item (sends next command)
+   * Note: Requires Jellyfin client to support next command
+   * @param {string} sessionId - Session ID
+   */
+  async skipNext(sessionId) {
+    try {
+      // Try direct next endpoint first
+      try {
+        await this.client.post(`/Sessions/${sessionId}/Playing/Next`);
+        return { success: true, message: 'Skipped to next item' };
+      } catch (e) {
+        // Fallback to generic message command if endpoint doesn't exist
+        await this.sendSessionMessage(sessionId, 'NextTrack');
+        return { success: true, message: 'Next command sent' };
+      }
+    } catch (error) {
+      throw new Error(`Failed to skip to next: ${error.message}`);
+    }
+  }
+
+  /**
+   * Skip to previous item
+   * @param {string} sessionId - Session ID
+   */
+  async skipPrevious(sessionId) {
+    try {
+      // Try direct previous endpoint first
+      try {
+        await this.client.post(`/Sessions/${sessionId}/Playing/Previous`);
+        return { success: true, message: 'Skipped to previous item' };
+      } catch (e) {
+        // Fallback to generic message command if endpoint doesn't exist
+        await this.sendSessionMessage(sessionId, 'PreviousTrack');
+        return { success: true, message: 'Previous command sent' };
+      }
+    } catch (error) {
+      throw new Error(`Failed to skip to previous: ${error.message}`);
+    }
+  }
+
   // Add more methods as needed
 }
 

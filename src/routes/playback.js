@@ -326,4 +326,275 @@ router.get('/:sessionId/details', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * PHASE 3: ADVANCED PLAYBACK FEATURES
+ * Subtitle/Audio track selection, queue management, skip functionality
+ */
+
+/**
+ * GET /user/:sessionId/tracks
+ * Get available audio and subtitle tracks for current playback
+ */
+router.get('/user/:sessionId/tracks', requireAuth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Verify the session belongs to the user
+    const sessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    const session = sessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      await AuditLogger.log('PLAYBACK_TRACKS_UNAUTHORIZED', req.session.user?.Id, `playback:${sessionId}`, 
+        { reason: 'Session does not belong to user' }, 'failure', req.ip);
+      
+      return res.status(403).json({
+        success: false,
+        message: 'You can only view tracks for your own sessions'
+      });
+    }
+
+    const tracks = await jellyfin.getAvailableTracks(sessionId);
+
+    await AuditLogger.log('PLAYBACK_VIEW_TRACKS', req.session.user?.Id, `playback:${sessionId}`, 
+      { audioTracks: tracks.audioTracks.length, subtitleTracks: tracks.subtitleTracks.length }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      tracks
+    });
+  } catch (error) {
+    console.error('Error getting available tracks:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /user/:sessionId/audio/:trackIndex
+ * Change audio track
+ */
+router.post('/user/:sessionId/audio/:trackIndex', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId, trackIndex } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Verify the session belongs to the user
+    const sessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    const session = sessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      await AuditLogger.log('PLAYBACK_AUDIO_UNAUTHORIZED', req.session.user?.Id, `playback:${sessionId}`, 
+        { reason: 'Session does not belong to user' }, 'failure', req.ip);
+      
+      return res.status(403).json({
+        success: false,
+        message: 'You can only change audio for your own sessions'
+      });
+    }
+
+    await jellyfin.setAudioTrack(sessionId, parseInt(trackIndex));
+
+    await AuditLogger.log('PLAYBACK_AUDIO_CHANGED', req.session.user?.Id, `playback:${sessionId}`, 
+      { trackIndex }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: `Audio track changed to ${trackIndex}`
+    });
+  } catch (error) {
+    console.error('Error changing audio track:', error.message);
+    
+    await AuditLogger.log('PLAYBACK_AUDIO_ERROR', req.session.user?.Id, `playback:${req.params.sessionId}`, 
+      { error: error.message }, 'failure', req.ip);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /user/:sessionId/subtitles/:trackIndex
+ * Change subtitle track (-1 to disable)
+ */
+router.post('/user/:sessionId/subtitles/:trackIndex', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId, trackIndex } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Verify the session belongs to the user
+    const sessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    const session = sessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      await AuditLogger.log('PLAYBACK_SUBTITLES_UNAUTHORIZED', req.session.user?.Id, `playback:${sessionId}`, 
+        { reason: 'Session does not belong to user' }, 'failure', req.ip);
+      
+      return res.status(403).json({
+        success: false,
+        message: 'You can only change subtitles for your own sessions'
+      });
+    }
+
+    await jellyfin.setSubtitleTrack(sessionId, parseInt(trackIndex));
+
+    await AuditLogger.log('PLAYBACK_SUBTITLES_CHANGED', req.session.user?.Id, `playback:${sessionId}`, 
+      { trackIndex }, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: trackIndex === '-1' ? 'Subtitles disabled' : `Subtitle track changed to ${trackIndex}`
+    });
+  } catch (error) {
+    console.error('Error changing subtitle track:', error.message);
+    
+    await AuditLogger.log('PLAYBACK_SUBTITLES_ERROR', req.session.user?.Id, `playback:${req.params.sessionId}`, 
+      { error: error.message }, 'failure', req.ip);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /user/:sessionId/queue
+ * Get current queue/playlist information
+ */
+router.get('/user/:sessionId/queue', requireAuth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Verify the session belongs to the user
+    const sessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    const session = sessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only view queue for your own sessions'
+      });
+    }
+
+    const queueInfo = await jellyfin.getPlaylistInfo(sessionId);
+
+    res.json({
+      success: true,
+      queue: queueInfo
+    });
+  } catch (error) {
+    console.error('Error getting queue info:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /user/:sessionId/skip/next
+ * Skip to next item
+ */
+router.post('/user/:sessionId/skip/next', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Verify the session belongs to the user
+    const sessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    const session = sessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only control your own sessions'
+      });
+    }
+
+    await jellyfin.skipNext(sessionId);
+
+    await AuditLogger.log('PLAYBACK_SKIP_NEXT', req.session.user?.Id, `playback:${sessionId}`, 
+      {}, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: 'Skipped to next item'
+    });
+  } catch (error) {
+    console.error('Error skipping to next:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /user/:sessionId/skip/previous
+ * Skip to previous item
+ */
+router.post('/user/:sessionId/skip/previous', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const jellyfin = new JellyfinAPI(
+      SetupManager.getConfig().jellyfinUrl,
+      req.session.accessToken
+    );
+
+    // Verify the session belongs to the user
+    const sessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    const session = sessions.find(s => s.sessionId === sessionId);
+
+    if (!session) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only control your own sessions'
+      });
+    }
+
+    await jellyfin.skipPrevious(sessionId);
+
+    await AuditLogger.log('PLAYBACK_SKIP_PREVIOUS', req.session.user?.Id, `playback:${sessionId}`, 
+      {}, 'success', req.ip);
+
+    res.json({
+      success: true,
+      message: 'Skipped to previous item'
+    });
+  } catch (error) {
+    console.error('Error skipping to previous:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

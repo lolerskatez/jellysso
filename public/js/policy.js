@@ -97,7 +97,7 @@ async function toggleDeviceWhitelist(enabled) {
     const token = await getCsrfToken();
     if (!token) return;
 
-    const response = await fetch('/api/policy/admin/user/' + getCurrentUserId() + '/device-whitelist/enable', {
+    const response = await fetch('/api/policy/user/device-whitelist/enable', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

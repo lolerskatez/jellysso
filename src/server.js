@@ -368,7 +368,6 @@ app.use('/api/playback', require('./routes/playback'));
 app.use('/api/admin/playback', require('./routes/admin-playback'));
 app.use('/api/policy', require('./routes/policy'));
 app.use('/policy', require('./routes/user-policy'));
-app.use('/admin', require('./routes/admin'));
 app.use('/setup', require('./routes/setup'));
 
 // OIDC routes - enable if you need external identity provider support

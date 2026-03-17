@@ -148,6 +148,30 @@ router.delete('/user/device/whitelist/:deviceId', requireAuth, async (req, res) 
 });
 
 /**
+ * POST /user/device-whitelist/enable
+ * Allow users to opt in/out of device whitelist enforcement on their own account
+ */
+router.post('/user/device-whitelist/enable', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+
+    const result = await PolicyManager.setDeviceWhitelistEnabled(req.session.user.Id, !!enabled);
+
+    await AuditLogger.log('POLICY_DEVICE_WHITELIST_TOGGLE', req.session.user.Id, 'policy:device-whitelist',
+      { enabled: !!enabled },
+      'success', req.ip);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error toggling device whitelist:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update device whitelist setting'
+    });
+  }
+});
+
+/**
  * ADMIN ENDPOINTS
  */
 

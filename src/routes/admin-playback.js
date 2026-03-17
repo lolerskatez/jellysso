@@ -35,7 +35,7 @@ const requireAdmin = (req, res, next) => {
  *   - userId: Filter by specific user
  *   - deviceName: Filter by device name
  */
-router.get('/playback/sessions', requireAuth, requireAdmin, async (req, res) => {
+router.get('/sessions', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { userId, deviceName } = req.query;
 
@@ -89,7 +89,7 @@ router.get('/playback/sessions', requireAuth, requireAdmin, async (req, res) => 
  * GET /admin/api/playback/sessions/stats
  * Get playback statistics and summary across all users
  */
-router.get('/playback/sessions/stats', requireAuth, requireAdmin, async (req, res) => {
+router.get('/sessions/stats', requireAuth, requireAdmin, async (req, res) => {
   try {
     const jellyfin = new JellyfinAPI(
       SetupManager.getConfig().jellyfinUrl,
@@ -141,7 +141,7 @@ router.get('/playback/sessions/stats', requireAuth, requireAdmin, async (req, re
  * POST /admin/api/playback/:sessionId/pause
  * Pause playback on ANY session (admin override)
  */
-router.post('/playback/:sessionId/pause', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/pause', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -192,7 +192,7 @@ router.post('/playback/:sessionId/pause', requireAuth, requireAdmin, csrfProtect
  * POST /admin/api/playback/:sessionId/resume
  * Resume playback on ANY session (admin override)
  */
-router.post('/playback/:sessionId/resume', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/resume', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -244,7 +244,7 @@ router.post('/playback/:sessionId/resume', requireAuth, requireAdmin, csrfProtec
  * Stop playback on ANY session (admin override)
  * Useful for maintenance or policy enforcement
  */
-router.post('/playback/:sessionId/stop', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/stop', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { reason } = req.body;
@@ -296,7 +296,7 @@ router.post('/playback/:sessionId/stop', requireAuth, requireAdmin, csrfProtecti
  * POST /admin/api/playback/stop-all
  * Force stop all playback sessions (emergency/maintenance)
  */
-router.post('/playback/stop-all', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/stop-all', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { reason } = req.body;
 
@@ -360,7 +360,7 @@ router.post('/playback/stop-all', requireAuth, requireAdmin, csrfProtection, asy
  * GET /admin/api/playback/user/:userId/sessions
  * Get all playback sessions for a specific user
  */
-router.get('/playback/user/:userId/sessions', requireAuth, requireAdmin, async (req, res) => {
+router.get('/user/:userId/sessions', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -399,7 +399,7 @@ router.get('/playback/user/:userId/sessions', requireAuth, requireAdmin, async (
  * GET /admin/playback/:sessionId/tracks
  * Get available audio and subtitle tracks for any session
  */
-router.get('/playback/:sessionId/tracks', requireAuth, requireAdmin, async (req, res) => {
+router.get('/:sessionId/tracks', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -430,7 +430,7 @@ router.get('/playback/:sessionId/tracks', requireAuth, requireAdmin, async (req,
  * POST /admin/playback/:sessionId/audio/:trackIndex
  * Admin: Change audio track on any session
  */
-router.post('/playback/:sessionId/audio/:trackIndex', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/audio/:trackIndex', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId, trackIndex } = req.params;
 
@@ -476,7 +476,7 @@ router.post('/playback/:sessionId/audio/:trackIndex', requireAuth, requireAdmin,
  * POST /admin/playback/:sessionId/subtitles/:trackIndex
  * Admin: Change subtitle track on any session (-1 to disable)
  */
-router.post('/playback/:sessionId/subtitles/:trackIndex', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/subtitles/:trackIndex', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId, trackIndex } = req.params;
 
@@ -522,7 +522,7 @@ router.post('/playback/:sessionId/subtitles/:trackIndex', requireAuth, requireAd
  * POST /admin/playback/:sessionId/skip/next
  * Admin: Skip to next item on any session
  */
-router.post('/playback/:sessionId/skip/next', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/skip/next', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -564,7 +564,7 @@ router.post('/playback/:sessionId/skip/next', requireAuth, requireAdmin, csrfPro
  * POST /admin/playback/:sessionId/skip/previous
  * Admin: Skip to previous item on any session
  */
-router.post('/playback/:sessionId/skip/previous', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+router.post('/:sessionId/skip/previous', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { sessionId } = req.params;
 

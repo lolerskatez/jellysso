@@ -143,6 +143,21 @@ class PolicyManager {
         [tier, tierConfig.maxStreams, userId]
       );
 
+      // Propagate stream limit to Jellyfin's native SimultaneousStreamLimit so
+      // enforcement happens inside Jellyfin itself (not just soft-checked here).
+      try {
+        const jellyfin = new JellyfinAPI(
+          SetupManager.getConfig().jellyfinUrl,
+          SetupManager.getConfig().apiKey
+        );
+        await jellyfin.updateUserPolicy(userId, {
+          SimultaneousStreamLimit: tierConfig.maxStreams
+        });
+      } catch (jellyfinError) {
+        console.error(`Warning: Could not update Jellyfin stream limit for user ${userId}:`, jellyfinError.message);
+        // Local DB tier was saved; Jellyfin update failure is non-fatal.
+      }
+
       return { success: true, tier, maxStreams: tierConfig.maxStreams };
     } catch (error) {
       console.error('Error setting user tier:', error);

@@ -112,13 +112,24 @@ async function loadData() {
       fetch('/api/policy/admin/tiers')
     ]);
 
+    if (!policiesRes.ok) {
+      var errText = '';
+      try { var errJson = await policiesRes.json(); errText = errJson.message || ''; } catch(_) {}
+      showStatus('Failed to load users (HTTP ' + policiesRes.status + ')' + (errText ? ': ' + errText : ''), 'error');
+      renderTable([]);
+      renderStats([]);
+      return;
+    }
+
     const [policiesData, tiersData] = await Promise.all([
       policiesRes.json(),
-      tiersRes.json()
+      tiersRes.ok ? tiersRes.json() : Promise.resolve({ success: false, tiers: [] })
     ]);
 
     if (!policiesData.success) {
       showStatus('Failed to load users: ' + (policiesData.message || 'Unknown error'), 'error');
+      renderTable([]);
+      renderStats([]);
       return;
     }
 
@@ -130,7 +141,9 @@ async function loadData() {
     populateTierSelect();
   } catch (err) {
     console.error('Error loading data:', err);
-    showStatus('Failed to load user data', 'error');
+    showStatus('Failed to load user data: ' + (err.message || 'Network error'), 'error');
+    renderTable([]);
+    renderStats([]);
   }
 }
 

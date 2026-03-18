@@ -250,14 +250,10 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
 // User management page
 router.get('/users', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, req.session.accessToken);
-    const users = await jellyfin.getUsers();
-    
+    // Users data is loaded client-side via /api/policy/admin/policies
     res.render('admin/users', {
       user: req.session.user,
-      csrfToken: res.locals.csrfToken,
-      users: users,
-      totalUsers: users.length
+      csrfToken: res.locals.csrfToken
     });
   } catch (error) {
     console.error('Users page error:', error);

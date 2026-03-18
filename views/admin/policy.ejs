@@ -217,12 +217,23 @@
     }
 
     /* ── Modal ───────────────────────────────────────────────────── */
+    /*
+     * Override layout.css .modal rules (designed for inner content box).
+     * Here .modal is the full-screen backdrop.
+     */
     .modal {
       display: none;
       position: fixed;
       z-index: 500;
       top: 0; left: 0;
       width: 100%; height: 100%;
+      /* Reset layout.css inner-box properties */
+      max-width: none;
+      max-height: none;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: visible;
+      animation: none;
       background: rgba(0,0,0,0.5);
     }
 

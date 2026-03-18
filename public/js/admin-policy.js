@@ -47,6 +47,12 @@ function showStatus(message, type = 'info') {
 async function loadTiers() {
   try {
     const res = await fetch('/api/policy/admin/tiers');
+    if (!res.ok) {
+      let errText = '';
+      try { const j = await res.json(); errText = j.message || ''; } catch(_) {}
+      showStatus('Failed to load tiers (HTTP ' + res.status + ')' + (errText ? ': ' + errText : ''), 'error');
+      return;
+    }
     const data = await res.json();
     if (!data.success) {
       showStatus('Failed to load tiers: ' + data.message, 'error');
@@ -56,7 +62,7 @@ async function loadTiers() {
     renderTierGrid(tiersCache);
   } catch (err) {
     console.error('Error loading tiers:', err);
-    showStatus('Failed to load tiers', 'error');
+    showStatus('Failed to load tiers: ' + (err.message || 'Network error'), 'error');
   }
 }
 

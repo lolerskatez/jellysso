@@ -692,6 +692,15 @@
       <input type="text" id="addDisplayName" placeholder="Display name">
     </div>
 
+    <p class="modal-section-label">Subscription Tier</p>
+    <div class="form-group">
+      <label for="addTier">Tier</label>
+      <select id="addTier">
+        <option value="">&#x2014; Select Tier &#x2014;</option>
+      </select>
+      <small>Optional. Manage tiers in Policy Management.</small>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal('addModal')">Cancel</button>
       <button class="btn-primary" id="addSubmitBtn" onclick="submitAddUser()">

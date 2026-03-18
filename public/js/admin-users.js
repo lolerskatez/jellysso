@@ -245,7 +245,7 @@ const applyFilter = (window.applyFilter = function() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const openAddModal = (window.openAddModal = function() {
-  ['addUsername', 'addPassword', 'addFirstName', 'addLastName', 'addEmail', 'addDisplayName'].forEach(function(id) {
+  ['addUsername', 'addPassword', 'addFirstName', 'addLastName', 'addEmail', 'addDisplayName', 'addTier'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -289,13 +289,30 @@ const submitAddUser = (window.submitAddUser = async function() {
     var email       = document.getElementById('addEmail')       ? document.getElementById('addEmail').value.trim()       : '';
     var displayName = document.getElementById('addDisplayName') ? document.getElementById('addDisplayName').value.trim() : '';
 
+    var profileCalls = [];
+
     if (firstName || lastName || email || displayName) {
-      await fetch('/admin/api/users/' + data.user.Id + '/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-        body: JSON.stringify({ firstName: firstName, lastName: lastName, email: email, displayName: displayName })
-      });
+      profileCalls.push(
+        fetch('/admin/api/users/' + data.user.Id + '/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          body: JSON.stringify({ firstName: firstName, lastName: lastName, email: email, displayName: displayName })
+        })
+      );
     }
+
+    var tier = document.getElementById('addTier') ? document.getElementById('addTier').value : '';
+    if (tier) {
+      profileCalls.push(
+        fetch('/api/policy/admin/user/' + data.user.Id + '/tier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          body: JSON.stringify({ tier: tier })
+        })
+      );
+    }
+
+    if (profileCalls.length) await Promise.all(profileCalls);
 
     showStatus('User "' + username + '" created successfully', 'success');
     closeModal('addModal');
@@ -626,16 +643,17 @@ const confirmDelete = (window.confirmDelete = async function() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const populateTierSelect = (window.populateTierSelect = function() {
-  var sel = document.getElementById('editTier');
-  if (!sel) return;
-
-  var current = sel.value;
-  sel.innerHTML = '<option value="">\u2014 Select Tier \u2014</option>' +
-    tiersCache.map(function(t) {
-      return '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.displayName) + '</option>';
-    }).join('');
-
-  if (current) sel.value = current;
+  var selectors = ['editTier', 'addTier'];
+  selectors.forEach(function(selId) {
+    var sel = document.getElementById(selId);
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">\u2014 Select Tier \u2014</option>' +
+      tiersCache.map(function(t) {
+        return '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.displayName) + '</option>';
+      }).join('');
+    if (current) sel.value = current;
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

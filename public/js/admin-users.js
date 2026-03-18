@@ -45,14 +45,14 @@ const escapeHtml = (window.escapeHtml = function(str) {
     .replace(/'/g, '&#039;');
 });
 
-function formatExpiry(dateStr) {
+const formatExpiry = (window.formatExpiry = function(dateStr) {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (isNaN(d)) return null;
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
+});
 
-function statusBadgeHtml(status) {
+const statusBadgeHtml = (window.statusBadgeHtml = function(status) {
   const map = {
     active:   ['badge-active',   'fa-circle-check', 'Active'],
     disabled: ['badge-disabled', 'fa-ban',          'Disabled'],
@@ -60,22 +60,22 @@ function statusBadgeHtml(status) {
   };
   const [cls, icon, label] = map[status] || ['badge-user', 'fa-circle', status || 'Unknown'];
   return `<span class="badge ${cls}"><i class="fas ${icon}"></i> ${label}</span>`;
-}
+});
 
-function tierBadgeHtml(user) {
+const tierBadgeHtml = (window.tierBadgeHtml = function(user) {
   if (!user.tier) return '<span class="badge badge-none">None</span>';
   const tier = tiersCache.find(t => t.id === user.tier);
   const color = tier && tier.badgeColor ? escapeHtml(tier.badgeColor) : '#95a5a6';
   const name  = tier ? escapeHtml(tier.displayName) : escapeHtml(user.tier);
   return `<span class="badge badge-tier" style="background:${color}">${name}</span>`;
-}
+});
 
-function roleBadgeHtml(user) {
+const roleBadgeHtml = (window.roleBadgeHtml = function(user) {
   if (user.isJellyfinAdmin) {
     return '<span class="badge badge-admin"><i class="fas fa-shield-alt"></i> Admin</span>';
   }
   return '<span class="badge badge-user">User</span>';
-}
+});
 
 const showStatus = (window.showStatus = function(message, type) {
   const el = document.getElementById('statusMsg');
@@ -90,18 +90,18 @@ const showStatus = (window.showStatus = function(message, type) {
   }
 });
 
-function setEl(id, value) {
+const setEl = (window.setEl = function(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = String(value);
-}
+});
 
-function setLoading(btn, loading, idleHtml) {
+const setLoading = (window.setLoading = function(btn, loading, idleHtml) {
   if (!btn) return;
   btn.disabled = loading;
   btn.innerHTML = loading
-    ? '<i class="fas fa-spinner fa-spin" style="margin-right:6px"></i>Please wait\u2026'
+    ? '<i class="fas fa-spinner fa-spin" style="margin-right:6px"></i>Please wait…'
     : idleHtml;
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data loading
@@ -153,19 +153,19 @@ const loadData = (window.loadData = async function() {
 // Stats bar
 // ─────────────────────────────────────────────────────────────────────────────
 
-function renderStats(users) {
+const renderStats = (window.renderStats = function(users) {
   setEl('statTotal',    users.length);
   setEl('statActive',   users.filter(function(u) { return u.accountStatus === 'active';   }).length);
   setEl('statDisabled', users.filter(function(u) { return u.accountStatus === 'disabled'; }).length);
   setEl('statExpired',  users.filter(function(u) { return u.accountStatus === 'expired';  }).length);
   setEl('statAdmins',   users.filter(function(u) { return u.isJellyfinAdmin; }).length);
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Table rendering
 // ─────────────────────────────────────────────────────────────────────────────
 
-function renderTable(users) {
+const renderTable = (window.renderTable = function(users) {
   const tbody = document.getElementById('usersTableBody');
   if (!tbody) return;
 
@@ -220,7 +220,7 @@ function renderTable(users) {
 
   tbody.innerHTML = rows.join('');
   applyFilter();
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Filter
@@ -392,7 +392,7 @@ const openEditModal = (window.openEditModal = async function(userId) {
   }
 });
 
-function switchTab(tabName) {
+const switchTab = (window.switchTab = function(tabName) {
   var tabs   = ['account', 'policy'];
   tabs.forEach(function(t) {
     var cap  = t.charAt(0).toUpperCase() + t.slice(1);
@@ -401,14 +401,14 @@ function switchTab(tabName) {
     if (btn)  btn.classList.toggle('active',  t === tabName);
     if (pane) pane.classList.toggle('active', t === tabName);
   });
-}
+});
 
-function clearExpiry() {
+const clearExpiry = (window.clearExpiry = function() {
   var el = document.getElementById('editExpiresAt');
   if (el) el.value = '';
-}
+});
 
-function updateStreamsFromTier() {
+const updateStreamsFromTier = (window.updateStreamsFromTier = function() {
   var tierEl    = document.getElementById('editTier');
   var streamsEl = document.getElementById('editMaxStreams');
   if (!tierEl || !streamsEl) return;
@@ -419,9 +419,9 @@ function updateStreamsFromTier() {
   } else {
     streamsEl.value = '';
   }
-}
+});
 
-async function generatePassword() {
+const generatePassword = (window.generatePassword = async function() {
   if (!currentEditUserId) return;
 
   var btn = document.getElementById('genPassBtn');
@@ -451,9 +451,9 @@ async function generatePassword() {
   } finally {
     setLoading(btn, false, '<i class="fas fa-key"></i> Generate &amp; Set New Password');
   }
-}
+});
 
-async function saveChanges() {
+const saveChanges = (window.saveChanges = async function() {
   if (!currentEditUserId) return;
 
   var btn = document.getElementById('editSaveBtn');
@@ -573,7 +573,7 @@ async function saveChanges() {
   } finally {
     setLoading(btn, false, '<i class="fas fa-save"></i> Save Changes');
   }
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Delete Modal
@@ -625,7 +625,7 @@ const confirmDelete = (window.confirmDelete = async function() {
 // Tier select
 // ─────────────────────────────────────────────────────────────────────────────
 
-function populateTierSelect() {
+const populateTierSelect = (window.populateTierSelect = function() {
   var sel = document.getElementById('editTier');
   if (!sel) return;
 
@@ -636,7 +636,7 @@ function populateTierSelect() {
     }).join('');
 
   if (current) sel.value = current;
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Modal open / close
@@ -719,12 +719,5 @@ document.addEventListener('DOMContentLoaded', function() {
 // Ensure all functions are available globally
 // ─────────────────────────────────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
-  window.switchTab = switchTab;
-  window.clearExpiry = clearExpiry;
-  window.updateStreamsFromTier = updateStreamsFromTier;
-  window.generatePassword = generatePassword;
-  window.saveChanges = saveChanges;
-  window.populateTierSelect = populateTierSelect;
-  
   console.log('admin-users.js initialization complete');
 }

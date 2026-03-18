@@ -46,7 +46,7 @@ function showStatus(message, type = 'info') {
 // Load & render tiers
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function loadTiers() {
+const loadTiers = (window.loadTiers = async function() {
   try {
     const res = await fetch('/api/policy/admin/tiers');
     if (!res.ok) {
@@ -66,9 +66,9 @@ async function loadTiers() {
     console.error('Error loading tiers:', err);
     showStatus('Failed to load tiers: ' + (err.message || 'Network error'), 'error');
   }
-}
+});
 
-function renderTierGrid(tiers) {
+const renderTierGrid = (window.renderTierGrid = function(tiers) {
   const grid = document.getElementById('tierGrid');
   if (!grid) return;
 
@@ -133,13 +133,9 @@ function renderTierGrid(tiers) {
   `;
 
   grid.innerHTML = html;
-}
+});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Create modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-function openCreateModal() {
+const openCreateModal = (window.openCreateModal = function() {
   document.getElementById('createId').value = '';
   document.getElementById('createDisplayName').value = '';
   document.getElementById('createMaxStreams').value = 1;
@@ -150,18 +146,18 @@ function openCreateModal() {
   document.getElementById('createSchedule').checked = false;
   document.getElementById('createModal').classList.add('show');
   document.getElementById('createId').focus();
-}
+});
 
-function syncCreatePreview() {
+const syncCreatePreview = (window.syncCreatePreview = function() {
   const color = document.getElementById('createColor').value;
   const name = document.getElementById('createDisplayName').value ||
                document.getElementById('createId').value || 'TIER';
   const preview = document.getElementById('createColorPreview');
   preview.style.background = color;
   preview.textContent = name.toUpperCase().substring(0, 10);
-}
+});
 
-async function submitCreateTier(event) {
+const submitCreateTier = (window.submitCreateTier = async function(event) {
   event.preventDefault();
   const token = await getCsrfToken();
   if (!token) return;
@@ -194,13 +190,9 @@ async function submitCreateTier(event) {
     console.error('Create tier error:', err);
     showStatus('Failed to create tier', 'error');
   }
-}
+});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Edit modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-function openEditModal(tierId) {
+const openEditModal = (window.openEditModal = function(tierId) {
   const tier = tiersCache.find(t => t.id === tierId);
   if (!tier) { showStatus('Tier not found', 'error'); return; }
 
@@ -214,17 +206,17 @@ function openEditModal(tierId) {
   syncEditPreview();
   document.getElementById('editModal').classList.add('show');
   document.getElementById('editDisplayName').focus();
-}
+});
 
-function syncEditPreview() {
+const syncEditPreview = (window.syncEditPreview = function() {
   const color = document.getElementById('editColor').value;
   const name = document.getElementById('editDisplayName').value || 'TIER';
   const preview = document.getElementById('editColorPreview');
   preview.style.background = color;
   preview.textContent = name.toUpperCase().substring(0, 10);
-}
+});
 
-async function submitEditTier(event) {
+const submitEditTier = (window.submitEditTier = async function(event) {
   event.preventDefault();
   const token = await getCsrfToken();
   if (!token) return;
@@ -256,13 +248,9 @@ async function submitEditTier(event) {
     console.error('Edit tier error:', err);
     showStatus('Failed to update tier', 'error');
   }
-}
+});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Delete modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-function openDeleteModal(tierId) {
+const openDeleteModal = (window.openDeleteModal = function(tierId) {
   const tier = tiersCache.find(t => t.id === tierId);
   if (!tier) return;
 
@@ -282,9 +270,9 @@ function openDeleteModal(tierId) {
   }
 
   document.getElementById('deleteModal').classList.add('show');
-}
+});
 
-async function confirmDeleteTier() {
+const confirmDeleteTier = (window.confirmDeleteTier = async function() {
   if (!pendingDeleteId) return;
   const token = await getCsrfToken();
   if (!token) return;
@@ -309,16 +297,12 @@ async function confirmDeleteTier() {
     showStatus('Failed to delete tier', 'error');
     closeModal('deleteModal');
   }
-}
+});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Modal helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function closeModal(modalId) {
+const closeModal = (window.closeModal = function(modalId) {
   const el = document.getElementById(modalId);
   if (el) el.classList.remove('show');
-}
+});
 
 // Close modals on backdrop click
 document.addEventListener('click', function(e) {
@@ -349,20 +333,6 @@ function escapeHtml(text) {
 // Ensure all functions are available globally
 // ─────────────────────────────────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
-  window.getCsrfToken = getCsrfToken;
-  window.showStatus = showStatus;
-  window.loadTiers = loadTiers;
-  window.renderTierGrid = renderTierGrid;
-  window.openCreateModal = openCreateModal;
-  window.syncCreatePreview = syncCreatePreview;
-  window.submitCreateTier = submitCreateTier;
-  window.openEditModal = openEditModal;
-  window.syncEditPreview = syncEditPreview;
-  window.submitEditTier = submitEditTier;
-  window.openDeleteModal = openDeleteModal;
-  window.confirmDeleteTier = confirmDeleteTier;
-  window.closeModal = closeModal;
   window.escapeHtml = escapeHtml;
-  
-  console.log('All admin-policy.js functions registered to window');
+  console.log('admin-policy.js initialization complete');
 }

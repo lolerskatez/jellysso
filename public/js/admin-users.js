@@ -17,7 +17,7 @@ let pendingDeleteName = '';
 // CSRF
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function getCsrfToken() {
+const getCsrfToken = (window.getCsrfToken = async function() {
   if (csrfToken) return csrfToken;
   try {
     const res = await fetch('/api/csrf-token');
@@ -29,13 +29,13 @@ async function getCsrfToken() {
     showStatus('Failed to get security token', 'error');
     return null;
   }
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
-function escapeHtml(str) {
+const escapeHtml = (window.escapeHtml = function(str) {
   if (str == null) return '';
   return String(str)
     .replace(/&/g, '&amp;')
@@ -43,7 +43,7 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
+});
 
 function formatExpiry(dateStr) {
   if (!dateStr) return null;
@@ -77,7 +77,7 @@ function roleBadgeHtml(user) {
   return '<span class="badge badge-user">User</span>';
 }
 
-function showStatus(message, type) {
+const showStatus = (window.showStatus = function(message, type) {
   const el = document.getElementById('statusMsg');
   if (!el) return;
   el.textContent = message;
@@ -88,7 +88,7 @@ function showStatus(message, type) {
       el.textContent = '';
     }, 5000);
   }
-}
+});
 
 function setEl(id, value) {
   const el = document.getElementById(id);
@@ -107,7 +107,7 @@ function setLoading(btn, loading, idleHtml) {
 // Data loading
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function loadData() {
+const loadData = (window.loadData = async function() {
   try {
     const [policiesRes, tiersRes] = await Promise.all([
       fetch('/api/policy/admin/policies'),
@@ -147,7 +147,7 @@ async function loadData() {
     renderTable([]);
     renderStats([]);
   }
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stats bar
@@ -226,7 +226,7 @@ function renderTable(users) {
 // Filter
 // ─────────────────────────────────────────────────────────────────────────────
 
-function applyFilter() {
+const applyFilter = (window.applyFilter = function() {
   var search  = (document.getElementById('searchInput')  ? document.getElementById('searchInput').value.toLowerCase()  : '');
   var statusF = (document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : '');
 
@@ -238,13 +238,13 @@ function applyFilter() {
     var matchStatus = !statusF || status === statusF;
     row.style.display = (matchSearch && matchStatus) ? '' : 'none';
   });
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Add User Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function openAddModal() {
+const openAddModal = (window.openAddModal = function() {
   ['addUsername', 'addPassword', 'addFirstName', 'addLastName', 'addEmail', 'addDisplayName'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
@@ -252,9 +252,9 @@ function openAddModal() {
   openModal('addModal');
   var u = document.getElementById('addUsername');
   if (u) u.focus();
-}
+});
 
-async function submitAddUser() {
+const submitAddUser = (window.submitAddUser = async function() {
   var username = (document.getElementById('addUsername') ? document.getElementById('addUsername').value.trim() : '');
   if (!username) {
     showStatus('Username is required', 'error');
@@ -306,13 +306,13 @@ async function submitAddUser() {
   } finally {
     setLoading(btn, false, '<i class="fas fa-plus"></i> Create User');
   }
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Edit User Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function openEditModal(userId) {
+const openEditModal = (window.openEditModal = async function(userId) {
   currentEditUserId = userId;
 
   // Reset generate-password result
@@ -390,7 +390,7 @@ async function openEditModal(userId) {
     console.error('Failed to load profile:', err);
     // Non-fatal — modal is already open
   }
-}
+});
 
 function switchTab(tabName) {
   var tabs   = ['account', 'policy'];
@@ -579,15 +579,15 @@ async function saveChanges() {
 // Delete Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function openDeleteModal(userId, name) {
+const openDeleteModal = (window.openDeleteModal = function(userId, name) {
   pendingDeleteId   = userId;
   pendingDeleteName = name;
   var nameEl = document.getElementById('deleteUserName');
   if (nameEl) nameEl.textContent = name || userId;
   openModal('deleteModal');
-}
+});
 
-async function confirmDelete() {
+const confirmDelete = (window.confirmDelete = async function() {
   if (!pendingDeleteId) return;
 
   var btn = document.getElementById('deleteConfirmBtn');
@@ -619,7 +619,7 @@ async function confirmDelete() {
     pendingDeleteId   = null;
     pendingDeleteName = '';
   }
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tier select
@@ -642,19 +642,19 @@ function populateTierSelect() {
 // Modal open / close
 // ─────────────────────────────────────────────────────────────────────────────
 
-function openModal(id) {
+const openModal = (window.openModal = function(id) {
   var el = document.getElementById(id);
   if (el) el.classList.add('show');
-}
+});
 
-function closeModal(id) {
+const closeModal = (window.closeModal = function(id) {
   var el = document.getElementById(id);
   if (el) el.classList.remove('show');
   if (id === 'deleteModal') {
     pendingDeleteId   = null;
     pendingDeleteName = '';
   }
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Init
@@ -719,24 +719,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // Ensure all functions are available globally
 // ─────────────────────────────────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
-  window.getCsrfToken = getCsrfToken;
-  window.escapeHtml = escapeHtml;
-  window.statusBadgeHtml = statusBadgeHtml;
-  window.tierBadgeHtml = tierBadgeHtml;
-  window.roleBadgeHtml = roleBadgeHtml;
-  window.showStatus = showStatus;
-  window.setEl = setEl;
-  window.setLoading = setLoading;
-  window.formatExpiry = formatExpiry;
-  window.applyFilter = applyFilter;
-  window.loadData = loadData;
-  window.openAddUserModal = openAddUserModal;
-  window.submitAddUser = submitAddUser;
-  window.openEditUserModal = openEditUserModal;
-  window.submitEditUser = submitEditUser;
-  window.openDeleteModal = openDeleteModal;
-  window.confirmDelete = confirmDelete;
-  window.closeModal = closeModal;
+  window.switchTab = switchTab;
+  window.clearExpiry = clearExpiry;
+  window.updateStreamsFromTier = updateStreamsFromTier;
+  window.generatePassword = generatePassword;
+  window.saveChanges = saveChanges;
+  window.populateTierSelect = populateTierSelect;
   
-  console.log('All admin-users.js functions registered to window');
+  console.log('admin-users.js initialization complete');
 }

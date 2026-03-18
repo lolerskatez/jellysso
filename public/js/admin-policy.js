@@ -112,11 +112,11 @@ function renderPoliciesTable(policies) {
         <td>${policy.whitelistedDeviceCount || 0}</td>
         <td style="font-size: 12px; color: var(--text-muted);">${updatedDisplay}</td>
         <td>
-          <div class="actions-cell">
-            <button class="btn-sm btn-edit" onclick="openEditModal('${escapeHtml(policy.userId)}')">
+          <div class="action-buttons">
+            <button class="btn-edit" onclick="openEditModal('${escapeHtml(policy.userId)}')">
               <i class="fas fa-edit"></i> Edit
             </button>
-            <button class="btn-sm btn-audit" onclick="openAuditModal('${escapeHtml(policy.userId)}')">
+            <button class="btn-audit" onclick="openAuditModal('${escapeHtml(policy.userId)}')">
               <i class="fas fa-history"></i> Audit
             </button>
           </div>

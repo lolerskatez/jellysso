@@ -178,6 +178,7 @@
       max-height: 90vh;
       overflow-y: auto;
       padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
     }
 
     .modal-header {
@@ -185,14 +186,16 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: var(--spacing-lg);
-      padding-bottom: var(--spacing-md);
-      border-bottom: 1px solid var(--border-color);
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--border-color);
     }
 
     .modal-header h2 {
       margin: 0;
       color: var(--text-primary);
       font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
     }
 
     .modal-close {
@@ -202,17 +205,26 @@
       cursor: pointer;
       color: var(--text-secondary);
       padding: 0;
-      width: 24px;
-      height: 24px;
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all var(--transition);
+      border-radius: var(--border-radius-sm);
     }
 
-    .modal-close:hover { color: var(--text-primary); }
+    .modal-close:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
 
     .form-group {
       margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group:last-of-type {
+      margin-bottom: 0;
     }
 
     .form-group label {
@@ -221,35 +233,41 @@
       font-weight: 600;
       color: var(--text-primary);
       font-size: 0.9375rem;
+      letter-spacing: 0.3px;
     }
 
     .form-group input,
     .form-group select {
       width: 100%;
-      padding: var(--spacing-sm) var(--spacing-md);
+      padding: 10px var(--spacing-md);
       border: 1px solid var(--border-color);
       border-radius: var(--border-radius-sm);
       font-size: 0.9375rem;
       background: var(--bg-secondary);
       color: var(--text-primary);
       font-family: inherit;
+      transition: all var(--transition);
+      box-sizing: border-box;
     }
 
     .form-group input:focus,
     .form-group select:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+      background: var(--bg-primary);
+      box-shadow: 0 0 0 3px rgba(0, 164, 220, 0.1);
     }
 
     .form-group input:read-only {
       background: var(--bg-tertiary);
       cursor: not-allowed;
+      color: var(--text-secondary);
     }
 
     .settings-section {
       background: var(--bg-secondary);
       padding: var(--spacing-md);
+      border: 1px solid var(--border-color);
       border-radius: var(--border-radius-sm);
       margin-bottom: var(--spacing-lg);
     }
@@ -258,7 +276,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: var(--spacing-sm) 0;
+      padding: var(--spacing-md) 0;
       border-bottom: 1px solid var(--border-color);
     }
 
@@ -268,13 +286,15 @@
       color: var(--text-primary);
       font-size: 0.9375rem;
       font-weight: 500;
+      letter-spacing: 0.2px;
     }
 
     .toggle-switch {
       position: relative;
       display: inline-block;
-      width: 44px;
-      height: 24px;
+      width: 48px;
+      height: 26px;
+      margin: 0;
     }
 
     .toggle-switch input {
@@ -290,37 +310,60 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: var(--border-color);
-      transition: background var(--transition);
-      border-radius: 24px;
+      background-color: #e0e0e0;
+      transition: background-color var(--transition);
+      border-radius: 26px;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
-      left: 4px;
-      bottom: 4px;
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
       background-color: white;
       transition: transform var(--transition);
       border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     }
 
     input:checked + .toggle-slider {
       background-color: var(--primary);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(0, 164, 220, 0.1);
     }
 
     input:checked + .toggle-slider:before {
-      transform: translateX(20px);
+      transform: translateX(22px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .devices-list {
       background: var(--bg-tertiary);
       padding: var(--spacing-md);
+      border: 1px solid var(--border-color);
       border-radius: var(--border-radius-sm);
       font-size: 0.875rem;
       color: var(--text-secondary);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .devices-list ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .devices-list li {
+      padding: var(--spacing-sm) 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.875rem;
+    }
+    
+    .devices-list li:last-child {
+      border-bottom: none;
     }
 
     .modal-actions {
@@ -328,35 +371,48 @@
       gap: var(--spacing-md);
       justify-content: flex-end;
       margin-top: var(--spacing-xl);
-      padding-top: var(--spacing-md);
+      padding-top: var(--spacing-lg);
       border-top: 1px solid var(--border-color);
     }
 
     .btn-primary {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, #0088aa 100%);
       color: white;
-      padding: var(--spacing-sm) var(--spacing-lg);
+      padding: 10px var(--spacing-lg);
       border: none;
       border-radius: var(--border-radius-sm);
       cursor: pointer;
-      font-weight: 500;
-      transition: opacity var(--transition);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all var(--transition);
+      box-shadow: 0 2px 4px rgba(0, 164, 220, 0.2);
     }
 
-    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 164, 220, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
 
     .btn-secondary {
-      background: var(--bg-tertiary);
+      background: var(--bg-secondary);
       color: var(--text-primary);
-      padding: var(--spacing-sm) var(--spacing-lg);
-      border: none;
+      padding: 10px var(--spacing-lg);
+      border: 1px solid var(--border-color);
       border-radius: var(--border-radius-sm);
       cursor: pointer;
-      font-weight: 500;
-      transition: opacity var(--transition);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all var(--transition);
     }
 
-    .btn-secondary:hover { opacity: 0.8; }
+    .btn-secondary:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--text-secondary);
+    }
 
     .status-msg {
       padding: var(--spacing-md);

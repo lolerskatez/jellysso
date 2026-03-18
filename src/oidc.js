@@ -3,6 +3,7 @@ const JellyfinAPI = require('./models/JellyfinAPI');
 const SetupManager = require('./models/SetupManager');
 const TokenManager = require('./models/TokenManager');
 const AuditLogger = require('./models/AuditLogger');
+const PolicyManager = require('./models/PolicyManager');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
@@ -72,6 +73,20 @@ const configuration = {
       const existingUser = users.find(u => u.Id === sub);
       
       if (existingUser) {
+        // Check JellySSO account status before issuing tokens
+        const access = await PolicyManager.checkAccountAccess(existingUser.Id);
+        if (!access.allowed) {
+          await AuditLogger.log({
+            action: 'OIDC_ACCESS_DENIED',
+            userId: existingUser.Id,
+            resource: 'OIDC',
+            details: { reason: access.reason },
+            status: 'failure',
+            ip: ctx?.request?.ip || 'unknown'
+          });
+          throw new Error(access.reason);
+        }
+
         return {
           accountId: sub,
           async claims(use, scope, claims) {

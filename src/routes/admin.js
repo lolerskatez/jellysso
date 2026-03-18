@@ -525,6 +525,41 @@ router.put('/api/users/:userId/profile', requireAuth, requireAdmin, async (req, 
   }
 });
 
+// Admin: Generate (or regenerate) a Jellyfin password for any user
+router.post('/api/users/:userId/generate-password', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Verify the target user exists in Jellyfin
+    const jellyfinAdmin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, SetupManager.getConfig().apiKey);
+    const users = await jellyfinAdmin.getUsers();
+    const targetUser = users.find(u => u.Id === userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const OTPManager = require('../models/OTPManager');
+    const { password, createdAt } = await OTPManager.create(userId);
+
+    // Set the generated password on Jellyfin via admin API key (not user token)
+    await jellyfinAdmin.resetUserPassword(userId, password);
+
+    await AuditLogger.log({
+      action: 'ADMIN_GENERATED_PASSWORD',
+      userId: req.session.user?.Id,
+      resource: userId,
+      details: { targetUsername: targetUser.Name, createdAt },
+      status: 'success',
+      ip: req.ip
+    });
+
+    res.json({ success: true, password, createdAt, username: targetUser.Name });
+  } catch (error) {
+    console.error('Admin generate-password error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Failed to generate password' });
+  }
+});
+
 // Settings management page
 router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
   try {

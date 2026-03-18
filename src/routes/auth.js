@@ -5,6 +5,7 @@ const SetupManager = require('../models/SetupManager');
 const JellyfinAPI = require('../models/JellyfinAPI');
 const AuditLogger = require('../models/AuditLogger');
 const TokenManager = require('../models/TokenManager');
+const PolicyManager = require('../models/PolicyManager');
 const { csrfProtection } = require('../middleware/csrf');
 const jwt = require('jsonwebtoken');
 const { getBaseUrl } = require('../utils/urlHelper');
@@ -42,6 +43,19 @@ router.post('/login', requireSetupComplete, async (req, res) => {
   try {
     const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
     const authResult = await jellyfin.authenticateByName(username, password);
+
+    // Check JellySSO account status (enabled flag + expiry) before creating a session
+    const access = await PolicyManager.checkAccountAccess(authResult.User.Id);
+    if (!access.allowed) {
+      await AuditLogger.logFailedLogin(username, access.reason, req.ip);
+      const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
+      if (isAjax) {
+        return res.status(403).json({ success: false, message: access.reason });
+      }
+      req.session.errorMessage = access.reason;
+      return res.redirect('/login');
+    }
+
     req.session.user = authResult.User;
     req.session.accessToken = authResult.AccessToken;
     req.session.save((err) => {

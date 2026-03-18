@@ -176,8 +176,129 @@ router.post('/user/device-whitelist/enable', requireAuth, csrfProtection, async 
  */
 
 /**
+ * GET /admin/tiers
+ * List all configured tiers
+ */
+router.get('/admin/tiers', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const tiers = await PolicyManager.getAllTiers();
+    // Annotate each tier with its current user count
+    const annotated = await Promise.all(
+      tiers.map(async t => ({
+        ...t,
+        userCount: await PolicyManager.getUsersOnTier(t.id)
+      }))
+    );
+    res.json({ success: true, tiers: annotated });
+  } catch (error) {
+    console.error('Error getting tiers:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to retrieve tiers' });
+  }
+});
+
+/**
+ * POST /admin/tiers
+ * Create a new tier
+ */
+router.post('/admin/tiers', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { id, displayName, maxConcurrentStreams, deviceWhitelistEnabled, enforceAccessSchedule, badgeColor, sortOrder } = req.body;
+    const tier = await PolicyManager.createTier({ id, displayName, maxConcurrentStreams, deviceWhitelistEnabled, enforceAccessSchedule, badgeColor, sortOrder });
+
+    await AuditLogger.log('ADMIN_TIER_CREATED', req.session.user.Id, `admin:tier:${id}`,
+      { displayName, maxConcurrentStreams }, 'success', req.ip);
+
+    res.status(201).json({ success: true, tier });
+  } catch (error) {
+    console.error('Error creating tier:', error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /admin/tiers/:id
+ * Update an existing tier
+ */
+router.put('/admin/tiers/:id', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { displayName, maxConcurrentStreams, deviceWhitelistEnabled, enforceAccessSchedule, badgeColor, sortOrder } = req.body;
+    const tier = await PolicyManager.updateTier(req.params.id, { displayName, maxConcurrentStreams, deviceWhitelistEnabled, enforceAccessSchedule, badgeColor, sortOrder });
+
+    await AuditLogger.log('ADMIN_TIER_UPDATED', req.session.user.Id, `admin:tier:${req.params.id}`,
+      { displayName, maxConcurrentStreams }, 'success', req.ip);
+
+    res.json({ success: true, tier });
+  } catch (error) {
+    console.error('Error updating tier:', error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * DELETE /admin/tiers/:id
+ * Delete a tier (blocked if users are assigned)
+ */
+router.delete('/admin/tiers/:id', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const result = await PolicyManager.deleteTier(req.params.id);
+
+    await AuditLogger.log('ADMIN_TIER_DELETED', req.session.user.Id, `admin:tier:${req.params.id}`,
+      {}, 'success', req.ip);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting tier:', error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /admin/user/:userId/account-status
+ * Enable/disable account and optionally set/clear expiry
+ * Body: { enabled: boolean, expiresAt: string|null } — expiresAt omitted = unchanged
+ */
+router.post('/admin/user/:userId/account-status', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { enabled, expiresAt } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ success: false, message: '"enabled" (boolean) is required' });
+    }
+
+    // Validate expiresAt when present
+    if (expiresAt !== undefined && expiresAt !== null) {
+      const d = new Date(expiresAt);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid expiresAt datetime' });
+      }
+    }
+
+    const result = await PolicyManager.setAccountStatus(userId, enabled, expiresAt);
+
+    // Mirror enable/disable to Jellyfin's own IsDisabled flag
+    try {
+      const SetupManager = require('../models/SetupManager');
+      const JellyfinAPI = require('../models/JellyfinAPI');
+      const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, SetupManager.getConfig().apiKey);
+      await jellyfin.updateUserPolicy(userId, { IsDisabled: !enabled });
+    } catch (jellyfinErr) {
+      console.error('Warning: Could not mirror account status to Jellyfin:', jellyfinErr.message);
+    }
+
+    await AuditLogger.log('ADMIN_ACCOUNT_STATUS_CHANGED', req.session.user.Id, `admin:user:${userId}`,
+      { enabled, expiresAt: expiresAt ?? 'unchanged' }, 'success', req.ip);
+
+    res.json({ success: true, ...result, expiresAt: expiresAt !== undefined ? expiresAt : undefined });
+  } catch (error) {
+    console.error('Error updating account status:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
  * GET /admin/policies
- * Get all user policies
+ * Get all user policies merged with Jellyfin user data
  */
 router.get('/admin/policies', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -186,27 +307,41 @@ router.get('/admin/policies', requireAuth, requireAdmin, async (req, res) => {
     const config = SetupManager.getConfig();
     const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
 
-    // Fetch all Jellyfin users and all DB policies in parallel
-    const [jellyfinUsers, dbPolicies] = await Promise.all([
+    // Fetch all Jellyfin users, DB policies and tiers in parallel
+    const [jellyfinUsers, dbPolicies, tiers] = await Promise.all([
       jellyfin.getUsers(),
-      PolicyManager.getAllPolicies()
+      PolicyManager.getAllPolicies(),
+      PolicyManager.getAllTiers()
     ]);
 
     // Index DB policies by userId for O(1) lookup
     const policyMap = new Map(dbPolicies.map(p => [p.userId, p]));
 
-    // Build merged list: every Jellyfin user gets a row, defaulting to free tier
-    const FREE_TIER = PolicyManager.TIERS['free'];
+    // Build merged list: every Jellyfin user gets a row
+    const now = new Date();
     const policies = (jellyfinUsers || []).map(u => {
       const p = policyMap.get(u.Id);
+      const accountEnabled = p ? !!p.accountEnabled : true;
+      const expiresAt = p ? p.expiresAt : null;
+      const expired = expiresAt ? new Date(expiresAt) < now : false;
+
+      let accountStatus = 'active';
+      if (!accountEnabled) accountStatus = 'disabled';
+      else if (expired) accountStatus = 'expired';
+
       return {
         userId: u.Id,
         username: u.Name || u.Id,
+        isJellyfinAdmin: !!(u.Policy && u.Policy.IsAdministrator),
+        isJellyfinDisabled: !!(u.Policy && u.Policy.IsDisabled),
         tier: p ? p.tier : 'free',
-        maxConcurrentStreams: p ? p.maxConcurrentStreams : FREE_TIER.maxStreams,
+        maxConcurrentStreams: p ? p.maxConcurrentStreams : 1,
         deviceWhitelistEnabled: p ? !!p.deviceWhitelistEnabled : false,
         enforceAccessSchedule: p ? !!p.enforceAccessSchedule : false,
         whitelistedDeviceCount: p ? (p.whitelistedDeviceCount || 0) : 0,
+        accountEnabled,
+        expiresAt,
+        accountStatus,
         updatedAt: p ? p.updatedAt : null
       };
     });
@@ -215,12 +350,11 @@ router.get('/admin/policies', requireAuth, requireAdmin, async (req, res) => {
       success: true,
       policies,
       totalUsers: policies.length,
-      availableTiers: PolicyManager.TIERS
+      tiers
     });
 
     await AuditLogger.log('ADMIN_VIEW_ALL_POLICIES', req.session.user.Id, 'admin:policy',
-      { policyCount: policies.length },
-      'success', req.ip);
+      { policyCount: policies.length }, 'success', req.ip);
   } catch (error) {
     console.error('Error getting policies:', error.message);
     res.status(500).json({

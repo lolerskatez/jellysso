@@ -268,16 +268,22 @@
       overflow: hidden;
       padding: var(--spacing-lg);
       border: 1px solid var(--border-color);
+      position: relative;
+      padding-bottom: calc(var(--spacing-lg) + 60px);
     }
 
     .modal-actions {
-      flex-shrink: 0;
+      position: absolute;
+      bottom: var(--spacing-lg);
+      left: var(--spacing-lg);
+      right: var(--spacing-lg);
       display: flex;
       gap: var(--spacing-md);
       justify-content: flex-end;
-      margin-top: var(--spacing-xl);
       padding-top: var(--spacing-lg);
       border-top: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
     }
 
     .modal-content.modal-wide { max-width: 640px; }

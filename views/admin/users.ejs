@@ -609,7 +609,7 @@
         <div class="toolbar">
           <div class="toolbar-search">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Search by name or ID&#x2026;">
+            <input type="text" id="searchInput" placeholder="Search by name or ID&#x2026;" autocomplete="off">
           </div>
           <div class="toolbar-filter">
             <select id="statusFilter" aria-label="Filter by status">
@@ -664,7 +664,7 @@
     </div>
     <div class="form-group">
       <label for="addPassword">Password</label>
-      <input type="password" id="addPassword" placeholder="Leave blank for no password">
+      <input type="password" id="addPassword" placeholder="Leave blank for no password" autocomplete="new-password">
       <small>Leave blank to create the user without a password.</small>
     </div>
 
@@ -728,7 +728,7 @@
       </div>
       <div class="form-group">
         <label for="editPassword">New Password</label>
-        <input type="password" id="editPassword" placeholder="Leave blank to keep current">
+        <input type="password" id="editPassword" placeholder="Leave blank to keep current" autocomplete="new-password">
       </div>
 
       <p class="modal-section-label">Extended Profile (SSO)</p>

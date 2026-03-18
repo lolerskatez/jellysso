@@ -109,18 +109,14 @@ const setLoading = (window.setLoading = function(btn, loading, idleHtml) {
 
 const loadData = (window.loadData = async function() {
   try {
-    console.log('[loadData] Starting to fetch user data...');
     const [policiesRes, tiersRes] = await Promise.all([
       fetch('/api/policy/admin/policies'),
       fetch('/api/policy/admin/tiers')
     ]);
 
-    console.log('[loadData] API responses received - policies:', policiesRes.status, 'tiers:', tiersRes.status);
-
     if (!policiesRes.ok) {
       var errText = '';
       try { var errJson = await policiesRes.json(); errText = errJson.message || ''; } catch(_) {}
-      console.error('[loadData] Policies response not OK:', policiesRes.status, errText);
       showStatus('Failed to load users (HTTP ' + policiesRes.status + ')' + (errText ? ': ' + errText : ''), 'error');
       renderTable([]);
       renderStats([]);
@@ -132,10 +128,7 @@ const loadData = (window.loadData = async function() {
       tiersRes.ok ? tiersRes.json() : Promise.resolve({ success: false, tiers: [] })
     ]);
 
-    console.log('[loadData] Data parsed - policies count:', policiesData.policies ? policiesData.policies.length : 0, 'success:', policiesData.success);
-
     if (!policiesData.success) {
-      console.error('[loadData] API returned success: false', policiesData.message);
       showStatus('Failed to load users: ' + (policiesData.message || 'Unknown error'), 'error');
       renderTable([]);
       renderStats([]);
@@ -145,14 +138,11 @@ const loadData = (window.loadData = async function() {
     usersCache = policiesData.policies || [];
     tiersCache = (tiersData.success ? tiersData.tiers : []) || [];
 
-    console.log('[loadData] Calling renderStats with', usersCache.length, 'users');
     renderStats(usersCache);
-    console.log('[loadData] Calling renderTable with', usersCache.length, 'users');
     renderTable(usersCache);
     populateTierSelect();
-    console.log('[loadData] Data load complete');
   } catch (err) {
-    console.error('[loadData] Error:', err);
+    console.error('Error loading data:', err);
     showStatus('Failed to load user data: ' + (err.message || 'Network error'), 'error');
     renderTable([]);
     renderStats([]);

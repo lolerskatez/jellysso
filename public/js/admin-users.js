@@ -714,3 +714,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ensure all functions are available globally
+// ─────────────────────────────────────────────────────────────────────────────
+if (typeof window !== 'undefined') {
+  window.getCsrfToken = getCsrfToken;
+  window.escapeHtml = escapeHtml;
+  window.statusBadgeHtml = statusBadgeHtml;
+  window.tierBadgeHtml = tierBadgeHtml;
+  window.roleBadgeHtml = roleBadgeHtml;
+  window.showStatus = showStatus;
+  window.setEl = setEl;
+  window.setLoading = setLoading;
+  window.formatExpiry = formatExpiry;
+  window.applyFilter = applyFilter;
+  window.loadData = loadData;
+  window.openAddUserModal = openAddUserModal;
+  window.submitAddUser = submitAddUser;
+  window.openEditUserModal = openEditUserModal;
+  window.submitEditUser = submitEditUser;
+  window.openDeleteModal = openDeleteModal;
+  window.confirmDelete = confirmDelete;
+  window.closeModal = closeModal;
+  
+  console.log('All admin-users.js functions registered to window');
+}

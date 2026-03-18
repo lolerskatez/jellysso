@@ -344,3 +344,25 @@ function escapeHtml(text) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
   return String(text).replace(/[&<>"']/g, m => map[m]);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ensure all functions are available globally
+// ─────────────────────────────────────────────────────────────────────────────
+if (typeof window !== 'undefined') {
+  window.getCsrfToken = getCsrfToken;
+  window.showStatus = showStatus;
+  window.loadTiers = loadTiers;
+  window.renderTierGrid = renderTierGrid;
+  window.openCreateModal = openCreateModal;
+  window.syncCreatePreview = syncCreatePreview;
+  window.submitCreateTier = submitCreateTier;
+  window.openEditModal = openEditModal;
+  window.syncEditPreview = syncEditPreview;
+  window.submitEditTier = submitEditTier;
+  window.openDeleteModal = openDeleteModal;
+  window.confirmDeleteTier = confirmDeleteTier;
+  window.closeModal = closeModal;
+  window.escapeHtml = escapeHtml;
+  
+  console.log('All admin-policy.js functions registered to window');
+}

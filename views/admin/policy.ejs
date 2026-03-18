@@ -708,67 +708,41 @@
 </div>
 
 <script src="/js/mobile-nav.js"></script>
-<script src="/js/admin-policy.js"></script>
+<script src="/js/admin-policy.js" onload="window._adminPolicyLoaded=true;" onerror="console.error('Failed to load admin-policy.js'); window._adminPolicyError=true;"></script>
 <script>
-  // Defensive fallback for function definitions if scripts don't load
-  console.log('Policy page script section: Checking for admin-policy functions...');
+  // Track if external script loaded
+  console.log('After admin-policy.js script tag: _adminPolicyLoaded =', window._adminPolicyLoaded);
   
-  if (typeof loadTiers !== 'function') { 
-    console.warn('loadTiers not found - creating fallback');
-    function loadTiers() { console.error('loadTiers not defined - fallback only'); } 
-  } else {
-    console.log('✓ loadTiers function found');
-  }
-  
-  if (typeof openCreateModal !== 'function') { 
-    console.warn('openCreateModal not found - creating fallback');
-    function openCreateModal() { console.error('openCreateModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ openCreateModal function found');
-  }
-  
-  if (typeof openEditModal !== 'function') { 
-    function openEditModal() { console.error('openEditModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ openEditModal function found');
-  }
-  
-  if (typeof openDeleteModal !== 'function') { 
-    function openDeleteModal() { console.error('openDeleteModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ openDeleteModal function found');
-  }
-  
-  if (typeof closeModal !== 'function') { 
-    function closeModal() { console.error('closeModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ closeModal function found');
-  }
-  
-  if (typeof confirmDeleteTier !== 'function') { 
-    function confirmDeleteTier() { console.error('confirmDeleteTier not defined - fallback only'); } 
-  } else {
-    console.log('✓ confirmDeleteTier function found');
-  }
-  
-  if (typeof syncCreatePreview !== 'function') { 
-    function syncCreatePreview() { } 
-  }
-  
-  if (typeof syncEditPreview !== 'function') { 
-    function syncEditPreview() { } 
-  }
-  
-  // Ensure DOMContentLoaded handler waits for functions
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded: Attempting to call loadTiers()...');
-    if (typeof loadTiers === 'function') {
-      console.log('Calling loadTiers()...');
-      loadTiers();
-    } else {
-      console.error('loadTiers function is not available on DOMContentLoaded');
-    }
-  });
+  // Ensure functions are available before page initialization
+  (function() {
+    // Define fallbacks explicitly in global scope
+    window.loadTiers = window.loadTiers || function() { console.error('loadTiers not defined'); };
+    window.openCreateModal = window.openCreateModal || function() { console.error('openCreateModal not defined'); };
+    window.openEditModal = window.openEditModal || function() { console.error('openEditModal not defined'); };
+    window.openDeleteModal = window.openDeleteModal || function() { console.error('openDeleteModal not defined'); };
+    window.closeModal = window.closeModal || function() { console.error('closeModal not defined'); };
+    window.confirmDeleteTier = window.confirmDeleteTier || function() { console.error('confirmDeleteTier not defined'); };
+    window.syncCreatePreview = window.syncCreatePreview || function() { };
+    window.syncEditPreview = window.syncEditPreview || function() { };
+    
+    console.log('After fallback setup:', {
+      loadTiers: typeof window.loadTiers,
+      openCreateModal: typeof window.openCreateModal,
+      _adminPolicyLoaded: window._adminPolicyLoaded
+    });
+    
+    // On DOM ready, run the app
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOMContentLoaded event fired. _adminPolicyLoaded =', window._adminPolicyLoaded);
+      if (typeof window.loadTiers === 'function') {
+        try {
+          window.loadTiers();
+        } catch (err) {
+          console.error('Error calling loadTiers:', err.message);
+        }
+      }
+    });
+  })();
 </script>
 </body>
 </html>

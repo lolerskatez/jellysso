@@ -858,52 +858,28 @@
   </div>
 </div>
 
-<script src="/js/admin-users.js"></script>
+<script src="/js/admin-users.js" onload="window._adminUsersLoaded=true;" onerror="console.error('Failed to load admin-users.js'); window._adminUsersError=true;"></script>
 <script>
-  // Defensive fallback for function definitions if scripts don't load
-  console.log('Users page script section: Checking for admin-users functions...');
+  // Track if external script loaded
+  console.log('After admin-users.js script tag: _adminUsersLoaded =', window._adminUsersLoaded);
   
-  if (typeof loadData !== 'function') { 
-    console.warn('loadData not found - creating fallback');
-    function loadData() { console.error('loadData not defined - fallback only'); } 
-  } else {
-    console.log('✓ loadData function found');
-  }
-  
-  if (typeof openAddUserModal !== 'function') { 
-    console.warn('openAddUserModal not found - creating fallback');
-    function openAddUserModal() { console.error('openAddUserModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ openAddUserModal function found');
-  }
-  
-  if (typeof openEditUserModal !== 'function') { 
-    function openEditUserModal() { console.error('openEditUserModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ openEditUserModal function found');
-  }
-  
-  if (typeof openDeleteModal !== 'function') { 
-    function openDeleteModal() { console.error('openDeleteModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ openDeleteModal function found');
-  }
-  
-  if (typeof closeModal !== 'function') { 
-    function closeModal() { console.error('closeModal not defined - fallback only'); } 
-  } else {
-    console.log('✓ closeModal function found');
-  }
-  
-  if (typeof confirmDelete !== 'function') { 
-    function confirmDelete() { console.error('confirmDelete not defined - fallback only'); } 
-  } else {
-    console.log('✓ confirmDelete function found');
-  }
-  
-  if (typeof applyFilter !== 'function') { 
-    function applyFilter() { } 
-  }
+  // Ensure functions are available before page initialization
+  (function() {
+    // Define fallbacks explicitly in global scope
+    window.loadData = window.loadData || function() { console.error('loadData not defined'); };
+    window.openAddUserModal = window.openAddUserModal || function() { console.error('openAddUserModal not defined'); };
+    window.openEditUserModal = window.openEditUserModal || function() { console.error('openEditUserModal not defined'); };
+    window.openDeleteModal = window.openDeleteModal || function() { console.error('openDeleteModal not defined'); };
+    window.closeModal = window.closeModal || function() { console.error('closeModal not defined'); };
+    window.confirmDelete = window.confirmDelete || function() { console.error('confirmDelete not defined'); };
+    window.applyFilter = window.applyFilter || function() { };
+    
+    console.log('After fallback setup:', {
+      loadData: typeof window.loadData,
+      openAddUserModal: typeof window.openAddUserModal,
+      _adminUsersLoaded: window._adminUsersLoaded
+    });
+  })();
 </script>
 </body>
 </html>

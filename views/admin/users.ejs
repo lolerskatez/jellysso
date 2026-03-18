@@ -263,9 +263,21 @@
       max-width: 540px;
       width: 92%;
       max-height: 90vh;
-      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       padding: var(--spacing-lg);
       border: 1px solid var(--border-color);
+    }
+
+    .modal-actions {
+      flex-shrink: 0;
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
     }
 
     .modal-content.modal-wide { max-width: 640px; }
@@ -302,15 +314,6 @@
     }
 
     .modal-close:hover { color: var(--text-primary); background: var(--bg-secondary); }
-
-    .modal-actions {
-      display: flex;
-      gap: var(--spacing-md);
-      justify-content: flex-end;
-      margin-top: var(--spacing-xl);
-      padding-top: var(--spacing-lg);
-      border-top: 1px solid var(--border-color);
-    }
 
     /* Modal tabs */
     .modal-tabs {

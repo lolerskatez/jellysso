@@ -670,7 +670,7 @@ const closeModal = (window.closeModal = function(id) {
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', function() {
+function initPage() {
   loadData();
 
   // Search and filter
@@ -723,7 +723,14 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
-});
+}
+
+// Run immediately if DOM is already ready, otherwise wait
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPage);
+} else {
+  initPage();
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ensure all functions are available globally

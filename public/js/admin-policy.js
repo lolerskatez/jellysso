@@ -4,6 +4,8 @@
  * Handles CRUD for tiers via /api/policy/admin/tiers
  */
 
+console.log('admin-policy.js loaded successfully');
+
 let csrfToken = null;
 let tiersCache = [];
 let pendingDeleteId = null;

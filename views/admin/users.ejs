@@ -859,5 +859,51 @@
 </div>
 
 <script src="/js/admin-users.js"></script>
+<script>
+  // Defensive fallback for function definitions if scripts don't load
+  console.log('Users page script section: Checking for admin-users functions...');
+  
+  if (typeof loadData !== 'function') { 
+    console.warn('loadData not found - creating fallback');
+    function loadData() { console.error('loadData not defined - fallback only'); } 
+  } else {
+    console.log('✓ loadData function found');
+  }
+  
+  if (typeof openAddUserModal !== 'function') { 
+    console.warn('openAddUserModal not found - creating fallback');
+    function openAddUserModal() { console.error('openAddUserModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ openAddUserModal function found');
+  }
+  
+  if (typeof openEditUserModal !== 'function') { 
+    function openEditUserModal() { console.error('openEditUserModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ openEditUserModal function found');
+  }
+  
+  if (typeof openDeleteModal !== 'function') { 
+    function openDeleteModal() { console.error('openDeleteModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ openDeleteModal function found');
+  }
+  
+  if (typeof closeModal !== 'function') { 
+    function closeModal() { console.error('closeModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ closeModal function found');
+  }
+  
+  if (typeof confirmDelete !== 'function') { 
+    function confirmDelete() { console.error('confirmDelete not defined - fallback only'); } 
+  } else {
+    console.log('✓ confirmDelete function found');
+  }
+  
+  if (typeof applyFilter !== 'function') { 
+    function applyFilter() { } 
+  }
+</script>
 </body>
 </html>

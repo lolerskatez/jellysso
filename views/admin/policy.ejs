@@ -710,7 +710,65 @@
 <script src="/js/mobile-nav.js"></script>
 <script src="/js/admin-policy.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', loadTiers);
+  // Defensive fallback for function definitions if scripts don't load
+  console.log('Policy page script section: Checking for admin-policy functions...');
+  
+  if (typeof loadTiers !== 'function') { 
+    console.warn('loadTiers not found - creating fallback');
+    function loadTiers() { console.error('loadTiers not defined - fallback only'); } 
+  } else {
+    console.log('✓ loadTiers function found');
+  }
+  
+  if (typeof openCreateModal !== 'function') { 
+    console.warn('openCreateModal not found - creating fallback');
+    function openCreateModal() { console.error('openCreateModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ openCreateModal function found');
+  }
+  
+  if (typeof openEditModal !== 'function') { 
+    function openEditModal() { console.error('openEditModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ openEditModal function found');
+  }
+  
+  if (typeof openDeleteModal !== 'function') { 
+    function openDeleteModal() { console.error('openDeleteModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ openDeleteModal function found');
+  }
+  
+  if (typeof closeModal !== 'function') { 
+    function closeModal() { console.error('closeModal not defined - fallback only'); } 
+  } else {
+    console.log('✓ closeModal function found');
+  }
+  
+  if (typeof confirmDeleteTier !== 'function') { 
+    function confirmDeleteTier() { console.error('confirmDeleteTier not defined - fallback only'); } 
+  } else {
+    console.log('✓ confirmDeleteTier function found');
+  }
+  
+  if (typeof syncCreatePreview !== 'function') { 
+    function syncCreatePreview() { } 
+  }
+  
+  if (typeof syncEditPreview !== 'function') { 
+    function syncEditPreview() { } 
+  }
+  
+  // Ensure DOMContentLoaded handler waits for functions
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded: Attempting to call loadTiers()...');
+    if (typeof loadTiers === 'function') {
+      console.log('Calling loadTiers()...');
+      loadTiers();
+    } else {
+      console.error('loadTiers function is not available on DOMContentLoaded');
+    }
+  });
 </script>
 </body>
 </html>

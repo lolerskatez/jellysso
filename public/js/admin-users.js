@@ -4,6 +4,8 @@
  * and handles Add / Edit (2-tab: Account + Policy) / Delete flows.
  */
 
+console.log('admin-users.js loaded successfully');
+
 let csrfToken = null;
 let usersCache = [];
 let tiersCache = [];

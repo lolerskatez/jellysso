@@ -351,7 +351,12 @@ router.get('/user/:sessionId/tracks', requireAuth, async (req, res) => {
       tracks
     });
   } catch (error) {
-    console.error('Error getting available tracks:', error.message);
+    console.error('Error getting available tracks:', error.message, {
+      sessionId: req.params.sessionId,
+      userId: req.session.user?.Id,
+      error: error
+    });
+    
     res.status(500).json({
       success: false,
       message: error.message

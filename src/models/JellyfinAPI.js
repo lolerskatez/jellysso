@@ -565,7 +565,18 @@ class JellyfinAPI {
       if (error.response?.status === 404) {
         throw new Error('Session not found');
       }
-      throw new Error(`Failed to get session details: ${error.message}`);
+      
+      // Log detailed error information for debugging
+      console.error(`getSessionDetails error: ${error.message}`, {
+        sessionId,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        code: error.code
+      });
+      
+      throw this.handleApiError(error, `Failed to get session details for sessionId ${sessionId}`);
     }
   }
 
@@ -577,7 +588,7 @@ class JellyfinAPI {
     try {
       const session = await this.getSessionDetails(sessionId);
       
-      if (!session.NowPlayingItem) {
+      if (!session || !session.NowPlayingItem) {
         return {
           audioTracks: [],
           subtitleTracks: [],
@@ -587,29 +598,46 @@ class JellyfinAPI {
       }
 
       const item = session.NowPlayingItem;
+      const mediaStreams = item.MediaStreams || [];
+      
+      // Extract audio tracks
+      const audioTracks = mediaStreams
+        .filter(s => s && s.Type === 'Audio')
+        .map(s => ({
+          id: s.Index,
+          language: s.Language || 'Unknown',
+          codec: s.Codec || 'Unknown',
+          displayName: `${s.Language || 'Unknown'} (${s.Codec || 'Unknown'})`,
+          channels: s.Channels || 2,
+          bitRate: s.BitRate
+        })) || [];
+      
+      // Extract subtitle tracks
+      const subtitleTracks = mediaStreams
+        .filter(s => s && s.Type === 'Subtitle')
+        .map(s => ({
+          id: s.Index,
+          language: s.Language || 'Unknown',
+          codec: s.Codec || 'Unknown',
+          displayName: `${s.Language || 'Unknown'} (${s.Codec || 'Unknown'})`,
+          isDefault: s.IsDefault || false,
+          isForced: s.IsForced || false
+        })) || [];
+      
+      // Get current stream indices, with fallback values
+      const playState = session.PlayState || {};
+      const currentAudioTrack = typeof playState.AudioStreamIndex === 'number' ? playState.AudioStreamIndex : null;
+      const currentSubtitleTrack = typeof playState.SubtitleStreamIndex === 'number' ? playState.SubtitleStreamIndex : null;
       
       return {
-        audioTracks: item.MediaStreams?.filter(s => s.Type === 'Audio').map(s => ({
-          id: s.Index,
-          language: s.Language || 'Unknown',
-          codec: s.Codec || 'Unknown',
-          displayName: `${s.Language || 'Unknown'} (${s.Codec || 'Unknown'})`,
-          channels: s.Channels,
-          bitRate: s.BitRate
-        })) || [],
-        subtitleTracks: item.MediaStreams?.filter(s => s.Type === 'Subtitle').map(s => ({
-          id: s.Index,
-          language: s.Language || 'Unknown',
-          codec: s.Codec || 'Unknown',
-          displayName: `${s.Language || 'Unknown'} (${s.Codec || 'Unknown'})`,
-          isDefault: s.IsDefault,
-          isForced: s.IsForced
-        })) || [],
-        currentAudioTrack: session.PlayState?.AudioStreamIndex,
-        currentSubtitleTrack: session.PlayState?.SubtitleStreamIndex
+        audioTracks,
+        subtitleTracks,
+        currentAudioTrack,
+        currentSubtitleTrack
       };
     } catch (error) {
-      throw new Error(`Failed to get available tracks: ${error.message}`);
+      console.error(`getAvailableTracks error for sessionId ${sessionId}: ${error.message}`, error);
+      throw error;
     }
   }
 
@@ -628,7 +656,8 @@ class JellyfinAPI {
       if (error.response?.status === 404) {
         throw new Error('Session not found');
       }
-      throw new Error(`Failed to change audio track: ${error.message}`);
+      console.error(`setAudioTrack error: ${error.message}`, { sessionId, audioTrackIndex, error });
+      throw this.handleApiError(error, `Failed to change audio track for sessionId ${sessionId}`);
     }
   }
 
@@ -647,7 +676,8 @@ class JellyfinAPI {
       if (error.response?.status === 404) {
         throw new Error('Session not found');
       }
-      throw new Error(`Failed to change subtitle track: ${error.message}`);
+      console.error(`setSubtitleTrack error: ${error.message}`, { sessionId, subtitleTrackIndex, error });
+      throw this.handleApiError(error, `Failed to change subtitle track for sessionId ${sessionId}`);
     }
   }
 

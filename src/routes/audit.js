@@ -1,24 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const AuditLogger = require('../models/AuditLogger');
-
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
-};
-
-// Middleware to check admin access
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.Policy && req.session.user.Policy.IsAdministrator) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Admin access required' });
-  }
-};
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Get audit logs (admin only)
 router.get('/', requireAuth, requireAdmin, async (req, res) => {

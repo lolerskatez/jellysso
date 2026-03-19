@@ -421,6 +421,7 @@ app.use('/api/playback', require('./routes/playback'));
 app.use('/api/admin/playback', require('./routes/admin-playback'));
 app.use('/api/policy', require('./routes/policy'));
 app.use('/api/me', require('./routes/me'));
+app.use('/api/monitoring', require('./routes/monitoring'));
 app.use('/policy', require('./routes/user-policy'));
 app.use('/setup', require('./routes/setup'));
 

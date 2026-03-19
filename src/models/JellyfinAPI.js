@@ -563,7 +563,9 @@ class JellyfinAPI {
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
-        throw new Error('Session not found');
+        // Session no longer exists - return null instead of throwing
+        // This can happen when sessions expire or clients disconnect
+        return null;
       }
       
       // Log detailed error information for debugging

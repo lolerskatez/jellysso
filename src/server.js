@@ -15,6 +15,10 @@ const PolicyManager = require('./models/PolicyManager');
 const OTPManager   = require('./models/OTPManager');
 const JellyfinAPI = require('./models/JellyfinAPI');
 const { csrfProtection, setCsrfToken, csrfErrorHandler } = require('./middleware/csrf');
+const { requestIdMiddleware } = require('./middleware/request-id');
+const { errorHandler, asyncHandler, AppError } = require('./middleware/error-handler');
+const { criticalLimiter, adminLimiter, apiLimiter, publicLimiter } = require('./middleware/rate-limit');
+const { AccountLockoutManager } = require('./models/AccountLockoutManager');
 const crypto = require('crypto');
 require('dotenv').config();
 
@@ -155,6 +159,9 @@ app.use(session({
     sameSite: 'lax'
   }
 }));
+
+// Request ID middleware - attach unique ID to all requests for tracing
+app.use(requestIdMiddleware);
 
 // Set CSRF token in response locals for all requests (AFTER session middleware)
 app.use(setCsrfToken);
@@ -600,6 +607,10 @@ app.get('/download', (req, res) => {
 // CSRF error handler middleware - catches CSRF token validation failures
 // This is especially important when behind reverse proxies like cloudflare/cloudflared
 app.use(csrfErrorHandler);
+
+// Global error handler middleware - must be last
+// Catches all errors and returns standardized error responses
+app.use(errorHandler);
 
 // Initialize plugin system
 (async () => {

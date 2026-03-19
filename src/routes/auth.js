@@ -6,9 +6,13 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const AuditLogger = require('../models/AuditLogger');
 const TokenManager = require('../models/TokenManager');
 const PolicyManager = require('../models/PolicyManager');
+const { AccountLockoutManager } = require('../models/AccountLockoutManager');
 const { csrfProtection } = require('../middleware/csrf');
+const { criticalLimiter } = require('../middleware/rate-limit');
+const { AppError } = require('../middleware/error-handler');
 const jwt = require('jsonwebtoken');
 const { getBaseUrl } = require('../utils/urlHelper');
+const logger = require('../utils/logger');
 
 // Middleware to require setup to be complete
 const requireSetupComplete = (req, res, next) => {
@@ -22,35 +26,79 @@ const requireSetupComplete = (req, res, next) => {
   next();
 };
 
-// Login route - CSRF validated by global middleware
-router.post('/login', requireSetupComplete, async (req, res) => {
+// Login route - CSRF validated by global middleware, rate limited
+router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) => {
   const { username, password } = req.body;
+  const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
+
+  // Validate input
   if (!username || !password) {
     await AuditLogger.log('LOGIN_ATTEMPT', 'unknown', `user:${username || 'unknown'}`, 
       { reason: 'Missing credentials' }, 'failure', req.ip);
     
-    // Check if this is an AJAX request
-    const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
-    
     if (isAjax) {
-      return res.status(400).json({ success: false, message: 'Username and password required' });
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Username and password are required',
+          timestamp: new Date().toISOString(),
+          requestId: req.id
+        }
+      });
     } else {
-      req.session.errorMessage = 'Username and password required';
+      req.session.errorMessage = 'Username and password are required';
       return res.redirect('/login');
     }
   }
-  
+
   try {
+    const lockoutManager = AccountLockoutManager.getInstance();
+
+    // Check if account is locked
+    const loginCheck = await lockoutManager.checkLoginAllowed(username, req.ip);
+    if (!loginCheck.allowed) {
+      await AuditLogger.logFailedLogin(username, 'Account locked', req.ip);
+      logger.warn('Login attempt on locked account', { username, ip: req.ip, requestId: req.id });
+
+      if (isAjax) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            code: 'ACCOUNT_LOCKED',
+            message: loginCheck.reason,
+            timestamp: new Date().toISOString(),
+            requestId: req.id
+          }
+        });
+      } else {
+        req.session.errorMessage = loginCheck.reason;
+        return res.redirect('/login');
+      }
+    }
+
+    // Attempt authentication
     const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
     const authResult = await jellyfin.authenticateByName(username, password);
+
+    // Record successful login attempt
+    await lockoutManager.recordLoginAttempt(username, req.ip, true);
 
     // Check JellySSO account status (enabled flag + expiry) before creating a session
     const access = await PolicyManager.checkAccountAccess(authResult.User.Id);
     if (!access.allowed) {
       await AuditLogger.logFailedLogin(username, access.reason, req.ip);
-      const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
+      
       if (isAjax) {
-        return res.status(403).json({ success: false, message: access.reason });
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCOUNT_DISABLED',
+            message: access.reason,
+            timestamp: new Date().toISOString(),
+            requestId: req.id
+          }
+        });
       }
       req.session.errorMessage = access.reason;
       return res.redirect('/login');
@@ -62,22 +110,34 @@ router.post('/login', requireSetupComplete, async (req, res) => {
     // Sync admin status from Jellyfin to database
     if (authResult.User && authResult.User.Id) {
       await PolicyManager.syncAdminStatusFromJellyfin(authResult.User.Id, authResult.User).catch(err => 
-        console.warn('Could not sync admin status:', err.message)
+        logger.warn('Could not sync admin status', { error: err.message })
       );
     }
     
     req.session.save((err) => {
       if (err) {
-        console.error('Session save error:', err);
+        logger.error('Session save error', { error: err.message, requestId: req.id });
         AuditLogger.log('LOGIN_SESSION_ERROR', authResult.User?.Name || username, `user:${username}`, 
           { error: 'Session save failed' }, 'failure', req.ip);
-        return res.status(500).json({ success: false, message: 'Session save failed' });
+        
+        if (isAjax) {
+          return res.status(500).json({
+            success: false,
+            error: {
+              code: 'SESSION_ERROR',
+              message: 'Failed to create session',
+              timestamp: new Date().toISOString(),
+              requestId: req.id
+            }
+          });
+        }
+        req.session.errorMessage = 'Failed to create session';
+        return res.redirect('/login');
       }
+
       // Log successful login
       AuditLogger.logSuccessfulLogin(authResult.User?.Name || username, req.ip);
-      
-      // Check if this is an AJAX request
-      const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
+      logger.info('User login successful', { username: authResult.User?.Name, userId: authResult.User?.Id, requestId: req.id });
       
       if (isAjax) {
         res.json({ success: true, user: authResult.User });
@@ -86,38 +146,50 @@ router.post('/login', requireSetupComplete, async (req, res) => {
         res.redirect('/quickconnect');
       }
     });
+
   } catch (error) {
-    console.error('Login error:', error.message);
-    let reason = 'Authentication failed';
-    let statusCode = 500;
-    let message = 'Login failed. Please try again.';
+    logger.error('Login error', { username, error: error.message, requestId: req.id });
     
+    let errorCode = 'AUTH_ERROR';
+    let statusCode = 500;
+    let message = 'Authentication failed. Please try again.';
+    let reason = 'Authentication failed';
+
     if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-      reason = 'Invalid credentials';
+      errorCode = 'INVALID_CREDENTIALS';
       statusCode = 401;
       message = 'Invalid username or password';
-      await AuditLogger.logFailedLogin(username, reason, req.ip);
+      reason = 'Invalid credentials';
     } else if (error.message.includes('403')) {
-      reason = 'Account disabled';
+      errorCode = 'ACCOUNT_DISABLED';
       statusCode = 403;
-      message = 'Account disabled or access forbidden';
-      await AuditLogger.logFailedLogin(username, reason, req.ip);
+      message = 'Account is disabled or access is forbidden';
+      reason = 'Account disabled';
     } else if (error.message.includes('503')) {
-      reason = 'Server unavailable';
+      errorCode = 'SERVICE_UNAVAILABLE';
       statusCode = 503;
-      message = 'Server temporarily unavailable';
-      await AuditLogger.logFailedLogin(username, reason, req.ip);
-    } else {
-      await AuditLogger.logFailedLogin(username, error.message, req.ip);
+      message = 'Authentication service is temporarily unavailable';
+      reason = 'Server unavailable';
     }
+
+    // Record failed login attempt
+    const lockoutManager = AccountLockoutManager.getInstance();
+    await lockoutManager.recordLoginAttempt(username, req.ip, false, reason);
     
-    // Check if this is an AJAX request
-    const isAjax = req.headers['content-type'] === 'application/json' || req.xhr;
-    
+    // Log the failed attempt
+    await AuditLogger.logFailedLogin(username, reason, req.ip);
+
     if (isAjax) {
-      res.status(statusCode).json({ success: false, message });
+      res.status(statusCode).json({
+        success: false,
+        error: {
+          code: errorCode,
+          message: message,
+          timestamp: new Date().toISOString(),
+          requestId: req.id
+        }
+      });
     } else {
-      // Normal form submission - redirect back to login with error
       req.session.errorMessage = message;
       res.redirect('/login');
     }

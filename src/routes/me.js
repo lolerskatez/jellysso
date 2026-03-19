@@ -7,11 +7,7 @@ const UserProfileManager = require('../models/UserProfileManager');
 const OTPManager = require('../models/OTPManager');
 const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
-
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) return next();
-  res.status(401).json({ success: false, message: 'Unauthorized' });
-};
+const { requireAuth } = require('../middleware/auth');
 
 /**
  * GET /api/me

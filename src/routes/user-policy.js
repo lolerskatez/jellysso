@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth } = require('../middleware/auth');
 
-// Middleware to require authentication
-const requireAuth = (req, res, next) => {
+// Middleware to require authentication for web routes (redirects to login)
+const requireWebAuth = (req, res, next) => {
   if (req.session && req.session.user) {
     next();
   } else {
@@ -10,7 +11,7 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-// User Policy Settings Page
+// User Policy SettingsWeb Page
 router.get('/', requireAuth, (req, res) => {
   try {
     res.render('policy', {

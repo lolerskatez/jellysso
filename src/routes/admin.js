@@ -12,6 +12,7 @@ const fs = require('fs').promises;
 const fsSyncApi = require('fs');
 const path = require('path');
 const { getBaseUrl } = require('../utils/urlHelper');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const os = require('os');
 

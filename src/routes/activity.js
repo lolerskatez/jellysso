@@ -3,15 +3,7 @@ const router = express.Router();
 const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const { validateActivityLogParams } = require('../middleware/validation');
-
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
-};
+const { requireAuth } = require('../middleware/auth');
 
 // Get activity logs
 router.get('/', requireAuth, async (req, res) => {

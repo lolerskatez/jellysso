@@ -515,9 +515,19 @@
 
     function renderSessions(sessions) {
       const container = document.getElementById('sessions-container');
+      const noSessions = document.getElementById('no-sessions');
       container.innerHTML = '';
 
-      sessions.forEach(session => {
+      // Filter to only show sessions with active playback (have a nowPlayingItem)
+      const playingSessions = sessions.filter(session => session.isPlaying && session.nowPlayingItem);
+
+      if (playingSessions.length === 0) {
+        container.style.display = 'none';
+        noSessions.style.display = 'block';
+        return;
+      }
+
+      playingSessions.forEach(session => {
         const card = createSessionCard(session);
         container.appendChild(card);
       });

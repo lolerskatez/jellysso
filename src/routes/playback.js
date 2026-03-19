@@ -22,8 +22,8 @@ router.get('/user/sessions', requireAuth, async (req, res) => {
       req.session.accessToken
     );
 
-    // Get all sessions for this user
-    const allSessions = await jellyfin.getActiveSessions(req.session.user.Id);
+    // Get playback sessions for this user (only those with active playback)
+    const allSessions = await jellyfin.getActiveSessions(req.session.user.Id, true);
 
     // Log the activity
     await AuditLogger.log('PLAYBACK_VIEW_SESSIONS', req.session.user?.Id, 'playback:sessions', 

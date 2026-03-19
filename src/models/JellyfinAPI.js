@@ -421,8 +421,10 @@ class JellyfinAPI {
   /**
    * Get all active playback sessions
    * Returns sessions for all users (admin only) or can be filtered by userId
+   * @param {string|null} userId - User ID to filter by (optional)
+   * @param {boolean} playingOnly - Only return sessions with active playback (optional)
    */
-  async getActiveSessions(userId = null) {
+  async getActiveSessions(userId = null, playingOnly = false) {
     try {
       const response = await this.client.get('/Sessions');
       let sessions = response.data;
@@ -430,6 +432,11 @@ class JellyfinAPI {
       // Filter by userId if provided
       if (userId) {
         sessions = sessions.filter(session => session.UserId === userId);
+      }
+
+      // Filter to only sessions with active playback if requested
+      if (playingOnly) {
+        sessions = sessions.filter(session => session.NowPlayingItem);
       }
 
       // Clean up and normalize session data

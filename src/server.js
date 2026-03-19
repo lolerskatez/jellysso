@@ -433,6 +433,7 @@ app.use('/api/monitoring', require('./routes/monitoring'));
 app.use('/api/announcements', require('./routes/announcements')); // Admin announcements
 app.use('/api/invites', require('./routes/invites')); // User invites
 app.use('/api/signup-profiles', require('./routes/signup-profiles')); // Signup profiles
+app.use('/api/contact-methods', require('./routes/contact-methods')); // Multi-channel contact methods
 app.use('/policy', require('./routes/user-policy'));
 app.use('/setup', require('./routes/setup'));
 

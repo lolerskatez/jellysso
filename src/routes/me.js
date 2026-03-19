@@ -4,6 +4,7 @@ const router = express.Router();
 const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const UserProfileManager = require('../models/UserProfileManager');
+const ContactMethodManager = require('../models/ContactMethodManager');
 const OTPManager = require('../models/OTPManager');
 const AuditLogger = require('../models/AuditLogger');
 const NotificationManager = require('../models/NotificationManager');
@@ -14,11 +15,20 @@ const { requireAuth } = require('../middleware/auth');
 
 /**
  * GET /api/me
- * Return the current user's Jellyfin profile merged with local profile data.
+ * Return the current user's Jellyfin profile merged with local profile data and contact methods.
  */
 router.get('/', requireAuth, async (req, res) => {
   try {
     const profile = await UserProfileManager.getProfile(req.session.user.Id).catch(() => null);
+    const contactMethods = await ContactMethodManager.getInstance()
+      .getContactMethods(req.session.user.Id)
+      .catch(() => ({
+        email_enabled: true,
+        discord_enabled: false,
+        telegram_enabled: false,
+        matrix_enabled: false
+      }));
+
     res.json({
       success: true,
       user: {
@@ -27,6 +37,7 @@ router.get('/', requireAuth, async (req, res) => {
         isAdmin: !!(req.session.user.Policy?.IsAdministrator)
       },
       profile,
+      contactMethods,
       authMethod: req.session.authMethod || 'local'
     });
   } catch (err) {

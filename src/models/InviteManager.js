@@ -488,6 +488,192 @@ class InviteManager {
       }
     });
   }
+
+  /**
+   * Set or update invite label (for organization)
+   * @param {string} code - Invite code
+   * @param {string} label - Label for the invite (e.g., "Spring 2026", "Friends")
+   * @returns {Promise<void>}
+   */
+  async setInviteLabel(code, label) {
+    return new Promise((resolve, reject) => {
+      try {
+        // Get existing metadata
+        this.db.get(
+          'SELECT metadata FROM invites WHERE code = ?',
+          [code],
+          (err, row) => {
+            if (err) return reject(err);
+            if (!row) return reject(new Error('Invite not found'));
+
+            const metadata = row.metadata ? JSON.parse(row.metadata) : {};
+            metadata.label = label;
+
+            // Update metadata with new label
+            this.db.run(
+              'UPDATE invites SET metadata = ? WHERE code = ?',
+              [JSON.stringify(metadata), code],
+              (updateErr) => {
+                if (updateErr) {
+                  this.logger.log('error', 'SET_INVITE_LABEL_ERROR', { code, label, error: updateErr.message });
+                  return reject(updateErr);
+                }
+
+                this.logger.log('info', 'INVITE_LABEL_SET', { code, label });
+                resolve();
+              }
+            );
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Get invite label
+   * @param {string} code - Invite code
+   * @returns {Promise<string|null>} Label or null if not set
+   */
+  async getInviteLabel(code) {
+    return new Promise((resolve, reject) => {
+      try {
+        this.db.get(
+          'SELECT metadata FROM invites WHERE code = ?',
+          [code],
+          (err, row) => {
+            if (err) reject(err);
+            else {
+              const metadata = row?.metadata ? JSON.parse(row.metadata) : {};
+              resolve(metadata.label || null);
+            }
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Record that an invite was pre-sent (via email or Discord)
+   * @param {string} code - Invite code
+   * @param {string} method - Delivery method (email, discord, telegram)
+   * @param {string} recipient - Who it was sent to (email or username)
+   * @returns {Promise<void>}
+   */
+  async recordPreSend(code, method, recipient) {
+    return new Promise((resolve, reject) => {
+      try {
+        // Get existing metadata
+        this.db.get(
+          'SELECT metadata FROM invites WHERE code = ?',
+          [code],
+          (err, row) => {
+            if (err) return reject(err);
+            if (!row) return reject(new Error('Invite not found'));
+
+            const metadata = row.metadata ? JSON.parse(row.metadata) : {};
+            
+            // Initialize sentTo array if not exists
+            if (!metadata.sentTo) {
+              metadata.sentTo = [];
+            }
+
+            // Add pre-send record
+            metadata.sentTo.push({
+              method,
+              recipient,
+              sentAt: new Date().toISOString()
+            });
+
+            // Update metadata
+            this.db.run(
+              'UPDATE invites SET metadata = ? WHERE code = ?',
+              [JSON.stringify(metadata), code],
+              (updateErr) => {
+                if (updateErr) {
+                  this.logger.log('error', 'RECORD_PRESEND_ERROR', { code, method, recipient, error: updateErr.message });
+                  return reject(updateErr);
+                }
+
+                this.logger.log('info', 'INVITE_PRESENT', { code, method, recipient });
+                resolve();
+              }
+            );
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Get pre-send statistics for an invite
+   * @param {string} code - Invite code
+   * @returns {Promise<{sentViaEmail: number, sentViaDiscord: number, sentViaTelegram: number, sentTo: Array}>}
+   */
+  async getPresendStats(code) {
+    return new Promise((resolve, reject) => {
+      try {
+        this.db.get(
+          'SELECT metadata FROM invites WHERE code = ?',
+          [code],
+          (err, row) => {
+            if (err) return reject(err);
+            if (!row) return reject(new Error('Invite not found'));
+
+            const metadata = row.metadata ? JSON.parse(row.metadata) : {};
+            const sentTo = metadata.sentTo || [];
+
+            const stats = {
+              sentViaEmail: sentTo.filter(s => s.method === 'email').length,
+              sentViaDiscord: sentTo.filter(s => s.method === 'discord').length,
+              sentViaTelegram: sentTo.filter(s => s.method === 'telegram').length,
+              sentVia: sentTo.filter(s => s.method === 'matrix').length,
+              totalSent: sentTo.length,
+              sentTo: sentTo
+            };
+
+            resolve(stats);
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * List invites by label
+   * @param {string} label - Label to filter by
+   * @returns {Promise<Array>} Array of invites with matching label
+   */
+  async listInvitesByLabel(label) {
+    return new Promise((resolve, reject) => {
+      try {
+        // Note: This requires JSON parsing in Node, simpler than SQL JSON for compatibility
+        this.db.all(
+          'SELECT * FROM invites ORDER BY createdAt DESC',
+          [],
+          (err, rows) => {
+            if (err) return reject(err);
+
+            const filtered = (rows || []).filter(row => {
+              const metadata = row.metadata ? JSON.parse(row.metadata) : {};
+              return metadata.label === label;
+            });
+
+            resolve(filtered);
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
 }
 
 module.exports = InviteManager;

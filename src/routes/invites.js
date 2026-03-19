@@ -175,12 +175,14 @@ router.delete('/:code', csrfProtection, requireAuth, requireAdmin, async (req, r
 
 /**
  * POST /api/invites/:code/accept - Accept invite and create user
+ * Body: { userId, contactMethods?: { discord?: string, telegram?: string, matrix?: string } }
  * (This endpoint is called after signup form submission)
  */
 router.post('/:code/accept', csrfProtection, publicLimiter, async (req, res) => {
   try {
     const { code } = req.params;
-    const { userId } = req.body;
+    const { userId, contactMethods } = req.body;
+    const ContactMethodManager = require('../models/ContactMethodManager');
 
     if (!userId) {
       return res.status(400).json({ success: false, error: 'User ID is required' });
@@ -195,7 +197,44 @@ router.post('/:code/accept', csrfProtection, publicLimiter, async (req, res) => 
     // Track acceptance
     await inviteManager.trackInviteUsage(code, 'accepted', { userId });
 
-    res.json({ success: true, message: 'Invite accepted' });
+    // If contact methods were provided during signup, initiate verification
+    const verifications = {};
+    if (contactMethods && typeof contactMethods === 'object') {
+      const contactMgr = ContactMethodManager.getInstance();
+      
+      try {
+        if (contactMethods.discord && contactMethods.discord.trim()) {
+          const discord = await contactMgr.addDiscordMethod(userId, contactMethods.discord.trim());
+          const verification = await contactMgr.createVerificationRequest(userId, 'discord', contactMethods.discord.trim());
+          verifications.discord = { id: verification.id, code: verification.code };
+          auditLogger.log('info', 'DISCORD_ADDED_ON_SIGNUP', { userId, code });
+        }
+        
+        if (contactMethods.telegram && contactMethods.telegram.trim()) {
+          const telegram = await contactMgr.addTelegramMethod(userId, contactMethods.telegram.trim());
+          const verification = await contactMgr.createVerificationRequest(userId, 'telegram', contactMethods.telegram.trim());
+          verifications.telegram = { id: verification.id, code: verification.code };
+          auditLogger.log('info', 'TELEGRAM_ADDED_ON_SIGNUP', { userId, code });
+        }
+        
+        if (contactMethods.matrix && contactMethods.matrix.trim()) {
+          const matrix = await contactMgr.addMatrixMethod(userId, contactMethods.matrix.trim());
+          const verification = await contactMgr.createVerificationRequest(userId, 'matrix', contactMethods.matrix.trim());
+          verifications.matrix = { id: verification.id, code: verification.code };
+          auditLogger.log('info', 'MATRIX_ADDED_ON_SIGNUP', { userId, code });
+        }
+      } catch (contactError) {
+        // Don't fail invite acceptance if contact method setup fails
+        auditLogger.log('warn', 'CONTACT_METHOD_SETUP_FAILED', { userId, error: contactError.message });
+        // But continue - the user was created successfully
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Invite accepted',
+      verifications: Object.keys(verifications).length > 0 ? verifications : undefined
+    });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message || 'Failed to accept invite' });
   }
@@ -215,6 +254,166 @@ router.get('/:code/usage-stats', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to get usage stats' });
+  }
+});
+
+/**
+ * PATCH /api/invites/:code/label - Set or update invite label (admin only)
+ * Body: { label: string }
+ */
+router.patch('/:code/label', csrfProtection, requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { label } = req.body;
+
+    if (!label || typeof label !== 'string') {
+      return res.status(400).json({ success: false, error: 'Label is required' });
+    }
+
+    if (label.length > 100) {
+      return res.status(400).json({ success: false, error: 'Label must be 100 characters or less' });
+    }
+
+    // Verify invite exists
+    const invite = await inviteManager.getInviteByCode(code);
+    if (!invite) {
+      return res.status(404).json({ success: false, error: 'Invite not found' });
+    }
+
+    await inviteManager.setInviteLabel(code, label.trim());
+
+    auditLogger.log('info', 'INVITE_LABEL_SET', {
+      userId: req.session.user?.Id,
+      code,
+      label,
+      ip: req.ip
+    });
+
+    res.json({
+      success: true,
+      message: 'Invite label updated',
+      label: label.trim()
+    });
+  } catch (error) {
+    auditLogger.log('error', 'SET_LABEL_ERROR', {
+      code: req.params.code,
+      error: error.message
+    });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/invites/:code/label - Get invite label
+ */
+router.get('/:code/label', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const label = await inviteManager.getInviteLabel(code);
+
+    res.json({
+      success: true,
+      label: label || null
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/invites/label/:label - List invites by label (admin only)
+ */
+router.get('/label/:label', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { label } = req.params;
+    const invites = await inviteManager.listInvitesByLabel(label);
+
+    res.json({
+      success: true,
+      invites,
+      total: invites.length
+    });
+  } catch (error) {
+    auditLogger.log('error', 'LIST_BY_LABEL_ERROR', {
+      label: req.params.label,
+      error: error.message
+    });
+    res.status(500).json({ success: false, error: 'Failed to list invites' });
+  }
+});
+
+/**
+ * POST /api/invites/:code/send - Pre-send invite via email or Discord (admin only) 
+ * This records that an invite was sent to a user via email/Discord
+ * TODO: Integrate with NotificationService for actual sending
+ * Body: { method: 'email'|'discord'|'telegram', recipient: string }
+ */
+router.post('/:code/send', csrfProtection, requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { method, recipient } = req.body;
+
+    const validMethods = ['email', 'discord', 'telegram', 'matrix'];
+    if (!validMethods.includes(method)) {
+      return res.status(400).json({ success: false, error: 'Invalid delivery method' });
+    }
+
+    if (!recipient || typeof recipient !== 'string' || recipient.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Recipient is required' });
+    }
+
+    // Verify invite exists and is active
+    const invite = await inviteManager.getInviteByCode(code);
+    if (!invite) {
+      return res.status(404).json({ success: false, error: 'Invite not found' });
+    }
+
+    if (invite.status !== 'pending') {
+      return res.status(400).json({ success: false, error: `Cannot send ${invite.status} invite` });
+    }
+
+    // Record the pre-send
+    await inviteManager.recordPreSend(code, method, recipient.trim());
+
+    // TODO: Add actual email/Discord sending logic here using NotificationService
+
+    auditLogger.log('info', 'INVITE_PRESEND', {
+      userId: req.session.user?.Id,
+      code,
+      method,
+      recipient,
+      ip: req.ip
+    });
+
+    res.json({
+      success: true,
+      message: `Invite sent via ${method}`,
+      method,
+      recipient: recipient.trim()
+    });
+  } catch (error) {
+    auditLogger.log('error', 'INVITE_PRESEND_ERROR', {
+      code: req.params.code,
+      error: error.message
+    });
+    res.status(500).json({ success: false, error: error.message || 'Failed to send invite' });
+  }
+});
+
+/**
+ * GET /api/invites/:code/presend-stats - Get pre-send statistics (admin only)
+ */
+router.get('/:code/presend-stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+    const stats = await inviteManager.getPresendStats(code);
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 

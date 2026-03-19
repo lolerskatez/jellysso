@@ -584,6 +584,9 @@
             <!-- Settings Tab -->
             <div class="tab-content active" id="tab-settings">
               <form id="pluginForm">
+                <!-- Hidden username field for accessibility and password manager support -->
+                <input type="text" name="username" value="jellyfin-plugin" hidden autocomplete="username">
+                
                 <div class="toggle-group">
                   <div class="toggle-label">
                     <strong>Enable SSO Plugin</strong>

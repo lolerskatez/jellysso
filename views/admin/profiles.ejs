@@ -409,7 +409,10 @@
       try {
         const response = await fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
           body: JSON.stringify(profile)
         });
 
@@ -437,7 +440,10 @@
       try {
         const response = await fetch(`/api/signup-profiles/${profileId}/duplicate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
           body: JSON.stringify({ newName })
         });
 
@@ -459,7 +465,10 @@
 
       try {
         const response = await fetch(`/api/signup-profiles/${profileId}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          }
         });
 
         const data = await response.json();
@@ -488,8 +497,8 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeModal();
     });
+  </script>
 
   <script src="/js/mobile-nav.js"></script>
-  </script>
 </body>
 </html>

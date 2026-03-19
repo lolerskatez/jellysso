@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const UserExpiryManager = require('../models/UserExpiryManager');
 const AuditLogger = require('../models/AuditLogger');
-const { requireAuth, requireAdmin, csrfProtection } = require('../middleware');
+const { csrfProtection } = require('../middleware/csrf');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Initialize managers
 const expiryManager = UserExpiryManager.getInstance();
-const auditLogger = AuditLogger.getInstance();
+const auditLogger = AuditLogger;
 
 /**
  * GET /api/users/expiry - List users with expiry info (admin only)

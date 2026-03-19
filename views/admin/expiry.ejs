@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Expiry Management - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin: 5px 0 0 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab {
+      padding: var(--spacing-md) var(--spacing-lg);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+
+    .users-table th {
+      background: var(--bg-light);
+      padding: var(--spacing-md);
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .users-table td {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .users-table tbody tr:hover {
+      background: var(--bg-light);
+    }
+
+    .days-remaining {
+      font-weight: 600;
+      color: var(--warning);
+    }
+
+    .days-remaining.critical {
+      color: var(--danger);
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-action {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .alert {
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .alert-success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left: 4px solid #10b981;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 4px solid #ef4444;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-3xl) var(--spacing-lg);
+      color: var(--text-secondary);
+    }
+
+    .actions-bar {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #0066cc);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .loading {
+      text-align: center;
+      padding: var(--spacing-2xl);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto var(--spacing-lg);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: var(--spacing-2xl);">
+    <div class="page-header">
+      <h1 style="margin: 0;">User Expiry Management</h1>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-value" id="statTotal">-</p>
+        <p class="stat-label">Users with Expiry</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statActive">-</p>
+        <p class="stat-label">Active</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statExpiring">-</p>
+        <p class="stat-label">Expiring Soon (7 days)</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statExpired">-</p>
+        <p class="stat-label">Expired</p>
+      </div>
+    </div>
+
+    <div class="actions-bar">
+      <button class="btn-primary" onclick="triggerWarnings()">
+        <i class="fas fa-bell"></i> Send Expiry Warnings
+      </button>
+      <button class="btn-primary" onclick="triggerDisable()">
+        <i class="fas fa-ban"></i> Disable Expired Users
+      </button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('expiring')">
+        <i class="fas fa-clock"></i> Expiring Soon (7 days)
+      </button>
+      <button class="tab" onclick="switchTab('expired')">
+        <i class="fas fa-times-circle"></i> Already Expired
+      </button>
+    </div>
+
+    <div id="expiringTab" class="tab-content active">
+      <div id="expiringLoading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading users...</p>
+      </div>
+      <div id="expiringContainer" style="overflow-x: auto;">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Expires</th>
+              <th>Days Remaining</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="expiringTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="expiredTab" class="tab-content">
+      <div id="expiredLoading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading users...</p>
+      </div>
+      <div id="expiredContainer" style="overflow-x: auto;">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Expired On</th>
+              <th>Days Ago</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="expiredTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/users/expiry/stats');
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('statTotal').textContent = data.stats.totalWithExpiry || 0;
+          document.getElementById('statActive').textContent = data.stats.active || 0;
+          document.getElementById('statExpiring').textContent = data.stats.expiringWithin7Days || 0;
+          document.getElementById('statExpired').textContent = data.stats.expired || 0;
+        }
+      } catch (error) {
+        showAlert('Failed to load statistics: ' + error.message, 'error');
+      }
+    }
+
+    async function loadExpiringUsers() {
+      try {
+        const response = await fetch('/api/users/expiry?filter=expiring_soon');
+        const data = await response.json();
+
+        document.getElementById('expiringLoading').style.display = 'none';
+
+        if (data.success) {
+          populateExpiringTable(data.users);
+        } else {
+          showAlert('Failed to load expiring users', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function loadExpiredUsers() {
+      try {
+        const response = await fetch('/api/users/expiry?filter=expired');
+        const data = await response.json();
+
+        document.getElementById('expiredLoading').style.display = 'none';
+
+        if (data.success) {
+          populateExpiredTable(data.users);
+        } else {
+          showAlert('Failed to load expired users', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      }
+    }
+
+    function populateExpiringTable(users) {
+      const tbody = document.getElementById('expiringTableBody');
+      tbody.innerHTML = '';
+
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: var(--spacing-2xl);">No users expiring soon</td></tr>';
+        return;
+      }
+
+      users.forEach(user => {
+        const expiresDate = new Date(user.expiresAt);
+        const now = new Date();
+        const daysRemaining = Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24));
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${user.username || user.id}</td>
+          <td>${user.email || 'N/A'}</td>
+          <td>${expiresDate.toLocaleDateString()}</td>
+          <td><span class="days-remaining ${daysRemaining <= 3 ? 'critical' : ''}">${daysRemaining} days</span></td>
+          <td>
+            <button class="btn-small btn-action" onclick="clearExpiry('${user.id}')">Clear Expiry</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function populateExpiredTable(users) {
+      const tbody = document.getElementById('expiredTableBody');
+      tbody.innerHTML = '';
+
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: var(--spacing-2xl);">No expired users</td></tr>';
+        return;
+      }
+
+      users.forEach(user => {
+        const expiredDate = new Date(user.expiresAt);
+        const now = new Date();
+        const daysAgo = Math.floor((now - expiredDate) / (1000 * 60 * 60 * 24));
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${user.username || user.id}</td>
+          <td>${user.email || 'N/A'}</td>
+          <td>${expiredDate.toLocaleDateString()}</td>
+          <td>${daysAgo} days ago</td>
+          <td>
+            <button class="btn-small btn-action" onclick="clearExpiry('${user.id}')">Re-activate</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function switchTab(tab) {
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // Update content
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      if (tab === 'expiringmore') {
+        loadExpiringUsers();
+        document.getElementById('expiringTab').classList.add('active');
+      } else {
+        loadExpiredUsers();
+        document.getElementById('expiredTab').classList.add('active');
+      }
+    }
+
+    async function clearExpiry(userId) {
+      if (!confirm('Are you sure you want to clear the expiry for this user?')) return;
+
+      try {
+        const response = await fetch(`/api/users/${userId}/expiry`, {
+          method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert('Expiry cleared', 'success');
+          loadStats();
+          loadExpiringUsers();
+          loadExpiredUsers();
+        } else {
+          showAlert(data.error || 'Failed to clear expiry', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function triggerWarnings() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      try {
+        const response = await fetch('/api/users/expiry/send-warnings', {
+          method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert(`Sent ${data.count} warning notification(s)`, 'success');
+        } else {
+          showAlert(data.error || 'Failed to send warnings', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Expiry Warnings';
+      }
+    }
+
+    async function triggerDisable() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Disabling...';
+
+      try {
+        const response = await fetch('/api/users/expiry/disable-expired', {
+          method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert(`Disabled ${data.count} expired user(s)`, 'success');
+          loadStats();
+          loadExpiringUsers();
+          loadExpiredUsers();
+        } else {
+          showAlert(data.error || 'Failed to disable users', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Disable Expired Users';
+      }
+    }
+
+    function showAlert(message, type) {
+      const container = document.getElementById('alertContainer');
+      const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
+      container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      loadExpiringUsers();
+    });
+  </script>
+</body>
+</html>

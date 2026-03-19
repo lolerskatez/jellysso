@@ -1928,4 +1928,43 @@ router.get('/policy', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Invite management page
+router.get('/invites', requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/invites', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    console.error('Invite management page error:', error);
+    res.status(500).render('error', { message: 'Error loading invite page', code: 500 });
+  }
+});
+
+// Signup profiles management page
+router.get('/signup-profiles', requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/profiles', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    console.error('Signup profiles page error:', error);
+    res.status(500).render('error', { message: 'Error loading profiles page', code: 500 });
+  }
+});
+
+// User expiry management page
+router.get('/user-expiry', requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/expiry', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    console.error('User expiry management page error:', error);
+    res.status(500).render('error', { message: 'Error loading expiry page', code: 500 });
+  }
+});
+
 module.exports = router;

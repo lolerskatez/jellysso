@@ -11,7 +11,7 @@ class SignupProfileManager {
 
   constructor() {
     this.db = DatabaseManager.db;
-    this.logger = AuditLogger.getInstance();
+    this.logger = AuditLogger;
     this.initializeTables();
     this.createDefaultProfiles();
   }

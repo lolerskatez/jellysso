@@ -13,7 +13,7 @@ class UserExpiryManager {
 
   constructor() {
     this.db = DatabaseManager.db;
-    this.logger = AuditLogger.getInstance();
+    this.logger = AuditLogger;
     this.notificationManager = NotificationManager.getInstance();
     this.initializeTables();
     this.startExpiryCheckDaemon();

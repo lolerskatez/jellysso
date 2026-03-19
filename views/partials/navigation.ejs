@@ -115,6 +115,30 @@
           Policy Management
         </a>
       </div>
+
+      <!-- Phase 2: User Lifecycle Management -->
+      <div style="margin: var(--spacing-lg) 0; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: var(--spacing-md);">
+        <div style="padding: 0 var(--spacing-lg); font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); font-weight: 600; letter-spacing: 0.5px;">User Lifecycle</div>
+      </div>
+
+      <div class="nav-item">
+        <a href="/admin/invites" class="nav-link <%= currentPage === 'admin-invites' ? 'active' : '' %>">
+          <i class="fas fa-envelope"></i>
+          Invite Management
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/signup-profiles" class="nav-link <%= currentPage === 'admin-profiles' ? 'active' : '' %>">
+          <i class="fas fa-user-tie"></i>
+          Signup Profiles
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="/admin/user-expiry" class="nav-link <%= currentPage === 'admin-expiry' ? 'active' : '' %>">
+          <i class="fas fa-hourglass-end"></i>
+          User Expiry
+        </a>
+      </div>
     <% } %>
   </nav>
 

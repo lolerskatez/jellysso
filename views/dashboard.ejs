@@ -409,6 +409,53 @@
 
         <!-- Dashboard Grid -->
         <div class="dashboard-grid">
+          <!-- Phase 2: User Lifecycle Stats Row (New) -->
+          <div class="col-12">
+            <div style="padding: 0 var(--spacing-lg); margin: var(--spacing-lg) 0; border-top: 2px solid var(--border-color); padding-top: var(--spacing-lg);">
+              <h3 style="margin: 0 0 var(--spacing-md) 0; display: flex; align-items: center; gap: var(--spacing-sm); color: var(--gray-900);">
+                <i class="fas fa-users-cog" style="color: var(--primary);"></i>
+                User Lifecycle Management
+              </h3>
+            </div>
+          </div>
+
+          <div class="stat-card col-3">
+            <div class="stat-icon primary">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="phaseStatInvites">-</h3>
+              <p>Pending Invites</p>
+            </div>
+          </div>
+          <div class="stat-card col-3">
+            <div class="stat-icon success">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="phaseStatAccepted">-</h3>
+              <p>Accepted Invites</p>
+            </div>
+          </div>
+          <div class="stat-card col-3">
+            <div class="stat-icon warning">
+              <i class="fas fa-hourglass-end"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="phaseStatExpiring">-</h3>
+              <p>Expiring Soon</p>
+            </div>
+          </div>
+          <div class="stat-card col-3">
+            <div class="stat-icon cyan">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="phaseStatProfiles">-</h3>
+              <p>Active Profiles</p>
+            </div>
+          </div>
+
           <!-- Recent Activity Widget -->
           <div class="widget col-12">
             <div class="widget-header">
@@ -551,5 +598,52 @@
   <script src="/js/mobile-nav.js"></script>
   <script src="/js/admin-dashboard-page.js"></script>
   <script src="/js/admin-dashboard.js"></script>
+
+  <!-- Phase 2: User Lifecycle Stats -->
+  <script>
+    async function loadPhase2Stats() {
+      try {
+        // Load invite stats
+        const inviteRes = await fetch('/api/invites/stats');
+        const inviteData = await inviteRes.json();
+        if (inviteData.success) {
+          document.getElementById('phaseStatInvites').textContent = inviteData.stats.pending || 0;
+          document.getElementById('phaseStatAccepted').textContent = inviteData.stats.accepted || 0;
+        }
+
+        // Load user expiry stats
+        const expiryRes = await fetch('/api/users/expiry/stats');
+        const expiryData = await expiryRes.json();
+        if (expiryData.success) {
+          document.getElementById('phaseStatExpiring').textContent = expiryData.stats.expiringWithin7Days || 0;
+        }
+
+        // Load profile stats
+        try {
+          const profileRes = await fetch('/api/signup-profiles');
+          const profileData = await profileRes.json();
+          if (profileData.success) {
+            document.getElementById('phaseStatProfiles').textContent = profileData.profiles.filter(p => p.isActive).length || 0;
+          }
+        } catch (e) {
+          console.warn('Could not load profile stats:', e);
+          document.getElementById('phaseStatProfiles').textContent = '-';
+        }
+      } catch (error) {
+        console.error('Error loading Phase 2 stats:', error);
+        document.getElementById('phaseStatInvites').textContent = '0';
+        document.getElementById('phaseStatAccepted').textContent = '0';
+        document.getElementById('phaseStatExpiring').textContent = '0';
+        document.getElementById('phaseStatProfiles').textContent = '0';
+      }
+    }
+
+    // Load Phase 2 stats on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadPhase2Stats);
+    } else {
+      loadPhase2Stats();
+    }
+  </script>
 </body>
 </html>

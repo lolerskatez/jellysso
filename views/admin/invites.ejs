@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invite Management - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #0066cc);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin: 5px 0 0 0;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show { display: flex; }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: var(--spacing-2xl);
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
+    }
+
+    .invites-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+
+    .invites-table th {
+      background: var(--bg-light);
+      padding: var(--spacing-md);
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .invites-table td {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .invites-table tbody tr:hover {
+      background: var(--bg-light);
+    }
+
+    .code-badge {
+      background: var(--bg-light);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-accepted { background: #d1fae5; color: #065f46; }
+    .status-expired { background: #fee2e2; color: #991b1b; }
+    .status-revoked { background: #e5e7eb; color: #374151; }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-info {
+      background: var(--primary);
+      color: white;
+    }
+
+    .alert {
+      padding: var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .alert-success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left: 4px solid #10b981;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 4px solid #ef4444;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: var(--spacing-2xl);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto var(--spacing-lg);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: var(--spacing-2xl);">
+    <div class="page-header">
+      <h1 style="margin: 0;">Invite Management</h1>
+      <button class="btn-primary" onclick="openCreateModal()">
+        <i class="fas fa-plus"></i> Create Invite
+      </button>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-value" id="statTotal">-</p>
+        <p class="stat-label">Total Invites</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statPending">-</p>
+        <p class="stat-label">Pending</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statAccepted">-</p>
+        <p class="stat-label">Accepted</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statExpired">-</p>
+        <p class="stat-label">Expired</p>
+      </div>
+    </div>
+
+    <div id="loadingContainer" class="loading">
+      <div class="spinner"></div>
+      <p>Loading invites...</p>
+    </div>
+
+    <div id="tableContainer" style="overflow-x: auto;">
+      <table class="invites-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Profile</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Expires</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="invitesTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Invite Modal -->
+  <div id="createModal" class="modal">
+    <div class="modal-content">
+      <h2 style="margin-top: 0;">Create Invite(s)</h2>
+      
+      <form id="createForm" onsubmit="handleCreateInvite(event)">
+        <div class="form-group">
+          <label class="form-label">Signup Profile</label>
+          <select id="profileSelect" class="form-control" required>
+            <option value="">Select a profile...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Number of Invites</label>
+          <input type="number" id="countInput" class="form-control" value="1" min="1" max="1000" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Expiry (Days) - Leave blank for no expiry</label>
+          <input type="number" id="expiryInput" class="form-control" min="1" max="365" placeholder="30">
+        </div>
+
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button type="submit" class="btn-primary" style="flex: 1;">Create</button>
+          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Load data on page load
+    async function loadData() {
+      try {
+        // Load statistics
+        const statsResponse = await fetch('/api/invites/stats');
+        const statsData = await statsResponse.json();
+        if (statsData.success) {
+          document.getElementById('statTotal').textContent = statsData.stats.total || 0;
+          document.getElementById('statPending').textContent = statsData.stats.pending || 0;
+          document.getElementById('statAccepted').textContent = statsData.stats.accepted || 0;
+          document.getElementById('statExpired').textContent = statsData.stats.expired || 0;
+        }
+
+        // Load invites
+        const invitesResponse = await fetch('/api/invites?limit=100');
+        const invitesData = await invitesResponse.json();
+        if (invitesData.success) {
+          populateInvitesTable(invitesData.invites);
+        }
+
+        // Load profiles for dropdown
+        const profilesResponse = await fetch('/api/signup-profiles');
+        const profilesData = await profilesResponse.json();
+        if (profilesData.success) {
+          const select = document.getElementById('profileSelect');
+          profilesData.profiles.forEach(profile => {
+            const option = document.createElement('option');
+            option.value = profile.id;
+            option.textContent = profile.name;
+            select.appendChild(option);
+          });
+        }
+
+        document.getElementById('loadingContainer').style.display = 'none';
+        document.getElementById('tableContainer').style.display = 'block';
+      } catch (error) {
+        showAlert('Failed to load data: ' + error.message, 'error');
+      }
+    }
+
+    function populateInvitesTable(invites) {
+      const tbody = document.getElementById('invitesTableBody');
+      tbody.innerHTML = '';
+
+      if (invites.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: var(--spacing-2xl);">No invites yet</td></tr>';
+        return;
+      }
+
+      invites.forEach(invite => {
+        const row = document.createElement('tr');
+        const createdDate = new Date(invite.createdAt).toLocaleDateString();
+        const expiresDate = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : 'Never';
+        
+        row.innerHTML = `
+          <td>
+            <span class="code-badge" onclick="copyToClipboard('${invite.code}')" title="Click to copy">
+              ${invite.code}
+            </span>
+          </td>
+          <td>${invite.signupProfileId}</td>
+          <td>
+            <span class="status-badge status-${invite.status}">
+              ${invite.status}
+            </span>
+          </td>
+          <td>${createdDate}</td>
+          <td>${expiresDate}</td>
+          <td>
+            ${invite.status === 'pending' ? `
+              <button class="btn-small btn-danger" onclick="revokeInvite('${invite.code}')">Revoke</button>
+            ` : '-'}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openCreateModal() {
+      document.getElementById('createModal').classList.add('show');
+      document.getElementById('createForm').reset();
+    }
+
+    function closeModal() {
+      document.getElementById('createModal').classList.remove('show');
+    }
+
+    async function handleCreateInvite(event) {
+      event.preventDefault();
+
+      const profileId = document.getElementById('profileSelect').value;
+      const count = parseInt(document.getElementById('countInput').value);
+      const expiryDays = document.getElementById('expiryInput').value ? parseInt(document.getElementById('expiryInput').value) : null;
+
+      if (!profileId) {
+        showAlert('Please select a profile', 'error');
+        return;
+      }
+
+      const btn = event.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      try {
+        const response = await fetch('/api/invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            signupProfileId: profileId,
+            count,
+            expiryDays
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert(`Created ${data.count} invite(s)!`, 'success');
+          closeModal();
+          loadData(); // Refresh table
+        } else {
+          showAlert(data.error || 'Failed to create invites', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create';
+      }
+    }
+
+    async function revokeInvite(code) {
+      if (!confirm('Are you sure you want to revoke this invite?')) return;
+
+      try {
+        const response = await fetch(`/api/invites/${code}`, { method: 'DELETE' });
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert('Invite revoked', 'success');
+          loadData();
+        } else {
+          showAlert(data.error || 'Failed to revoke invite', 'error');
+        }
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      }
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showAlert('Copied to clipboard!', 'success');
+      });
+    }
+
+    function showAlert(message, type) {
+      const container = document.getElementById('alertContainer');
+      const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
+      container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+
+    // Load on page load
+    window.addEventListener('DOMContentLoaded', loadData);
+
+    // Close modal on ESC key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+</html>

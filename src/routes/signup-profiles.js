@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const SignupProfileManager = require('../models/SignupProfileManager');
 const AuditLogger = require('../models/AuditLogger');
-const { requireAuth, requireAdmin, csrfProtection } = require('../middleware');
+const { csrfProtection } = require('../middleware/csrf');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
 // Initialize managers
 const profileManager = SignupProfileManager.getInstance();
-const auditLogger = AuditLogger.getInstance();
+const auditLogger = AuditLogger;
 
 // Rate limiting for public endpoints
 const publicLimiter = rateLimit({

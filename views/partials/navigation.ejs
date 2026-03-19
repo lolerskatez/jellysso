@@ -55,6 +55,14 @@
       </a>
     </div>
 
+    <!-- My Account (for all users) -->
+    <div class="nav-item">
+      <a href="/account" class="nav-link <%= currentPage === 'account' ? 'active' : '' %>">
+        <i class="fas fa-user"></i>
+        My Account
+      </a>
+    </div>
+
     <!-- Admin Tools Section (only for admins) -->
     <% if (user?.Policy?.IsAdministrator) { %>
       <div style="margin: var(--spacing-lg) 0; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: var(--spacing-md);">

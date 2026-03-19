@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="My Account - JellySSO">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>My Account - JellySSO</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <link rel="stylesheet" href="/css/account.css">
+  <script src="/js/account.js" defer></script>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('partials/navigation', { user, currentPage: 'account' }) %>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="btn btn-secondary" id="sidebarToggle" style="display: none;">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="page-title"><i class="fas fa-user"></i> My Account</h1>
+        </div>
+        <div class="header-right">
+          <% if (typeof user !== 'undefined' && user) { %>
+          <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-left: var(--spacing-lg);">
+            <span style="color: var(--text-secondary);">
+              <strong><%= user.Name %></strong> 
+              <% if (user.Policy && user.Policy.IsAdministrator) { %>
+              <span style="margin-left: var(--spacing-sm);">👑 Administrator</span>
+              <% } %>
+            </span>
+            <button id="logoutBtn" class="btn btn-sm btn-secondary">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+          <% } %>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <div class="account-header" style="margin-bottom: 2rem;">
+          <h2 style="margin: 0 0 0.5rem 0;">Manage your account settings, security, and preferences</h2>
+        </div>
+
+        <div class="account-container">
+          <!-- Sidebar Navigation -->
+          <nav class="account-sidebar">
+            <ul class="account-nav">
+              <li><a href="#profile" class="account-nav-item active" data-section="profile">
+                <i class="fas fa-id-card"></i> Profile
+              </a></li>
+              <li><a href="#security" class="account-nav-item" data-section="security">
+                <i class="fas fa-lock"></i> Security
+              </a></li>
+              <li><a href="#notifications" class="account-nav-item" data-section="notifications">
+                <i class="fas fa-bell"></i> Notifications
+              </a></li>
+              <li><a href="#sessions" class="account-nav-item" data-section="sessions">
+                <i class="fas fa-device"></i> Sessions
+              </a></li>
+              <li><a href="#privacy" class="account-nav-item" data-section="privacy">
+                <i class="fas fa-shield-alt"></i> Privacy
+              </a></li>
+            </ul>
+          </nav>
+
+          <!-- Main Content -->
+          <div class="account-content">
+            <!-- Profile Section -->
+            <section id="profile" class="account-section active">
+              <div class="section-header">
+                <h2><i class="fas fa-id-card"></i> Account Information</h2>
+                <p>View and manage your account details</p>
+              </div>
+
+              <div class="section-card">
+                <h3>Basic Information</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Jellyfin Username</label>
+                    <input type="text" id="username" class="form-control" readonly>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="userId" class="form-control" readonly>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" id="firstName" class="form-control" placeholder="Enter first name">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" id="lastName" class="form-control" placeholder="Enter last name">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="Enter email">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Account Type</label>
+                    <input type="text" id="authMethod" class="form-control" readonly>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" id="displayName" class="form-control" placeholder="Optional display name">
+                  </div>
+                </div>
+
+                <button id="saveProfileBtn" class="btn btn-primary" disabled>Save Changes</button>
+                <div id="profileStatus" class="form-status"></div>
+              </div>
+            </section>
+
+            <!-- Security Section -->
+            <section id="security" class="account-section">
+              <div class="section-header">
+                <h2><i class="fas fa-lock"></i> Security Settings</h2>
+                <p>Change password and manage authentication</p>
+              </div>
+
+              <!-- Change Password Card -->
+              <div class="section-card">
+                <h3>Change Password</h3>
+                <p class="card-description">Update your account password. You'll need to sign in again after changing it.</p>
+
+                <div id="passwordWarning" class="alert alert-warning" style="display:none;">
+                  <i class="fas fa-info-circle"></i> Password changes are managed by your SSO provider.
+                </div>
+
+                <div id="passwordForm" style="display:block;">
+                  <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" id="currentPassword" class="form-control" placeholder="Enter current password">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" id="newPassword" class="form-control" placeholder="Enter at least 8 characters">
+                    <small class="form-help">Must be at least 8 characters</small>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="form-control" placeholder="Confirm new password">
+                  </div>
+
+                  <button id="changePasswordBtn" class="btn btn-primary" disabled>Change Password</button>
+                  <div id="passwordStatus" class="form-status"></div>
+                </div>
+              </div>
+
+              <!-- Generated Password Card (SSO only) -->
+              <div class="section-card" id="otpCard" style="display:none;">
+                <h3>App Password for SSO Account</h3>
+                <p class="card-description">Generate a one-time password to use with apps that don't support SSO.</p>
+
+                <div id="otpStatus" class="form-status"></div>
+                <button id="generatePasswordBtn" class="btn btn-primary">Generate Password</button>
+              </div>
+            </section>
+
+            <!-- Notifications Section -->
+            <section id="notifications" class="account-section">
+              <div class="section-header">
+                <h2><i class="fas fa-bell"></i> Notification Preferences</h2>
+                <p>Choose how you want to receive notifications</p>
+              </div>
+
+              <div class="section-card">
+                <div id="availableChannels" class="channels-grid">
+                  <!-- Dynamically populated -->
+                </div>
+
+                <div class="form-group" style="margin-top: 2rem;">
+                  <label class="form-checkbox">
+                    <input type="checkbox" id="notificationDigest">
+                    <span>Receive digest of notifications instead of individual messages</span>
+                  </label>
+                </div>
+
+                <button id="saveNotificationsBtn" class="btn btn-primary" disabled>Save Preferences</button>
+                <div id="notificationsStatus" class="form-status"></div>
+              </div>
+            </section>
+
+            <!-- Sessions Section -->
+            <section id="sessions" class="account-section">
+              <div class="section-header">
+                <h2><i class="fas fa-device"></i> Active Sessions</h2>
+                <p>Manage devices and log out from other sessions</p>
+              </div>
+
+              <div class="section-card">
+                <h3>Currently Active</h3>
+                <div id="activeSessions" class="sessions-list">
+                  <p class="no-data">Loading sessions...</p>
+                </div>
+              </div>
+
+              <div class="section-card">
+                <h3>Session History</h3>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Login Time</th>
+                        <th>Logout Time</th>
+                        <th>IP Address</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sessionHistory">
+                      <tr><td colspan="5" class="no-data">Loading history...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="historyPagination" class="pagination"></div>
+              </div>
+            </section>
+
+            <!-- Privacy Section -->
+            <section id="privacy" class="account-section">
+              <div class="section-header">
+                <h2><i class="fas fa-shield-alt"></i> Privacy & Data</h2>
+                <p>GDPR compliance and data management</p>
+              </div>
+
+              <div class="section-card">
+                <h3>Data Export</h3>
+                <p class="card-description">Download all your personal data in JSON format. This includes your profile, settings, history, and account activity logs.</p>
+                <button id="exportDataBtn" class="btn btn-secondary">
+                  <i class="fas fa-download"></i> Download My Data
+                </button>
+                <div id="exportStatus" class="form-status"></div>
+              </div>
+
+              <div class="section-card warning">
+                <h3><i class="fas fa-exclamation-triangle"></i> Account Deletion</h3>
+                <p class="card-description">Permanently delete your account. This cannot be undone.</p>
+                <button class="btn btn-danger" onclick="alert('Please contact an administrator to delete your account.')">Request Account Deletion</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

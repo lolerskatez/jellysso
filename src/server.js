@@ -640,6 +640,22 @@ app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
   res.render('playback', { user: req.session.user, csrfToken: req.csrfToken(), currentPage: 'playback' });
 });
 
+app.get('/account', requireWebAuth, csrfProtection, async (req, res) => {
+  try {
+    res.render('account', { 
+      user: req.session.user, 
+      csrfToken: req.csrfToken(),
+      currentPage: 'account'
+    });
+  } catch (err) {
+    logger.error('Account page error:', err);
+    res.status(500).render('error', { 
+      message: 'Account page error',
+      details: err.message 
+    });
+  }
+});
+
 app.get('/membership', requireWebAuth, csrfProtection, async (req, res) => {
   const PolicyManager = require('./models/PolicyManager');
   const UserProfileManager = require('./models/UserProfileManager');

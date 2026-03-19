@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - JellySSO</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .signup-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 500px;
+      padding: 40px;
+    }
+
+    .signup-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .signup-header h1 {
+      color: #333;
+      font-size: 28px;
+      margin: 0 0 10px 0;
+    }
+
+    .signup-header p {
+      color: #666;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .profile-info {
+      background: #f5f7fa;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .profile-info h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .profile-info-item {
+      color: #666;
+      margin: 5px 0;
+    }
+
+    .strength-indicator {
+      margin-top: 8px;
+      height: 6px;
+      background: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .strength-bar {
+      height: 100%;
+      width: 0%;
+      transition: width 0.2s, background-color 0.2s;
+    }
+
+    .strength-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .error-message {
+      color: #d32f2f;
+      font-size: 14px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .success-message {
+      color: #388e3c;
+      font-size: 14px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .login-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    .alert {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #d32f2f;
+    }
+
+    .alert-warning {
+      background: #fff3e0;
+      color: #e65100;
+      border-left: 4px solid #ff9800;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="signup-container">
+    <div class="signup-header">
+      <h1>Welcome to JellySSO</h1>
+      <p>Create your account</p>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <form id="signupForm" style="display: none;">
+      <div class="profile-info">
+        <h3>Your Account Details</h3>
+        <div id="profileDetails"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required placeholder="Choose a username">
+        <div class="error-message" id="usernameError"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email (Optional)</label>
+        <input type="email" id="email" name="email" placeholder="your@email.com">
+        <div class="error-message" id="emailError"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required placeholder="Min. 8 characters">
+        <div class="strength-indicator">
+          <div class="strength-bar" id="strengthBar"></div>
+        </div>
+        <div class="strength-text" id="strengthText">Weak</div>
+        <div class="error-message" id="passwordError"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm password">
+        <div class="error-message" id="confirmPasswordError"></div>
+      </div>
+
+      <button type="submit" id="submitBtn">Create Account</button>
+
+      <div class="login-link">
+        Already have an account? <a href="/login">Sign in</a>
+      </div>
+    </form>
+
+    <div id="loadingContainer" style="text-align: center;">
+      <div class="loading"></div>
+      <p style="color: #666;">Validating your invite...</p>
+    </div>
+  </div>
+
+  <script>
+    const inviteCode = new URLSearchParams(window.location.search).get('invite');
+
+    if (!inviteCode) {
+      showAlert('error', 'This link is incomplete. Please use the full signup link from your invite.');
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('loadingContainer').style.display = 'none';
+    }
+
+    // Validate invite on page load
+    async function validateInvite() {
+      try {
+        const response = await fetch(`/api/invites/${inviteCode}`);
+        const data = await response.json();
+
+        if (!data.success) {
+          showAlert('error', data.error || 'Invalid invite code');
+          return;
+        }
+
+        // Load signup profile
+        await loadSignupProfile(data.invite.signupProfileId);
+        document.getElementById('loadingContainer').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'block';
+
+        // Track that this page was viewed
+        await fetch(`/api/invites/${inviteCode}/usage-stats`);
+
+      } catch (error) {
+        showAlert('error', 'Failed to validate invite. Please try again.');
+      }
+    }
+
+    // Load signup profile details
+    async function loadSignupProfile(profileId) {
+      try {
+        const response = await fetch(`/api/signup-profiles/${profileId}`);
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error('Profile not found');
+        }
+
+        const profile = data.profile;
+        const details = document.getElementById('profileDetails');
+
+        let html = `
+          <div class="profile-info-item"><strong>${profile.name}</strong></div>
+          <div class="profile-info-item">${profile.description || 'Standard account'}</div>
+        `;
+
+        if (profile.jellyfinTier) {
+          html += `<div class="profile-info-item">Tier: <strong>${profile.jellyfinTier}</strong></div>`;
+        }
+
+        if (profile.jellyfinLibraryAccess) {
+          const libraries = Array.isArray(profile.jellyfinLibraryAccess)
+            ? profile.jellyfinLibraryAccess.join(', ')
+            : 'All';
+          html += `<div class="profile-info-item">Access: <strong>${libraries}</strong></div>`;
+        }
+
+        details.innerHTML = html;
+
+        // Store profile in session for later
+        window.signupProfile = profile;
+
+      } catch (error) {
+        showAlert('error', 'Failed to load profile information');
+      }
+    }
+
+    // Password strength checker
+    document.getElementById('password').addEventListener('input', function () {
+      const password = this.value;
+      let strength = 0;
+      let strengthText = 'Weak';
+      let strengthColor = '#d32f2f';
+
+      if (password.length >= 8) strength++;
+      if (password.length >= 12) strength++;
+      if (/[A-Z]/.test(password)) strength++;
+      if (/[0-9]/.test(password)) strength++;
+      if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+      const strengthPercentages = [20, 40, 60, 80, 100];
+      const strengthTexts = ['Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+      const strengthColors = ['#d32f2f', '#f57c00', '#fbc02d', '#388e3c', '#1976d2'];
+
+      strength = Math.min(strength, 5);
+      const bar = document.getElementById('strengthBar');
+      bar.style.width = strengthPercentages[strength - 1] + '%';
+      bar.style.backgroundColor = strengthColors[strength - 1];
+      document.getElementById('strengthText').textContent = strengthTexts[strength - 1];
+      document.getElementById('strengthText').style.color = strengthColors[strength - 1];
+    });
+
+    // Form submission
+    document.getElementById('signupForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      // Validation
+      let hasError = false;
+
+      if (!username) {
+        showFieldError('usernameError', 'Username is required');
+        hasError = true;
+      }
+
+      if (password.length < 8) {
+        showFieldError('passwordError', 'Password must be at least 8 characters');
+        hasError = true;
+      }
+
+      if (password !== confirmPassword) {
+        showFieldError('confirmPasswordError', 'Passwords do not match');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      // Submit to signup endpoint
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      const originalText = submitBtn.textContent;
+      submitBtn.innerHTML = '<span class="loading"></span> Creating account...';
+
+      try {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            email: email || null,
+            password,
+            inviteCode,
+            signupProfileId: window.signupProfile.id
+          })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          showAlert('error', data.error || 'Failed to create account');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
+        }
+
+        // Accept the invite
+        await fetch(`/api/invites/${inviteCode}/accept`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: data.user.id })
+        });
+
+        // Success!
+        showAlert('success', 'Account created! Redirecting to login...');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+
+      } catch (error) {
+        showAlert('error', error.message || 'An error occurred');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+
+    function showAlert(type, message) {
+      const container = document.getElementById('alertContainer');
+      const alertClass = type === 'error' ? 'alert-error' : 'alert-warning';
+      container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    }
+
+    function showFieldError(fieldId, message) {
+      document.getElementById(fieldId).textContent = message;
+      document.getElementById(fieldId).style.display = 'block';
+    }
+
+    // Clear field errors on input
+    ['username', 'email', 'password', 'confirmPassword'].forEach(field => {
+      document.getElementById(field).addEventListener('input', function () {
+        const errorId = this.id + 'Error';
+        const errorEl = document.getElementById(errorId);
+        if (errorEl) errorEl.style.display = 'none';
+      });
+    });
+
+    // Validate invite on load
+    validateInvite();
+  </script>
+</body>
+</html>

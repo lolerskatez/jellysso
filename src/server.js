@@ -419,6 +419,7 @@ app.get('/api/csrf-token', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/users', require('./routes/bulk-operations')); // Bulk user operations
+app.use('/api/users/expiry', require('./routes/user-expiry')); // User expiry management
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/quickconnect', require('./routes/quickconnect'));
 app.use('/api/activity', require('./routes/activity'));
@@ -430,6 +431,8 @@ app.use('/api/policy', require('./routes/policy'));
 app.use('/api/me', require('./routes/me'));
 app.use('/api/monitoring', require('./routes/monitoring'));
 app.use('/api/announcements', require('./routes/announcements')); // Admin announcements
+app.use('/api/invites', require('./routes/invites')); // User invites
+app.use('/api/signup-profiles', require('./routes/signup-profiles')); // Signup profiles
 app.use('/policy', require('./routes/user-policy'));
 app.use('/setup', require('./routes/setup'));
 
@@ -597,6 +600,18 @@ app.get('/auth/reset-password', async (req, res) => {
   });
 });
 
+app.get('/signup', async (req, res) => {
+  // If already logged in, redirect to quickconnect
+  if (req.session && req.session.user) {
+    return res.redirect('/quickconnect');
+  }
+
+  // Render signup page with public invite validation
+  res.render('signup', {
+    appName: SetupManager.getConfig().appName || 'JellySSO'
+  });
+});
+
 app.get('/quickconnect', requireWebAuth, csrfProtection, (req, res) => {
   res.render('quickconnect', { user: req.session.user, csrfToken: req.csrfToken() });
 });
@@ -714,6 +729,20 @@ app.use(errorHandler);
     // Initialize OTP system
     await OTPManager.initializeSchema();
     console.log('✅ OTP system initialized');
+
+    // Initialize Phase 2 invite system managers
+    const InviteManager = require('./models/InviteManager');
+    const SignupProfileManager = require('./models/SignupProfileManager');
+    const UserExpiryManager = require('./models/UserExpiryManager');
+    
+    InviteManager.getInstance();
+    console.log('✅ Invite system initialized');
+    
+    SignupProfileManager.getInstance();
+    console.log('✅ Signup profiles ready');
+    
+    UserExpiryManager.getInstance();
+    console.log('✅ User expiry daemon started');
 
     await PluginManager.initialize();
     console.log('✅ Plugin system ready');

@@ -19,6 +19,7 @@ const { requestIdMiddleware } = require('./middleware/request-id');
 const { errorHandler, asyncHandler, AppError } = require('./middleware/error-handler');
 const { criticalLimiter, adminLimiter, apiLimiter, publicLimiter } = require('./middleware/rate-limit');
 const { AccountLockoutManager } = require('./models/AccountLockoutManager');
+const CONSTANTS = require('./config/constants');
 const crypto = require('crypto');
 require('dotenv').config();
 
@@ -97,7 +98,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Configure Helmet with strict CSP (no unsafe-inline)
 const isProduction = process.env.NODE_ENV === 'production';
-const useHttps = false; // Force HTTP even if environment variable is set
+const useHttps = isProduction || process.env.USE_HTTPS === 'true';
 
 // Generate nonce for inline styles/scripts (more secure than unsafe-inline)
 const generateNonce = () => require('crypto').randomBytes(16).toString('hex');

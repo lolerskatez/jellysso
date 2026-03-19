@@ -21,7 +21,7 @@ class PasswordPolicyManager {
    * Initialize database schema
    */
   async initializeSchema() {
-    const db = DatabaseManager.getInstance();
+    const db = DatabaseManager.db;
 
     return new Promise((resolve, reject) => {
       db.serialize(() => {
@@ -99,7 +99,7 @@ class PasswordPolicyManager {
    */
   async getPolicySettings() {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT * FROM password_policy_settings WHERE id = 1`,
         (err, row) => {
@@ -135,7 +135,7 @@ class PasswordPolicyManager {
    */
   async updatePolicySettings(settings) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const {
         expiration_days,
         min_length,
@@ -224,7 +224,7 @@ class PasswordPolicyManager {
    */
   async isPasswordReused(userId, passwordHash, historyCount) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT COUNT(*) as count FROM password_history 
          WHERE user_id = ? AND password_hash = ?
@@ -247,7 +247,7 @@ class PasswordPolicyManager {
    */
   async recordPasswordChange(userId, passwordHash) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const expirationDays = 90; // Default, should be from policy
 
       db.serialize(() => {
@@ -289,7 +289,7 @@ class PasswordPolicyManager {
    */
   async getUserPasswordExpiry(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT * FROM user_password_expiry WHERE user_id = ?`,
         [userId],
@@ -335,7 +335,7 @@ class PasswordPolicyManager {
    */
   async forcePasswordChange(userId, reason = 'Admin required') {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `INSERT OR REPLACE INTO user_password_expiry 
          (user_id, force_change, change_required_at)
@@ -359,7 +359,7 @@ class PasswordPolicyManager {
    */
   async getExpiredPasswordUsers(limit = 50) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT user_id, expires_at, force_change 
          FROM user_password_expiry 
@@ -383,7 +383,7 @@ class PasswordPolicyManager {
    */
   async sendExpiryNotifications(daysBeforeExpiry = 7) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const cutoffDate = new Date(Date.now() + daysBeforeExpiry * 24 * 60 * 60 * 1000).toISOString();
 
       db.all(
@@ -418,7 +418,7 @@ class PasswordPolicyManager {
    */
   async getPasswordHistory(userId, limit = 10) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, changed_at FROM password_history 
          WHERE user_id = ? 
@@ -442,7 +442,7 @@ class PasswordPolicyManager {
    */
   async cleanupPasswordHistory(daysOld = 365) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000).toISOString();
 
       db.run(

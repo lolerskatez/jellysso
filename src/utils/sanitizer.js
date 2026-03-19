@@ -13,8 +13,7 @@ const defaultOptions = {
   onIgnoreTagAttr: null,
   onTagAttr: null,
   onTag: null,
-  css: false,
-  escapeHtml: true
+  css: false
 };
 
 /**

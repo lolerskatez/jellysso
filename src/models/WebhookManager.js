@@ -22,7 +22,7 @@ class WebhookManager {
    * Initialize database schema
    */
   async initializeSchema() {
-    const db = DatabaseManager.getInstance();
+    const db = DatabaseManager.db;
 
     return new Promise((resolve, reject) => {
       db.serialize(() => {
@@ -98,7 +98,7 @@ class WebhookManager {
    */
   async createWebhook(userId, url, events, secret = null) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const eventsJson = JSON.stringify(events);
 
       db.run(
@@ -122,7 +122,7 @@ class WebhookManager {
    */
   async getUserWebhooks(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, url, events, active, created_at FROM webhooks WHERE user_id = ? ORDER BY created_at DESC`,
         [userId],
@@ -147,7 +147,7 @@ class WebhookManager {
    */
   async getWebhook(webhookId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT * FROM webhooks WHERE id = ?`,
         [webhookId],
@@ -173,7 +173,7 @@ class WebhookManager {
    */
   async updateWebhook(webhookId, updates) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const { url, events, active, secret } = updates;
       const eventsJson = events ? JSON.stringify(events) : null;
 
@@ -221,7 +221,7 @@ class WebhookManager {
    */
   async deleteWebhook(webhookId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
 
       db.serialize(() => {
         // Delete webhook events
@@ -246,7 +246,7 @@ class WebhookManager {
    */
   async triggerEvent(eventType, payload, userId = null) {
     try {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
 
       // Find webhooks subscribed to this event
       const query = userId
@@ -277,7 +277,7 @@ class WebhookManager {
    */
   async queueWebhookEvent(webhookId, eventType, payload) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const payloadJson = JSON.stringify(payload);
 
       db.run(
@@ -365,7 +365,7 @@ class WebhookManager {
    */
   async updateWebhookEventStatus(webhookId, eventType, status, responseCode = null, responseBody = null) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `UPDATE webhook_events 
          SET status = ?, response_code = ?, response_body = ?, attempts = attempts + 1, last_attempt = CURRENT_TIMESTAMP
@@ -389,7 +389,7 @@ class WebhookManager {
    */
   async getWebhookEvents(webhookId, limit = 50, offset = 0) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, event_type, status, response_code, attempts, created_at 
          FROM webhook_events 
@@ -414,7 +414,7 @@ class WebhookManager {
    */
   async retryFailedEvents(webhookId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, event_type, payload FROM webhook_events 
          WHERE webhook_id = ? AND status = 'failed'`,
@@ -442,7 +442,7 @@ class WebhookManager {
    */
   async cleanupOldEvents(daysOld = 30) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000).toISOString();
 
       db.run(

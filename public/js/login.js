@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const usernameField = document.getElementById('username');
 
   function showMessage(message, type = 'error') {
-    messageDiv.style.display = 'flex';
+    messageDiv.classList.remove('hidden');
     messageDiv.className = `alert ${type}`;
     const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
     messageDiv.innerHTML = `
@@ -19,12 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function setLoading(loading) {
     if (loading) {
-      loginLoading.style.display = 'inline-flex';
-      loginText.style.display = 'none';
+      loginLoading.classList.remove('hidden');
+      loginText.classList.add('hidden');
       loginBtn.disabled = true;
     } else {
-      loginLoading.style.display = 'none';
-      loginText.style.display = 'inline';
+      loginLoading.classList.add('hidden');
+      loginText.classList.remove('hidden');
       loginBtn.disabled = false;
     }
   }
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      messageDiv.style.display = 'none';
+      messageDiv.classList.add('hidden');
       setLoading(true);
 
       const formData = new FormData(e.target);

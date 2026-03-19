@@ -21,7 +21,7 @@ class SessionActivityManager {
    * Initialize database schema for session activity tracking
    */
   async initializeSchema() {
-    const db = DatabaseManager.getInstance();
+    const db = DatabaseManager;
 
     return new Promise((resolve, reject) => {
       db.serialize(() => {
@@ -78,7 +78,7 @@ class SessionActivityManager {
    */
   async recordLogin(userId, sessionId, ip, userAgent) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.run(
         `INSERT INTO session_activity (user_id, session_id, ip_address, user_agent) 
          VALUES (?, ?, ?, ?)`,
@@ -101,7 +101,7 @@ class SessionActivityManager {
    */
   async recordLogout(sessionId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.run(
         `UPDATE session_activity 
          SET logout_time = CURRENT_TIMESTAMP, status = 'closed'
@@ -125,7 +125,7 @@ class SessionActivityManager {
    */
   async updateActivity(sessionId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.run(
         `UPDATE session_activity 
          SET last_activity = CURRENT_TIMESTAMP 
@@ -148,7 +148,7 @@ class SessionActivityManager {
    */
   async getActiveSessions(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.all(
         `SELECT id, session_id, ip_address, user_agent, login_time, last_activity 
          FROM session_activity 
@@ -172,7 +172,7 @@ class SessionActivityManager {
    */
   async getSessionHistory(userId, limit = 50, offset = 0) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.all(
         `SELECT id, session_id, ip_address, user_agent, login_time, logout_time, 
                 CAST((julianday(logout_time) - julianday(login_time)) * 24 * 60 AS INTEGER) as duration_minutes,
@@ -199,7 +199,7 @@ class SessionActivityManager {
    */
   async terminateSession(sessionId, userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.run(
         `UPDATE session_activity 
          SET logout_time = CURRENT_TIMESTAMP, status = 'terminated'
@@ -223,7 +223,7 @@ class SessionActivityManager {
    */
   async getConcurrentSessionCount(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       db.get(
         `SELECT COUNT(*) as count FROM session_activity 
          WHERE user_id = ? AND status = 'active'`,
@@ -245,7 +245,7 @@ class SessionActivityManager {
    */
   async cleanupOldSessions(daysOld = 90) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager;
       const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000).toISOString();
       
       db.run(

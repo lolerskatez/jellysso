@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 
 class AccountLockoutManager {
   constructor() {
-    this.db = DatabaseManager.getInstance();
+    this.db = DatabaseManager.db;
     this.initializeDatabase();
   }
 

@@ -21,7 +21,7 @@ class SecurityAlertManager {
    * Initialize database schema
    */
   async initializeSchema() {
-    const db = DatabaseManager.getInstance();
+    const db = DatabaseManager.db;
 
     return new Promise((resolve, reject) => {
       db.serialize(() => {
@@ -97,7 +97,7 @@ class SecurityAlertManager {
    */
   async createAlert(userId, alertType, severity, title, message, metadata = {}, ip = null, userAgent = null) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const metadataJson = JSON.stringify(metadata);
 
       db.run(
@@ -150,7 +150,7 @@ class SecurityAlertManager {
    */
   async getUserAlerts(userId, limit = 50, offset = 0, unreadOnly = false) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const query = unreadOnly
         ? `SELECT id, alert_type, severity, title, message, metadata, ip_address, read, created_at 
            FROM security_alerts 
@@ -183,7 +183,7 @@ class SecurityAlertManager {
    */
   async markAlertAsRead(alertId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `UPDATE security_alerts SET read = 1 WHERE id = ?`,
         [alertId],
@@ -204,7 +204,7 @@ class SecurityAlertManager {
    */
   async markAllAlertsAsRead(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `UPDATE security_alerts SET read = 1 WHERE user_id = ?`,
         [userId],
@@ -225,7 +225,7 @@ class SecurityAlertManager {
    */
   async getUnreadCount(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT COUNT(*) as count FROM security_alerts WHERE user_id = ? AND read = 0`,
         [userId],
@@ -246,7 +246,7 @@ class SecurityAlertManager {
    */
   async getAlertPreferences(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT * FROM alert_preferences WHERE user_id = ?`,
         [userId],
@@ -283,7 +283,7 @@ class SecurityAlertManager {
    */
   async updateAlertPreferences(userId, preferences) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const {
         email_alerts,
         failed_login_alerts,
@@ -371,7 +371,7 @@ class SecurityAlertManager {
   async detectSuspiciousActivity(userId, ip, userAgent) {
     try {
       // Check for multiple failed logins from different IPs
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       
       db.get(
         `SELECT COUNT(DISTINCT ip_address) as unique_ips 
@@ -410,7 +410,7 @@ class SecurityAlertManager {
    */
   async getAlertsByType(alertType, limit = 50, offset = 0) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, user_id, alert_type, severity, title, message, created_at 
          FROM security_alerts 
@@ -435,7 +435,7 @@ class SecurityAlertManager {
    */
   async getCriticalAlerts(limit = 50) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, user_id, alert_type, severity, title, message, created_at 
          FROM security_alerts 
@@ -460,7 +460,7 @@ class SecurityAlertManager {
    */
   async cleanupOldAlerts(daysOld = 90) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000).toISOString();
 
       db.run(

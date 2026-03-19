@@ -6,7 +6,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const AuditLogger = require('../models/AuditLogger');
 const TokenManager = require('../models/TokenManager');
 const PolicyManager = require('../models/PolicyManager');
-const { AccountLockoutManager } = require('../models/AccountLockoutManager');
+const { getInstance: getAccountLockoutManager } = require('../models/AccountLockoutManager');
 const { csrfProtection } = require('../middleware/csrf');
 const { criticalLimiter } = require('../middleware/rate-limit');
 const { AppError } = require('../middleware/error-handler');
@@ -55,7 +55,7 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
   }
 
   try {
-    const lockoutManager = AccountLockoutManager.getInstance();
+    const lockoutManager = getAccountLockoutManager();
 
     // Check if account is locked
     const loginCheck = await lockoutManager.checkLoginAllowed(username, req.ip);
@@ -179,7 +179,7 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
     }
 
     // Record failed login attempt
-    const lockoutManager = AccountLockoutManager.getInstance();
+    const lockoutManager = getAccountLockoutManager();
     await lockoutManager.recordLoginAttempt(username, req.ip, false, reason);
     
     // Log the failed attempt

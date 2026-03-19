@@ -81,7 +81,7 @@ class DatabaseIndexes {
       const sql = `CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName} (${columnStr})`;
       
       await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run(sql, (err) => {
+        DatabaseManager.db.run(sql, (err) => {
           if (err) reject(err);
           else resolve();
         });
@@ -101,7 +101,7 @@ class DatabaseIndexes {
    */
   static async analyzeQuery(sql) {
     return new Promise((resolve, reject) => {
-      DatabaseManager.getInstance().db.all(`EXPLAIN QUERY PLAN ${sql}`, (err, rows) => {
+      DatabaseManager.db.all(`EXPLAIN QUERY PLAN ${sql}`, (err, rows) => {
         if (err) reject(err);
         else resolve(rows);
       });
@@ -116,14 +116,14 @@ class DatabaseIndexes {
       logger.info('Running database optimization');
       
       await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run('VACUUM', (err) => {
+        DatabaseManager.db.run('VACUUM', (err) => {
           if (err) reject(err);
           else resolve();
         });
       });
 
       await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run('ANALYZE', (err) => {
+        DatabaseManager.db.run('ANALYZE', (err) => {
           if (err) reject(err);
           else resolve();
         });

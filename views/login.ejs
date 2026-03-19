@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <link rel="stylesheet" href="/css/layout.css">
-  <style>
+  <style nonce="<%= nonce %>">
     html, body {
       height: 100%;
       margin: 0;
@@ -264,6 +264,10 @@
     }
 
     /* Responsive */
+    .hidden {
+      display: none;
+    }
+
     @media (max-width: 480px) {
       .login-page-wrapper {
         max-width: 100%;
@@ -301,7 +305,7 @@
             <div><%= errorMessage %></div>
           </div>
         <% } %>
-        <div id="message" class="alert" style="display: none;"></div>
+        <div id="message" class="alert hidden"></div>
         
         <form id="loginForm" class="login-form" method="post" action="/api/auth/login">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -333,7 +337,7 @@
           </div>
 
           <button type="submit" class="login-btn" id="loginBtn">
-            <span id="loginLoading" style="display: none;">
+            <span id="loginLoading" class="hidden">
               <div class="spinner"></div>
               Signing in...
             </span>

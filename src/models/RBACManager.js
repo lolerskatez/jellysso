@@ -21,7 +21,7 @@ class RBACManager {
    * Initialize database schema
    */
   async initializeSchema() {
-    const db = DatabaseManager.getInstance();
+    const db = DatabaseManager.db;
 
     return new Promise((resolve, reject) => {
       db.serialize(() => {
@@ -110,7 +110,7 @@ class RBACManager {
    * Initialize default roles and permissions
    */
   async initializeDefaultRoles() {
-    const db = DatabaseManager.getInstance();
+    const db = DatabaseManager.db;
 
     // Default permissions
     const permissions = [
@@ -203,7 +203,7 @@ class RBACManager {
    */
   async getRoles() {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT id, name, description, is_system, created_at FROM roles ORDER BY name`,
         (err, rows) => {
@@ -223,7 +223,7 @@ class RBACManager {
    */
   async getRoleWithPermissions(roleId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.get(
         `SELECT id, name, description, is_system FROM roles WHERE id = ?`,
         [roleId],
@@ -260,7 +260,7 @@ class RBACManager {
    */
   async createRole(name, description, permissionIds = []) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `INSERT INTO roles (name, description, is_system) VALUES (?, ?, 0)`,
         [name, description],
@@ -302,7 +302,7 @@ class RBACManager {
    */
   async updateRolePermissions(roleId, permissionIds) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       
       db.serialize(() => {
         // Delete existing permissions
@@ -342,7 +342,7 @@ class RBACManager {
    */
   async deleteRole(roleId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       
       db.serialize(() => {
         // Delete role permissions
@@ -370,7 +370,7 @@ class RBACManager {
    */
   async assignRoleToUser(userId, roleId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)`,
         [userId, roleId],
@@ -392,7 +392,7 @@ class RBACManager {
    */
   async removeRoleFromUser(userId, roleId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.run(
         `DELETE FROM user_roles WHERE user_id = ? AND role_id = ?`,
         [userId, roleId],
@@ -414,7 +414,7 @@ class RBACManager {
    */
   async getUserRoles(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT r.id, r.name, r.description FROM roles r
          JOIN user_roles ur ON r.id = ur.role_id
@@ -470,7 +470,7 @@ class RBACManager {
    */
   async getPermissions(category = null) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       const query = category 
         ? `SELECT id, name, description, category FROM permissions WHERE category = ? ORDER BY category, name`
         : `SELECT id, name, description, category FROM permissions ORDER BY category, name`;
@@ -493,7 +493,7 @@ class RBACManager {
    */
   async getUsersWithRole(roleId, limit = 50) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.db;
       db.all(
         `SELECT DISTINCT user_id FROM user_roles WHERE role_id = ? LIMIT ?`,
         [roleId, limit],

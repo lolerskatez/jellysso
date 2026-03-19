@@ -57,7 +57,7 @@ class DatabaseRecovery {
    */
   async execute(sql, params = []) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance().db;
+      const db = DatabaseManager.db;
 
       if (!db) {
         reject(new Error('Database connection not available'));

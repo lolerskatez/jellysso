@@ -96,7 +96,7 @@ class ScheduledCleanupTasks {
       const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000).toISOString();
 
       const result = await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run(
+        DatabaseManager.db.run(
           `DELETE FROM audit_logs WHERE timestamp < ?`,
           [cutoffDate],
           function(err) {
@@ -123,7 +123,7 @@ class ScheduledCleanupTasks {
       const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000).toISOString();
 
       const result = await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run(
+        DatabaseManager.db.run(
           `DELETE FROM sessions WHERE expires < ?`,
           [cutoffDate],
           function(err) {
@@ -147,7 +147,7 @@ class ScheduledCleanupTasks {
   async cleanupExpiredApiKeys() {
     try {
       const result = await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run(
+        DatabaseManager.db.run(
           `DELETE FROM api_keys WHERE expires_at < datetime('now')`,
           function(err) {
             if (err) reject(err);
@@ -173,7 +173,7 @@ class ScheduledCleanupTasks {
       const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000).toISOString();
 
       const result = await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run(
+        DatabaseManager.db.run(
           `DELETE FROM webhook_events WHERE timestamp < ?`,
           [cutoffDate],
           function(err) {
@@ -199,7 +199,7 @@ class ScheduledCleanupTasks {
       const cutoffDate = new Date(Date.now() - CONSTANTS.ACCOUNT_LOCKOUT.ATTEMPT_WINDOW).toISOString();
 
       const result = await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run(
+        DatabaseManager.db.run(
           `DELETE FROM login_attempts WHERE timestamp < ?`,
           [cutoffDate],
           function(err) {
@@ -225,14 +225,14 @@ class ScheduledCleanupTasks {
       logger.info('Running database optimization');
 
       await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run('VACUUM', (err) => {
+        DatabaseManager.db.run('VACUUM', (err) => {
           if (err) reject(err);
           else resolve();
         });
       });
 
       await new Promise((resolve, reject) => {
-        DatabaseManager.getInstance().db.run('ANALYZE', (err) => {
+        DatabaseManager.db.run('ANALYZE', (err) => {
           if (err) reject(err);
           else resolve();
         });

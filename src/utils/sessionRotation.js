@@ -70,39 +70,31 @@ class SessionRotation {
    * @param {function} callback - Callback function
    */
   static rotateSessionOnLogin(req, res, userData, accessToken, callback) {
-    // Destroy any existing session
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.warn('Could not destroy old session on login:', err.message);
-        }
-        createNewSession();
-      });
-    } else {
-      createNewSession();
+    // Simply regenerate the session (this creates a new session ID)
+    // No need to destroy first - regenerate handles that
+    if (!req.session) {
+      return callback(new Error('Session middleware not initialized'));
     }
 
-    function createNewSession() {
-      req.session.regenerate((err) => {
+    req.session.regenerate((err) => {
+      if (err) {
+        return callback(err);
+      }
+
+      // Set new session data
+      req.session.user = userData;
+      req.session.accessToken = accessToken;
+      req.session.createdAt = Date.now();
+      req.session.lastActivity = Date.now();
+      req.session.loginMethod = 'password'; // Track login method
+
+      req.session.save((err) => {
         if (err) {
           return callback(err);
         }
-
-        // Set new session data
-        req.session.user = userData;
-        req.session.accessToken = accessToken;
-        req.session.createdAt = Date.now();
-        req.session.lastActivity = Date.now();
-        req.session.loginMethod = 'password'; // Track login method
-
-        req.session.save((err) => {
-          if (err) {
-            return callback(err);
-          }
-          callback(null, req.sessionID);
-        });
+        callback(null, req.sessionID);
       });
-    }
+    });
   }
 
   /**

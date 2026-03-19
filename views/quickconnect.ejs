@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
-  <style>
+  <style nonce="<%= nonce %>">
     .sidebar-header h2 {
       display: flex;
       align-items: center;
@@ -20,7 +20,7 @@
       font-size: 1.5rem;
     }
   </style>
-  <style>
+  <style nonce="<%= nonce %>">
     .quickconnect-container {
       max-width: 600px;
       margin: 0 auto;
@@ -246,6 +246,43 @@
       cursor: not-allowed;
       transform: none;
     }
+    .hidden {
+      display: none;
+    }
+    .qc-header {
+      margin-bottom: 1.4rem;
+    }
+    .qc-icon {
+      font-size: 2.165rem;
+      color: var(--primary);
+      margin-bottom: 0.72rem;
+      display: block;
+    }
+    .qc-title {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 1.445rem;
+    }
+    .qc-subtitle {
+      color: var(--text-secondary);
+      margin: 0.36rem 0 0 0;
+      font-size: 0.8rem;
+    }
+    .instructions-title {
+      margin-top: 0;
+      color: var(--text-primary);
+      font-size: 0.935rem;
+    }
+    .about-title {
+      color: var(--text-primary);
+      margin-bottom: 0.72rem;
+      font-size: 1.08rem;
+    }
+    .about-text {
+      color: var(--text-secondary);
+      margin-bottom: 0.72rem;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
 <body>
@@ -275,14 +312,14 @@
         <div class="quickconnect-container">
           <!-- QuickConnect Form -->
             <div class="quickconnect-card">
-              <div style="margin-bottom: 1.4rem;">
-                <i class="fas fa-mobile-alt" style="font-size: 2.165rem; color: var(--primary); margin-bottom: 0.72rem; display: block;"></i>
-                <h2 style="margin: 0; color: var(--text-primary); font-size: 1.445rem;">Authorize Device</h2>
-                <p style="color: var(--text-secondary); margin: 0.36rem 0 0 0; font-size: 0.8rem;">Enter the QuickConnect code from your TV or device</p>
+              <div class="qc-header">
+                <i class="fas fa-mobile-alt qc-icon"></i>
+                <h2 class="qc-title">Authorize Device</h2>
+                <p class="qc-subtitle">Enter the QuickConnect code from your TV or device</p>
               </div>
 
               <div class="instructions">
-                <h4 style="margin-top: 0; color: var(--text-primary); font-size: 0.935rem;"><i class="fas fa-info-circle"></i> How to authorize:</h4>
+                <h4 class="instructions-title"><i class="fas fa-info-circle"></i> How to authorize:</h4>
                 <ol>
                   <li>On your TV or device, select "Quick Connect" on the login screen</li>
                   <li>Note the code displayed on your device</li>
@@ -308,22 +345,22 @@
                     <i class="fas fa-check-circle"></i>
                     Authorize Device
                   </span>
-                  <span id="btnLoading" style="display: none;">
+                  <span id="btnLoading" class="hidden">
                     <i class="fas fa-spinner fa-spin"></i>
                     Authorizing...
                   </span>
                 </button>
               </form>
 
-              <div id="statusMessage" class="status-message" style="display: none;"></div>
+              <div id="statusMessage" class="status-message hidden"></div>
 
           <!-- About Section -->
           <div class="quickconnect-card">
-            <h3 style="color: var(--text-primary); margin-bottom: 0.72rem; font-size: 1.08rem;">
+            <h3 class="about-title">
               <i class="fas fa-question-circle"></i>
               About QuickConnect
             </h3>
-            <p style="color: var(--text-secondary); margin-bottom: 0.72rem; font-size: 0.8rem;">
+            <p class="about-text">
               QuickConnect allows you to easily authenticate with your Jellyfin server using a temporary code from your Jellyfin app, without needing to remember passwords.
             </p>
             <div class="status-message status-info">

@@ -17,40 +17,46 @@ class AccountLockoutManager {
    */
   initializeDatabase() {
     try {
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS login_attempts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT NOT NULL,
-          ip_address TEXT NOT NULL,
-          success INTEGER NOT NULL DEFAULT 0,
-          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-          reason TEXT
-        )
-      `);
+      this.db.serialize(() => {
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS login_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            ip_address TEXT NOT NULL,
+            success INTEGER NOT NULL DEFAULT 0,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            reason TEXT
+          )
+        `);
 
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS account_lockouts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT NOT NULL UNIQUE,
-          locked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          unlock_at DATETIME NOT NULL,
-          reason TEXT,
-          attempts_count INTEGER DEFAULT 0
-        )
-      `);
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS account_lockouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            locked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            unlock_at DATETIME NOT NULL,
+            reason TEXT,
+            attempts_count INTEGER DEFAULT 0
+          )
+        `);
 
-      // Create indexes for faster queries
-      this.db.run(`
-        CREATE INDEX IF NOT EXISTS idx_login_attempts_username_timestamp 
-        ON login_attempts(username, timestamp)
-      `);
+        // Create indexes for faster queries
+        this.db.run(`
+          CREATE INDEX IF NOT EXISTS idx_login_attempts_username_timestamp 
+          ON login_attempts(username, timestamp)
+        `);
 
-      this.db.run(`
-        CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_timestamp 
-        ON login_attempts(ip_address, timestamp)
-      `);
-
-      logger.info('AccountLockoutManager database initialized');
+        this.db.run(`
+          CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_timestamp 
+          ON login_attempts(ip_address, timestamp)
+        `, (err) => {
+          if (err) {
+            logger.error('Failed to initialize AccountLockoutManager database', { error: err.message });
+          } else {
+            logger.info('AccountLockoutManager database initialized');
+          }
+        });
+      });
     } catch (error) {
       logger.error('Failed to initialize AccountLockoutManager database', { error: error.message });
     }

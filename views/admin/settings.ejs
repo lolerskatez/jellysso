@@ -368,6 +368,9 @@
         <!-- Jellyfin Settings -->
         <div id="jellyfin" class="settings-panel">
           <form id="jellyfinForm">
+            <!-- Hidden username field for accessibility and password manager support -->
+            <input type="text" name="username" value="jellyfin" hidden autocomplete="username">
+            
             <div class="settings-section">
               <h3><i class="fas fa-play"></i> Jellyfin Server Configuration</h3>
               

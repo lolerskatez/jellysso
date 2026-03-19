@@ -426,7 +426,7 @@ class NotificationManager {
    */
   async getUserPreferences(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.db;
+      const db = DatabaseManager.getInstance().db;
       db.get(
         'SELECT * FROM user_notification_preferences WHERE user_id = ?',
         [userId],
@@ -466,7 +466,7 @@ class NotificationManager {
    */
   async saveUserPreferences(userId, preferences) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.db;
+      const db = DatabaseManager.getInstance().db;
       const id = `prefs_${userId}_${Date.now()}`;
 
       db.run(

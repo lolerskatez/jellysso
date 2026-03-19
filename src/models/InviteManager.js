@@ -10,7 +10,7 @@ class InviteManager {
   static instance = null;
 
   constructor() {
-    this.db = DatabaseManager.db;
+    this.db = DatabaseManager.getInstance().db;
     this.logger = AuditLogger;
     this.initializeTables();
   }

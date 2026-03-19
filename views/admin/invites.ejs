@@ -416,7 +416,10 @@
       try {
         const response = await fetch('/api/invites', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
           body: JSON.stringify({
             signupProfileId: profileId,
             count,
@@ -445,7 +448,12 @@
       if (!confirm('Are you sure you want to revoke this invite?')) return;
 
       try {
-        const response = await fetch(`/api/invites/${code}`, { method: 'DELETE' });
+        const response = await fetch(`/api/invites/${code}`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          }
+        });
         const data = await response.json();
 
         if (data.success) {
@@ -481,8 +489,8 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeModal();
     });
+  </script>
 
   <script src="/js/mobile-nav.js"></script>
-  </script>
 </body>
 </html>

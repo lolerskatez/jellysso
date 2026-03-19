@@ -12,7 +12,7 @@ class UserExpiryManager {
   static expiryCheckInterval = null;
 
   constructor() {
-    this.db = DatabaseManager.db;
+    this.db = DatabaseManager.getInstance().db;
     this.logger = AuditLogger;
     this.notificationManager = NotificationManager.getInstance();
     this.initializeTables();

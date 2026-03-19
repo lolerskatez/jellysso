@@ -9,7 +9,7 @@ class MessageTemplateManager {
   static instance = null;
 
   constructor() {
-    this.db = DatabaseManager.db;
+    this.db = DatabaseManager.getInstance().db;
     this.initializeDefaultTemplates();
   }
 

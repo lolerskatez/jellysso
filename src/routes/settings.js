@@ -1,11 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const JellyfinAPI = require('../models/JellyfinAPI');
-const SetupManager = require('../models/SetupManager');
-const SettingsManager = require('../models/SettingsManager');
-const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
 const { validateSettings, validateSystemConfig } = require('../middleware/validation');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
@@ -28,7 +25,7 @@ const requireAdmin = (req, res, next) => {
 // Get system configuration
 router.get('/system', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, req.session.accessToken);
+    const jellyfin = new (require('../models/JellyfinAPI'))(require('../models/SetupManager').getConfig().jellyfinUrl, req.session.accessToken);
     const config = await jellyfin.getSystemConfiguration();
     res.json(config);
   } catch (error) {

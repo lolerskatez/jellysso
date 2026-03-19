@@ -4,27 +4,9 @@ const SetupManager = require('../models/SetupManager');
 const JellyfinAPI = require('../models/JellyfinAPI');
 const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl);
-
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    jellyfin.apiKey = req.session.accessToken;
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
-};
-
-// Middleware to check admin access
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.Policy && req.session.user.Policy.IsAdministrator) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Admin access required' });
-  }
-};
 
 // Validation helper
 const validateUserData = (data) => {

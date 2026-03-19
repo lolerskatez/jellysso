@@ -10,6 +10,7 @@ const { AccountLockoutManager } = require('../models/AccountLockoutManager');
 const { csrfProtection } = require('../middleware/csrf');
 const { criticalLimiter } = require('../middleware/rate-limit');
 const { AppError } = require('../middleware/error-handler');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 const { getBaseUrl } = require('../utils/urlHelper');
 const logger = require('../utils/logger');

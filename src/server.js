@@ -237,6 +237,26 @@ if (process.env.NODE_ENV !== 'production') {
   global.appCache.on('expired', (key) => logger.debug(`Cache expired: ${key}`));
 }
 
+// Initialize database indexes for performance
+try {
+  const DatabaseIndexes = require('./models/DatabaseIndexes');
+  DatabaseIndexes.initializeIndexes().catch(err => {
+    logger.warn('Could not initialize database indexes', { error: err.message });
+  });
+} catch (err) {
+  logger.warn('DatabaseIndexes module not available', { error: err.message });
+}
+
+// Initialize scheduled cleanup tasks
+try {
+  const { getInstance: getCleanupTasks } = require('./models/ScheduledCleanupTasks');
+  const cleanupTasks = getCleanupTasks();
+  cleanupTasks.initializeTasks();
+  logger.info('Scheduled cleanup tasks initialized');
+} catch (err) {
+  logger.warn('Could not initialize cleanup tasks', { error: err.message });
+}
+
 // Setup check middleware - redirect to setup if not configured
 app.use((req, res, next) => {
   // Skip setup check for setup routes, health check, and static files

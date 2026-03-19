@@ -378,17 +378,21 @@ const openEditModal = (window.openEditModal = async function(userId) {
   }
 
   // Policy tab
+  var userTypeEl = document.getElementById('editUserType');
+  if (userTypeEl) {
+    userTypeEl.value = user.isAdmin ? 'admin' : 'user';
+  }
+
   var tierEl = document.getElementById('editTier');
   if (tierEl) {
     tierEl.value = user.tier || '';
     updateStreamsFromTier();
   }
 
-  var dwlEl = document.getElementById('editDeviceWL');
-  if (dwlEl) dwlEl.checked = !!user.deviceWhitelistEnabled;
-
-  var schedEl = document.getElementById('editAccessSched');
-  if (schedEl) schedEl.checked = !!user.enforceAccessSchedule;
+  var downloadsEl = document.getElementById('editAllowDownloads');
+  if (downloadsEl) {
+    downloadsEl.checked = user.allowDownloads !== 0;
+  }
 
   openModal('editModal');
 
@@ -537,6 +541,19 @@ const saveChanges = (window.saveChanges = async function() {
       .then(function(d) { if (!d.success) errors.push('Account status: ' + (d.message || 'Failed')); })
     );
 
+    // ── User Type (Admin) ────────────────────────────────────────
+    var userTypeEl = document.getElementById('editUserType');
+    var isAdmin = userTypeEl && userTypeEl.value === 'admin';
+    promises.push(
+      fetch('/api/policy/admin/user/' + currentEditUserId + '/admin-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+        body: JSON.stringify({ isAdmin: isAdmin })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (!d.success) errors.push('User type: ' + (d.message || 'Failed')); })
+    );
+
     // ── Tier ──────────────────────────────────────────────────────
     var tier = document.getElementById('editTier') ? document.getElementById('editTier').value : '';
     if (tier) {
@@ -551,28 +568,16 @@ const saveChanges = (window.saveChanges = async function() {
       );
     }
 
-    // ── Device whitelist ──────────────────────────────────────────
-    var deviceWl = document.getElementById('editDeviceWL') ? document.getElementById('editDeviceWL').checked : false;
+    // ── Media Downloads ───────────────────────────────────────────
+    var allowDownloads = document.getElementById('editAllowDownloads') ? document.getElementById('editAllowDownloads').checked : true;
     promises.push(
-      fetch('/api/policy/admin/user/' + currentEditUserId + '/device-whitelist/enable', {
+      fetch('/api/policy/admin/user/' + currentEditUserId + '/downloads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-        body: JSON.stringify({ enabled: deviceWl })
+        body: JSON.stringify({ allowed: allowDownloads })
       })
       .then(function(r) { return r.json(); })
-      .then(function(d) { if (!d.success) errors.push('Device whitelist: ' + (d.message || 'Failed')); })
-    );
-
-    // ── Access schedule ───────────────────────────────────────────
-    var schedule = document.getElementById('editAccessSched') ? document.getElementById('editAccessSched').checked : false;
-    promises.push(
-      fetch('/api/policy/admin/user/' + currentEditUserId + '/access-schedule/enforce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-        body: JSON.stringify({ enforce: schedule })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (!d.success) errors.push('Access schedule: ' + (d.message || 'Failed')); })
+      .then(function(d) { if (!d.success) errors.push('Downloads: ' + (d.message || 'Failed')); })
     );
 
     await Promise.all(promises);

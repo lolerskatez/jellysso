@@ -14,8 +14,8 @@ class PolicyManager {
    * Predefined policy tiers
    */
   static TIERS = {
-    'free': {
-      name: 'Free',
+    'single': {
+      name: 'Single',
       maxStreams: 1,
       description: 'Single stream only'
     },
@@ -24,15 +24,15 @@ class PolicyManager {
       maxStreams: 2,
       description: 'Two simultaneous streams'
     },
-    'premium': {
-      name: 'Premium',
-      maxStreams: 4,
-      description: 'Four simultaneous streams'
+    'unlimited': {
+      name: 'Unlimited',
+      maxStreams: 999,
+      description: 'Unlimited streams'
     },
     'admin': {
       name: 'Admin',
       maxStreams: 999,
-      description: 'Unlimited streams'
+      description: 'Administrator access'
     }
   };
 
@@ -47,8 +47,6 @@ class PolicyManager {
           id TEXT PRIMARY KEY,
           displayName TEXT NOT NULL,
           maxConcurrentStreams INTEGER NOT NULL DEFAULT 1,
-          deviceWhitelistEnabled INTEGER NOT NULL DEFAULT 0,
-          enforceAccessSchedule INTEGER NOT NULL DEFAULT 0,
           badgeColor TEXT NOT NULL DEFAULT '#95a5a6',
           sortOrder INTEGER NOT NULL DEFAULT 0,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -58,11 +56,10 @@ class PolicyManager {
 
       // Seed built-in tiers — INSERT OR IGNORE is idempotent
       const seedTiers = [
-        { id: 'free',     displayName: 'Free',     maxConcurrentStreams: 1,   badgeColor: '#95a5a6', sortOrder: 0 },
-        { id: 'standard', displayName: 'Standard', maxConcurrentStreams: 2,   badgeColor: '#3498db', sortOrder: 1 },
-        { id: 'premium',  displayName: 'Premium',  maxConcurrentStreams: 4,   badgeColor: '#9b59b6', sortOrder: 2 },
-        { id: 'family',   displayName: 'Family',   maxConcurrentStreams: 6,   badgeColor: '#27ae60', sortOrder: 3 },
-        { id: 'admin',    displayName: 'Admin',    maxConcurrentStreams: 999, badgeColor: '#f39c12', sortOrder: 4 }
+        { id: 'single',    displayName: 'Single',    maxConcurrentStreams: 1,   badgeColor: '#95a5a6', sortOrder: 0 },
+        { id: 'standard',  displayName: 'Standard',  maxConcurrentStreams: 2,   badgeColor: '#3498db', sortOrder: 1 },
+        { id: 'unlimited', displayName: 'Unlimited', maxConcurrentStreams: 999, badgeColor: '#27ae60', sortOrder: 2 },
+        { id: 'admin',     displayName: 'Admin',     maxConcurrentStreams: 999, badgeColor: '#f39c12', sortOrder: 3 }
       ];
       for (const t of seedTiers) {
         await DatabaseManager.query(
@@ -77,10 +74,8 @@ class PolicyManager {
         CREATE TABLE IF NOT EXISTS user_policies (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           userId TEXT UNIQUE NOT NULL,
-          tier TEXT NOT NULL DEFAULT 'free',
+          tier TEXT NOT NULL DEFAULT 'single',
           maxConcurrentStreams INTEGER NOT NULL DEFAULT 1,
-          deviceWhitelistEnabled INTEGER NOT NULL DEFAULT 0,
-          enforceAccessSchedule INTEGER NOT NULL DEFAULT 0,
           accountEnabled INTEGER NOT NULL DEFAULT 1,
           expiresAt TEXT,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -88,7 +83,7 @@ class PolicyManager {
         )
       `);
 
-      // Migration: add new columns to existing user_policies tables
+      // Migration: add accountEnabled if missing
       const upCols = await DatabaseManager.query('PRAGMA table_info(user_policies)');
       const colNames = (upCols || []).map(c => c.name);
       if (!colNames.includes('accountEnabled')) {
@@ -103,20 +98,18 @@ class PolicyManager {
         );
         console.log('Migrated user_policies: added expiresAt');
       }
-
-      // Device whitelist table
-      await DatabaseManager.query(`
-        CREATE TABLE IF NOT EXISTS device_whitelist (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          userId TEXT NOT NULL,
-          deviceId TEXT NOT NULL,
-          deviceName TEXT,
-          deviceType TEXT,
-          allowedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(userId, deviceId),
-          FOREIGN KEY(userId) REFERENCES user_policies(userId)
-        )
-      `);
+      if (!colNames.includes('isAdmin')) {
+        await DatabaseManager.query(
+          'ALTER TABLE user_policies ADD COLUMN isAdmin INTEGER NOT NULL DEFAULT 0'
+        );
+        console.log('Migrated user_policies: added isAdmin');
+      }
+      if (!colNames.includes('allowDownloads')) {
+        await DatabaseManager.query(
+          'ALTER TABLE user_policies ADD COLUMN allowDownloads INTEGER NOT NULL DEFAULT 1'
+        );
+        console.log('Migrated user_policies: added allowDownloads');
+      }
 
       // Policy enforcement audit table
       await DatabaseManager.query(`
@@ -140,6 +133,73 @@ class PolicyManager {
   }
 
   /**
+   * Sync admin status from Jellyfin to database
+   * Called during login to ensure consistency
+   */
+  static async syncAdminStatusFromJellyfin(userId, jellyfinUser) {
+    try {
+      if (!jellyfinUser || !jellyfinUser.Policy) return;
+
+      const isAdmin = jellyfinUser.Policy.IsAdministrator ? 1 : 0;
+      
+      // Ensure policy row exists
+      await this.getUserPolicy(userId);
+      
+      // Update admin status from Jellyfin
+      await DatabaseManager.query(
+        'UPDATE user_policies SET isAdmin = ? WHERE userId = ?',
+        [isAdmin, userId]
+      );
+
+      console.log(`Synced admin status for user ${userId}: ${isAdmin === 1}`);
+      return { success: true, synced: true };
+    } catch (error) {
+      console.error('Error syncing admin status from Jellyfin:', error);
+      return { success: false, synced: false };
+    }
+  }
+
+  /**
+   * Migrate existing admin users from Jellyfin to database
+   * Run once during startup to populate admin status for existing users
+   */
+  static async migrateAdminUsersFromJellyfin(jellyfinApi) {
+    try {
+      console.log('Starting migration of admin users from Jellyfin...');
+      
+      if (!jellyfinApi) {
+        console.warn('JellyfinAPI not available for admin user migration');
+        return { success: false, migrateCount: 0, reason: 'API unavailable' };
+      }
+
+      const users = await jellyfinApi.getUsers();
+      let migratedCount = 0;
+
+      for (const user of users) {
+        if (user.Policy?.IsAdministrator) {
+          // Ensure user has a policy record
+          await this.getUserPolicy(user.Id);
+          
+          // Set admin flag
+          await DatabaseManager.query(
+            'UPDATE user_policies SET isAdmin = 1 WHERE userId = ?',
+            [user.Id]
+          );
+          
+          migratedCount++;
+          console.log(`Migrated admin user: ${user.Name} (${user.Id})`);
+        }
+      }
+
+      console.log(`✅ Admin user migration complete: ${migratedCount} users migrated`);
+      return { success: true, migratedCount };
+    } catch (error) {
+      console.error('Error during admin user migration:', error);
+      return { success: false, migratedCount: 0, error: error.message };
+    }
+  }
+
+  /**
    * Get user policy (creates default if doesn't exist)
    */
   static async getUserPolicy(userId) {
@@ -151,7 +211,7 @@ class PolicyManager {
 
       // Create default policy for new users
       if (!policy) {
-        const defaultTier = 'free';
+        const defaultTier = 'single';
         const tierConfig = await this.getTier(defaultTier);
         const maxStreams = tierConfig ? tierConfig.maxConcurrentStreams : 1;
 
@@ -232,7 +292,7 @@ class PolicyManager {
         SetupManager.getConfig().apiKey
       );
 
-      // Check 1: Stream count limit
+      // Check: Stream count limit
       const activeSessions = await jellyfin.getActiveSessions(userId);
       if (activeSessions.length >= policy.maxConcurrentStreams) {
         const reason = `Stream limit reached (${policy.maxConcurrentStreams} max)`;
@@ -243,33 +303,6 @@ class PolicyManager {
           limit: policy.maxConcurrentStreams,
           current: activeSessions.length
         };
-      }
-
-      // Check 2: Device whitelist (if enabled)
-      if (policy.deviceWhitelistEnabled) {
-        const whitelisted = await this.isDeviceWhitelisted(userId, deviceId);
-        if (!whitelisted) {
-          const reason = 'Device not whitelisted';
-          await this.logPolicyAudit(userId, 'DEVICE_RESTRICTION', 'DENIED', reason, deviceId, sessionId, ipAddress);
-          return {
-            allowed: false,
-            reason,
-            requiresDeviceApproval: true
-          };
-        }
-      }
-
-      // Check 3: Access schedule (if enabled)
-      if (policy.enforceAccessSchedule) {
-        const inWindow = await this.isInAccessWindow(userId);
-        if (!inWindow) {
-          const reason = 'Outside access window';
-          await this.logPolicyAudit(userId, 'ACCESS_SCHEDULE', 'DENIED', reason, deviceId, sessionId, ipAddress);
-          return {
-            allowed: false,
-            reason
-          };
-        }
       }
 
       // All checks passed
@@ -286,179 +319,43 @@ class PolicyManager {
   /**
    * Check if device is whitelisted for user (if whitelist enabled)
    */
-  static async isDeviceWhitelisted(userId, deviceId) {
-    try {
-      const whitelisted = await DatabaseManager.queryOne(
-        'SELECT * FROM device_whitelist WHERE userId = ? AND deviceId = ?',
-        [userId, deviceId]
-      );
-      return !!whitelisted;
-    } catch (error) {
-      console.error('Error checking device whitelist:', error);
-      return false;
-    }
-  }
+  // DEPRECATED: Device whitelist feature removed
 
   /**
    * Add device to whitelist
    */
-  static async whitelistDevice(userId, deviceId, deviceName = null, deviceType = null) {
-    try {
-      await DatabaseManager.query(
-        `INSERT OR REPLACE INTO device_whitelist (userId, deviceId, deviceName, deviceType)
-         VALUES (?, ?, ?, ?)`,
-        [userId, deviceId, deviceName, deviceType]
-      );
-
-      return { success: true, message: `Device whitelisted: ${deviceName || deviceId}` };
-    } catch (error) {
-      console.error('Error whitelisting device:', error);
-      throw error;
-    }
-  }
+  // DEPRECATED: Device whitelist feature removed
 
   /**
    * Remove device from whitelist
    */
-  static async unwhitelistDevice(userId, deviceId) {
-    try {
-      await DatabaseManager.query(
-        'DELETE FROM device_whitelist WHERE userId = ? AND deviceId = ?',
-        [userId, deviceId]
-      );
-
-      return { success: true, message: 'Device removed from whitelist' };
-    } catch (error) {
-      console.error('Error removing device from whitelist:', error);
-      throw error;
-    }
-  }
+  // DEPRECATED: Device whitelist feature removed
 
   /**
    * Get whitelisted devices for user
    */
-  static async getWhitelistedDevices(userId) {
-    try {
-      const devices = await DatabaseManager.query(
-        'SELECT * FROM device_whitelist WHERE userId = ? ORDER BY allowedAt DESC',
-        [userId]
-      );
-      return devices || [];
-    } catch (error) {
-      console.error('Error getting whitelisted devices:', error);
-      return [];
-    }
-  }
+  // DEPRECATED: Device whitelist feature removed
 
   /**
    * Enable/disable device whitelist for user
    */
-  static async setDeviceWhitelistEnabled(userId, enabled) {
-    try {
-      await DatabaseManager.query(
-        `UPDATE user_policies
-         SET deviceWhitelistEnabled = ?, updatedAt = CURRENT_TIMESTAMP
-         WHERE userId = ?`,
-        [enabled ? 1 : 0, userId]
-      );
-
-      return {
-        success: true,
-        deviceWhitelistEnabled: !!enabled,
-        message: `Device whitelist ${enabled ? 'enabled' : 'disabled'}`
-      };
-    } catch (error) {
-      console.error('Error setting device whitelist:', error);
-      throw error;
-    }
-  }
+  // DEPRECATED: Device whitelist feature removed
 
   /**
    * Check if current time is within user's access schedule
    * Uses Jellyfin's AccessSchedules via API
    */
-  static async isInAccessWindow(userId) {
-    try {
-      const policy = await this.getUserPolicy(userId);
-      
-      // If access schedule not enforced, always allow
-      if (!policy.enforceAccessSchedule) {
-        return true;
-      }
-
-      // Get user's Jellyfin access schedule
-      const jellyfin = new JellyfinAPI(
-        SetupManager.getConfig().jellyfinUrl,
-        SetupManager.getConfig().apiKey
-      );
-
-      const userInfo = await jellyfin.getUser(userId);
-      const schedules = userInfo.Policy?.AccessSchedules || [];
-
-      // If no schedules defined, allow access
-      if (!schedules || schedules.length === 0) {
-        return true;
-      }
-
-      // Check if current time matches any schedule
-      const now = new Date();
-      const currentDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
-      const currentHour = now.getHours() + now.getMinutes() / 60;
-
-      for (const schedule of schedules) {
-        const matches = this.dayMatches(schedule.DayOfWeek, currentDayOfWeek);
-        if (matches && currentHour >= schedule.StartHour && currentHour < schedule.EndHour) {
-          return true;
-        }
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Error checking access window:', error);
-      return true; // Fail-open: allow on error
-    }
-  }
+  // DEPRECATED: Access schedule feature removed
 
   /**
    * Check if day matches Jellyfin schedule patterns
    */
-  static dayMatches(scheduleDayPattern, currentDay) {
-    if (scheduleDayPattern === 'Everyday') return true;
-    if (scheduleDayPattern === currentDay) return true;
-    
-    if (scheduleDayPattern === 'Weekday') {
-      return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(currentDay);
-    }
-    
-    if (scheduleDayPattern === 'Weekend') {
-      return ['Saturday', 'Sunday'].includes(currentDay);
-    }
-
-    return false;
-  }
+  // DEPRECATED: Access schedule feature removed
 
   /**
    * Enable/disable access schedule enforcement
    */
-  static async setEnforceAccessSchedule(userId, enforce) {
-    try {
-      await DatabaseManager.query(
-        `UPDATE user_policies
-         SET enforceAccessSchedule = ?, updatedAt = CURRENT_TIMESTAMP
-         WHERE userId = ?`,
-        [enforce ? 1 : 0, userId]
-      );
-
-      return {
-        success: true,
-        enforceAccessSchedule: !!enforce,
-        message: `Access schedule enforcement ${enforce ? 'enabled' : 'disabled'}`
-      };
-    } catch (error) {
-      console.error('Error setting access schedule enforcement:', error);
-      throw error;
-    }
-  }
+  // DEPRECATED: Access schedule feature removed
 
   /**
    * Log policy audit event
@@ -536,7 +433,7 @@ class PolicyManager {
     }
   }
 
-  static async createTier({ id, displayName, maxConcurrentStreams, deviceWhitelistEnabled = 0, enforceAccessSchedule = 0, badgeColor = '#95a5a6', sortOrder = 0 }) {
+  static async createTier({ id, displayName, maxConcurrentStreams, badgeColor = '#95a5a6', sortOrder = 0 }) {
     if (!id || !displayName) throw new Error('Tier id and displayName are required');
     if (!/^[a-z0-9_-]+$/.test(id)) throw new Error('Tier id must be lowercase alphanumeric, hyphens, or underscores only');
     const streams = parseInt(maxConcurrentStreams);
@@ -546,14 +443,14 @@ class PolicyManager {
     if (existing) throw new Error(`Tier "${id}" already exists`);
 
     await DatabaseManager.query(
-      `INSERT INTO tiers (id, displayName, maxConcurrentStreams, deviceWhitelistEnabled, enforceAccessSchedule, badgeColor, sortOrder)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, displayName, streams, deviceWhitelistEnabled ? 1 : 0, enforceAccessSchedule ? 1 : 0, badgeColor, sortOrder]
+      `INSERT INTO tiers (id, displayName, maxConcurrentStreams, badgeColor, sortOrder)
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, displayName, streams, badgeColor, sortOrder]
     );
     return this.getTier(id);
   }
 
-  static async updateTier(id, { displayName, maxConcurrentStreams, deviceWhitelistEnabled, enforceAccessSchedule, badgeColor, sortOrder }) {
+  static async updateTier(id, { displayName, maxConcurrentStreams, badgeColor, sortOrder }) {
     const existing = await this.getTier(id);
     if (!existing) throw new Error(`Tier "${id}" not found`);
 
@@ -564,8 +461,6 @@ class PolicyManager {
       `UPDATE tiers SET
          displayName = ?,
          maxConcurrentStreams = ?,
-         deviceWhitelistEnabled = ?,
-         enforceAccessSchedule = ?,
          badgeColor = ?,
          sortOrder = ?,
          updatedAt = CURRENT_TIMESTAMP
@@ -573,8 +468,6 @@ class PolicyManager {
       [
         displayName !== undefined ? displayName : existing.displayName,
         streams,
-        deviceWhitelistEnabled !== undefined ? (deviceWhitelistEnabled ? 1 : 0) : existing.deviceWhitelistEnabled,
-        enforceAccessSchedule !== undefined ? (enforceAccessSchedule ? 1 : 0) : existing.enforceAccessSchedule,
         badgeColor !== undefined ? badgeColor : existing.badgeColor,
         sortOrder !== undefined ? sortOrder : existing.sortOrder,
         id
@@ -644,6 +537,52 @@ class PolicyManager {
    * Enable or disable a user's account, and optionally set/clear an expiry.
    * expiresAt: ISO datetime string to set, null to clear, undefined to leave unchanged.
    */
+  static async setAdminStatus(userId, isAdmin) {
+    try {
+      await this.getUserPolicy(userId); // ensure row exists
+
+      await DatabaseManager.query(
+        'UPDATE user_policies SET isAdmin = ? WHERE userId = ?',
+        [isAdmin ? 1 : 0, userId]
+      );
+
+      // Sync to Jellyfin
+      await JellyfinAPI.updateUserPolicy(userId, {
+        IsAdministrator: isAdmin ? true : false
+      });
+
+      await this.logPolicyAudit(userId, 'ADMIN_STATUS', isAdmin ? 'GRANTED' : 'REVOKED');
+      console.log(`User ${userId} admin status: ${isAdmin}`);
+      return { success: true, isAdmin };
+    } catch (error) {
+      console.error('Error setting admin status:', error);
+      throw error;
+    }
+  }
+
+  static async setDownloadsAllowed(userId, allowed) {
+    try {
+      await this.getUserPolicy(userId); // ensure row exists
+
+      await DatabaseManager.query(
+        'UPDATE user_policies SET allowDownloads = ? WHERE userId = ?',
+        [allowed ? 1 : 0, userId]
+      );
+
+      // Sync to Jellyfin
+      await JellyfinAPI.updateUserPolicy(userId, {
+        EnableContentDownloading: allowed ? true : false
+      });
+
+      await this.logPolicyAudit(userId, 'DOWNLOADS', allowed ? 'ENABLED' : 'DISABLED');
+      console.log(`User ${userId} downloads: ${allowed}`);
+      return { success: true, allowed };
+    } catch (error) {
+      console.error('Error setting downloads:', error);
+      throw error;
+    }
+  }
+
   static async setAccountStatus(userId, enabled, expiresAt = undefined) {
     await this.getUserPolicy(userId); // ensure row exists
 

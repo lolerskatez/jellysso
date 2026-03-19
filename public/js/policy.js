@@ -62,10 +62,10 @@ async function loadUserPolicy() {
     
     // Update description
     const descriptions = {
-      'free': 'Perfect for trying out the service',
+      'single': 'Perfect for personal use',
       'standard': 'Great for individuals and small groups',
-      'premium': 'Ideal for families and power users',
-      'family': 'Unlimited streaming for everyone'
+      'unlimited': 'Unlimited streaming for everyone',
+      'admin': 'Administrator access with unlimited streams'
     };
     document.getElementById('tierDescription').textContent = 
       descriptions[policy.tier] || 'Your subscription plan';

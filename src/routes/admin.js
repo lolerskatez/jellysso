@@ -4,6 +4,7 @@ const AuditLogger = require('../models/AuditLogger');
 const DatabaseManager = require('../models/DatabaseManager');
 const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
+const PolicyManager = require('../models/PolicyManager');
 const PerformanceMonitor = require('../models/PerformanceMonitor');
 const appLogger = require('../utils/logger');
 const securityConfig = require('../utils/securityConfig');
@@ -362,8 +363,22 @@ router.get('/api/users/:userId', requireAuth, requireAdmin, async (req, res) => 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+
+    // Get policy data from database
+    const policy = await PolicyManager.getUserPolicy(userId);
     
-    res.json({ success: true, user });
+    // Merge policy data with Jellyfin user data
+    const mergedUser = {
+      ...user,
+      tier: policy?.tier || 'single',
+      maxConcurrentStreams: policy?.maxConcurrentStreams || 1,
+      accountEnabled: policy?.accountEnabled !== 0,
+      expiresAt: policy?.expiresAt || null,
+      isAdmin: policy?.isAdmin === 1,
+      allowDownloads: policy?.allowDownloads !== 0
+    };
+    
+    res.json({ success: true, user: mergedUser });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ success: false, message: error.message });

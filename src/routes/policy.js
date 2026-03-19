@@ -148,30 +148,6 @@ router.delete('/user/device/whitelist/:deviceId', requireAuth, async (req, res) 
 });
 
 /**
- * POST /user/device-whitelist/enable
- * Allow users to opt in/out of device whitelist enforcement on their own account
- */
-router.post('/user/device-whitelist/enable', requireAuth, csrfProtection, async (req, res) => {
-  try {
-    const { enabled } = req.body;
-
-    const result = await PolicyManager.setDeviceWhitelistEnabled(req.session.user.Id, !!enabled);
-
-    await AuditLogger.log('POLICY_DEVICE_WHITELIST_TOGGLE', req.session.user.Id, 'policy:device-whitelist',
-      { enabled: !!enabled },
-      'success', req.ip);
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error toggling device whitelist:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update device whitelist setting'
-    });
-  }
-});
-
-/**
  * ADMIN ENDPOINTS
  */
 
@@ -387,7 +363,7 @@ router.post('/admin/user/:userId/tier', requireAuth, requireAdmin, csrfProtectio
 
     res.json({
       success: true,
-      message: `User tier set to ${tier}`,
+      message: `User tier set to ${tier}. Stream limit updated in JellySSO and synchronized to Jellyfin.`,
       ...result
     });
   } catch (error) {
@@ -399,58 +375,68 @@ router.post('/admin/user/:userId/tier', requireAuth, requireAdmin, csrfProtectio
   }
 });
 
-/**
- * POST /admin/user/:userId/device-whitelist/enable
- * Enable device whitelist enforcement for user
- */
-router.post('/admin/user/:userId/device-whitelist/enable', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
-  try {
-    const { enabled } = req.body;
 
-    const result = await PolicyManager.setDeviceWhitelistEnabled(req.params.userId, enabled);
-
-    await AuditLogger.log('ADMIN_DEVICE_WHITELIST_TOGGLE', req.session.user.Id, `admin:policy:${req.params.userId}`,
-      { enabled },
-      'success', req.ip);
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error toggling device whitelist:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update device whitelist setting'
-    });
-  }
-});
-
-/**
- * POST /admin/user/:userId/access-schedule/enforce
- * Enable/disable access schedule enforcement
- */
-router.post('/admin/user/:userId/access-schedule/enforce', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
-  try {
-    const { enforce } = req.body;
-
-    const result = await PolicyManager.setEnforceAccessSchedule(req.params.userId, enforce);
-
-    await AuditLogger.log('ADMIN_ACCESS_SCHEDULE_TOGGLE', req.session.user.Id, `admin:policy:${req.params.userId}`,
-      { enforce },
-      'success', req.ip);
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error toggling access schedule enforcement:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update access schedule setting'
-    });
-  }
-});
 
 /**
  * GET /admin/user/:userId/audit-log
  * Get audit log for specific user
  */
+/**
+ * POST /admin/user/:userId/admin-status
+ * Set user admin status
+ */
+router.post('/admin/user/:userId/admin-status', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { isAdmin } = req.body;
+
+    const result = await PolicyManager.setAdminStatus(req.params.userId, isAdmin);
+
+    await AuditLogger.log('ADMIN_STATUS_CHANGE', req.session.user.Id, `admin:policy:${req.params.userId}`,
+      { isAdmin },
+      'success', req.ip);
+
+    res.json({
+      success: true,
+      message: `User ${isAdmin ? 'promoted to' : 'demoted from'} admin status`,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error updating admin status:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update admin status'
+    });
+  }
+});
+
+/**
+ * POST /admin/user/:userId/downloads
+ * Set download permission
+ */
+router.post('/admin/user/:userId/downloads', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { allowed } = req.body;
+
+    const result = await PolicyManager.setDownloadsAllowed(req.params.userId, allowed);
+
+    await AuditLogger.log('DOWNLOADS_PERMISSION', req.session.user.Id, `admin:policy:${req.params.userId}`,
+      { allowed },
+      'success', req.ip);
+
+    res.json({
+      success: true,
+      message: `Media downloads ${allowed ? 'enabled' : 'disabled'} for user`,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error updating download permission:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update download permission'
+    });
+  }
+});
+
 router.get('/admin/user/:userId/audit-log', requireAuth, requireAdmin, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 100, 500);

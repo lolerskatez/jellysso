@@ -666,6 +666,7 @@
     <div class="form-group">
       <label for="addPassword">Password</label>
       <form style="display:contents" onsubmit="return false">
+        <input type="text" id="addUsername-hidden" style="display:none" autocomplete="username">
         <input type="password" id="addPassword" placeholder="Leave blank for no password" autocomplete="new-password">
       </form>
       <small>Leave blank to create the user without a password.</small>
@@ -741,6 +742,7 @@
       <div class="form-group">
         <label for="editPassword">New Password</label>
         <form style="display:contents" onsubmit="return false">
+          <input type="text" id="editUsername-hidden" style="display:none" autocomplete="username">
           <input type="password" id="editPassword" placeholder="Leave blank to keep current" autocomplete="new-password">
         </form>
       </div>
@@ -802,6 +804,15 @@
 
     <!-- Policy Tab -->
     <div class="tab-panel" id="tabPolicy">
+      <p class="modal-section-label">User Type</p>
+      <div class="form-group">
+        <label for="editUserType">Role</label>
+        <select id="editUserType">
+          <option value="user">User</option>
+          <option value="admin">Admin (Server Manager)</option>
+        </select>
+      </div>
+
       <p class="modal-section-label">Subscription Tier</p>
       <div class="form-group">
         <label for="editTier">Tier</label>
@@ -815,24 +826,14 @@
         <small>Determined by tier. Manage tiers in Policy Management.</small>
       </div>
 
-      <p class="modal-section-label">Policy Overrides</p>
+      <p class="modal-section-label">Permissions</p>
       <div class="toggle-row">
         <div>
-          <div class="toggle-row-label">Device Whitelist Enforcement</div>
-          <div class="toggle-row-sub">Block logins from unrecognised devices</div>
+          <div class="toggle-row-label">Media Downloads</div>
+          <div class="toggle-row-sub">Allow user to download media from the server</div>
         </div>
         <label class="toggle-switch">
-          <input type="checkbox" id="editDeviceWL">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-row-label">Access Schedule Enforcement</div>
-          <div class="toggle-row-sub">Apply time-of-day restrictions</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="editAccessSched">
+          <input type="checkbox" id="editAllowDownloads" checked>
           <span class="toggle-slider"></span>
         </label>
       </div>

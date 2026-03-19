@@ -608,6 +608,22 @@ app.use(csrfErrorHandler);
     await PolicyManager.initializeSchema();
     console.log('✅ Policy system initialized');
 
+    // Migrate existing admin users from Jellyfin if setup is complete
+    const SetupManager = require('./models/SetupManager');
+    if (SetupManager.isSetupComplete()) {
+      try {
+        const config = SetupManager.getConfig();
+        const JellyfinAPI = require('./models/JellyfinAPI');
+        const jellyfinApi = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+        const migrationResult = await PolicyManager.migrateAdminUsersFromJellyfin(jellyfinApi);
+        if (migrationResult.success) {
+          console.log(`✅ Admin user migration: ${migrationResult.migratedCount} users synced`);
+        }
+      } catch (err) {
+        console.warn('⚠️  Could not migrate admin users from Jellyfin:', err.message);
+      }
+    }
+
     // Initialize OTP system
     await OTPManager.initializeSchema();
     console.log('✅ OTP system initialized');

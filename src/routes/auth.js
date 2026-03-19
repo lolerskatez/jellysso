@@ -58,6 +58,14 @@ router.post('/login', requireSetupComplete, async (req, res) => {
 
     req.session.user = authResult.User;
     req.session.accessToken = authResult.AccessToken;
+    
+    // Sync admin status from Jellyfin to database
+    if (authResult.User && authResult.User.Id) {
+      await PolicyManager.syncAdminStatusFromJellyfin(authResult.User.Id, authResult.User).catch(err => 
+        console.warn('Could not sync admin status:', err.message)
+      );
+    }
+    
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
@@ -630,6 +638,14 @@ router.get('/oidc/callback', async (req, res) => {
     req.session.accessToken = jellyfinConfig.apiKey || null;
     req.session.authMethod = 'oidc';
     req.session.oidcClaims = userInfoPayload;
+
+    // Sync admin status from Jellyfin to database
+    if (jellyfinUser && jellyfinUser.Id) {
+      const PolicyManager = require('../models/PolicyManager');
+      await PolicyManager.syncAdminStatusFromJellyfin(jellyfinUser.Id, jellyfinUser).catch(err => 
+        console.warn('Could not sync admin status:', err.message)
+      );
+    }
 
     await AuditLogger.log({
       action: 'OIDC_LOGIN_SUCCESS',

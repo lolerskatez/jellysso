@@ -17,10 +17,11 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
  * Optional query params:
  *   - userId: Filter by specific user
  *   - deviceName: Filter by device name
+ *   - includeIdle: Include sessions without active playback (default: false)
  */
 router.get('/sessions', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { userId, deviceName } = req.query;
+    const { userId, deviceName, includeIdle } = req.query;
 
     const jellyfin = new JellyfinAPI(
       SetupManager.getConfig().jellyfinUrl,
@@ -29,6 +30,11 @@ router.get('/sessions', requireAuth, requireAdmin, async (req, res) => {
 
     // Get all active sessions (admin can see all)
     let allSessions = await jellyfin.getActiveSessions();
+
+    // By default, only show sessions with active playback
+    if (includeIdle !== 'true') {
+      allSessions = allSessions.filter(s => s.nowPlayingItem);
+    }
 
     // Apply optional filters
     if (userId) {
@@ -43,7 +49,7 @@ router.get('/sessions', requireAuth, requireAdmin, async (req, res) => {
 
     // Log the activity
     await AuditLogger.log('ADMIN_PLAYBACK_VIEW_SESSIONS', req.session.user?.Id, 'admin:playback:sessions', 
-      { sessionCount: allSessions.length, filters: { userId, deviceName } }, 'success', req.ip);
+      { sessionCount: allSessions.length, filters: { userId, deviceName, includeIdle } }, 'success', req.ip);
 
     res.json({
       success: true,
@@ -80,20 +86,23 @@ router.get('/sessions/stats', requireAuth, requireAdmin, async (req, res) => {
     );
 
     const allSessions = await jellyfin.getActiveSessions();
+    
+    // Filter to only sessions with active playback
+    const playingSessions = allSessions.filter(s => s.nowPlayingItem);
 
-    // Calculate statistics
+    // Calculate statistics (based on playing sessions only)
     const stats = {
-      totalSessions: allSessions.length,
-      activeSessions: allSessions.filter(s => s.playbackState?.isPlaying).length,
-      pausedSessions: allSessions.filter(s => s.playbackState?.isPaused).length,
-      uniqueUsers: new Set(allSessions.map(s => s.userId)).size,
-      uniqueDevices: new Set(allSessions.map(s => s.deviceId)).size,
+      totalSessions: playingSessions.length,
+      activeSessions: playingSessions.filter(s => s.playbackState?.isPlaying).length,
+      pausedSessions: playingSessions.filter(s => s.playbackState?.isPaused).length,
+      uniqueUsers: new Set(playingSessions.map(s => s.userId)).size,
+      uniqueDevices: new Set(playingSessions.map(s => s.deviceId)).size,
       contentTypes: {},
       deviceNames: {}
     };
 
     // Count content types
-    allSessions.forEach(session => {
+    playingSessions.forEach(session => {
       if (session.nowPlayingItem?.type) {
         stats.contentTypes[session.nowPlayingItem.type] = 
           (stats.contentTypes[session.nowPlayingItem.type] || 0) + 1;

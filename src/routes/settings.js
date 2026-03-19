@@ -4,24 +4,6 @@ const { csrfProtection } = require('../middleware/csrf');
 const { validateSettings, validateSystemConfig } = require('../middleware/validation');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
-};
-
-// Middleware to check admin access
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.Policy && req.session.user.Policy.IsAdministrator) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Admin access required' });
-  }
-};
-
 // Get system configuration
 router.get('/system', requireAuth, requireAdmin, async (req, res) => {
   try {

@@ -11,6 +11,7 @@ const { csrfProtection } = require('../middleware/csrf');
 const { criticalLimiter } = require('../middleware/rate-limit');
 const { AppError } = require('../middleware/error-handler');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const SessionRotation = require('../utils/sessionRotation');
 const jwt = require('jsonwebtoken');
 const { getBaseUrl } = require('../utils/urlHelper');
 const logger = require('../utils/logger');
@@ -105,9 +106,6 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
       return res.redirect('/login');
     }
 
-    req.session.user = authResult.User;
-    req.session.accessToken = authResult.AccessToken;
-    
     // Sync admin status from Jellyfin to database
     if (authResult.User && authResult.User.Id) {
       await PolicyManager.syncAdminStatusFromJellyfin(authResult.User.Id, authResult.User).catch(err => 
@@ -115,11 +113,12 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
       );
     }
     
-    req.session.save((err) => {
+    // Use secure session rotation on login
+    SessionRotation.rotateSessionOnLogin(req, res, authResult.User, authResult.AccessToken, (err, sessionId) => {
       if (err) {
-        logger.error('Session save error', { error: err.message, requestId: req.id });
+        logger.error('Session rotation error', { error: err.message, requestId: req.id });
         AuditLogger.log('LOGIN_SESSION_ERROR', authResult.User?.Name || username, `user:${username}`, 
-          { error: 'Session save failed' }, 'failure', req.ip);
+          { error: 'Session rotation failed' }, 'failure', req.ip);
         
         if (isAjax) {
           return res.status(500).json({
@@ -136,9 +135,15 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
         return res.redirect('/login');
       }
 
-      // Log successful login
+      // Log successful login with session metadata
+      const sessionMeta = SessionRotation.getSessionMetadata(req);
       AuditLogger.logSuccessfulLogin(authResult.User?.Name || username, req.ip);
-      logger.info('User login successful', { username: authResult.User?.Name, userId: authResult.User?.Id, requestId: req.id });
+      logger.info('User login successful', { 
+        username: authResult.User?.Name, 
+        userId: authResult.User?.Id, 
+        sessionId: sessionMeta.sessionId,
+        requestId: req.id 
+      });
       
       if (isAjax) {
         res.json({ success: true, user: authResult.User });

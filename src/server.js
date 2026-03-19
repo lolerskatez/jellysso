@@ -18,6 +18,8 @@ const { csrfProtection, setCsrfToken, csrfErrorHandler } = require('./middleware
 const { requestIdMiddleware } = require('./middleware/request-id');
 const { errorHandler, asyncHandler, AppError } = require('./middleware/error-handler');
 const { criticalLimiter, adminLimiter, apiLimiter, publicLimiter } = require('./middleware/rate-limit');
+const { sanitizationMiddleware } = require('./utils/sanitizer');
+const SessionTimeoutManager = require('./utils/sessionTimeoutManager');
 const { AccountLockoutManager } = require('./models/AccountLockoutManager');
 const CONSTANTS = require('./config/constants');
 const crypto = require('crypto');
@@ -165,6 +167,9 @@ const sessionStore = new SessionStore({
   cleanupInterval: 60 * 60 * 1000 // cleanup every hour
 });
 
+// Initialize session timeout manager for server-side timeout enforcement
+const sessionTimeoutManager = new SessionTimeoutManager(sessionStore);
+
 // Session configuration for reverse proxy scenarios (cloudflared, nginx, etc.)
 // NOTE: Even though we're behind HTTPS via cloudflared, cloudflared may not forward
 // X-Forwarded-Proto correctly. Setting secure: false is safe because TLS is terminated
@@ -187,6 +192,9 @@ app.use(session({
 
 // Request ID middleware - attach unique ID to all requests for tracing
 app.use(requestIdMiddleware);
+
+// Input sanitization middleware - prevent XSS attacks
+app.use(sanitizationMiddleware());
 
 // Set CSRF token in response locals for all requests (AFTER session middleware)
 app.use(setCsrfToken);

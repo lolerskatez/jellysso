@@ -34,29 +34,6 @@ const upload = multer({
   }
 });
 
-// Middleware: Require authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
-};
-
-// Middleware: Require admin access
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.Policy && req.session.user.Policy.IsAdministrator) {
-    next();
-  } else {
-    // Return JSON for API requests, HTML for page requests
-    if (req.path.includes('/api/')) {
-      res.status(403).json({ success: false, message: 'Admin access required' });
-    } else {
-      res.status(403).render('error', { message: 'Admin access required', code: 403 });
-    }
-  }
-};
-
 // Dashboard home page - unified admin dashboard
 router.get('/', requireAuth, requireAdmin, async (req, res) => {
   try {

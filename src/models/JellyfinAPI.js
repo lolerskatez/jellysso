@@ -20,6 +20,54 @@ class JellyfinAPI {
     });
   }
 
+  /**
+   * Centralized error handler for API calls
+   * @param {Error} error - The error object from axios
+   * @param {string} context - Context of the operation for better error messages
+   * @returns {Error} - Formatted error with appropriate message
+   */
+  handleApiError(error, context = 'API call') {
+    // Network errors
+    if (error.code === 'ECONNREFUSED') {
+      return new Error(`${context}: Unable to connect to Jellyfin server. Please check the server URL and network connection.`);
+    }
+    if (error.code === 'ENOTFOUND') {
+      return new Error(`${context}: Jellyfin server hostname not found. Please verify the server URL.`);
+    }
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+      return new Error(`${context}: Request timeout. The Jellyfin server is not responding.`);
+    }
+
+    // HTTP response errors
+    if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data;
+      
+      if (status === 401) {
+        return new Error(`${context}: Authentication failed. Invalid or expired API key.`);
+      }
+      if (status === 403) {
+        return new Error(`${context}: Access forbidden. Insufficient permissions.`);
+      }
+      if (status === 404) {
+        return new Error(`${context}: Resource not found.`);
+      }
+      if (status === 503) {
+        return new Error(`${context}: Jellyfin server is temporarily unavailable. Please try again later.`);
+      }
+      if (status >= 500) {
+        return new Error(`${context}: Jellyfin server error (${status}). Please try again later.`);
+      }
+      
+      // Use response message if available
+      const message = data?.message || data?.error || error.message;
+      return new Error(`${context}: ${message || `HTTP ${status}`}`);
+    }
+
+    // Generic error
+    return new Error(`${context}: ${error.message || 'Unknown error'}`);
+  }
+
   async testConnection() {
     try {
       // Use a public endpoint that doesn't require authentication
@@ -101,19 +149,7 @@ class JellyfinAPI {
       this.setCached(cacheKey, response.data);
       return response.data;
     } catch (error) {
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        throw new Error('Unable to connect to Jellyfin server. Please check the server URL and network connection.');
-      }
-      if (error.response?.status === 401) {
-        console.error('❌ Authentication failed with status 401. The API key may be invalid or expired.');
-        console.error(`   API Key (first 16 chars): ${this.apiKey?.substring(0, 16)}...`);
-        console.error(`   Response: ${error.response?.data || 'No response body'}`);
-        throw new Error('Authentication failed: Invalid or expired API key');
-      }
-      if (error.response?.status === 503) {
-        throw new Error('Jellyfin server is temporarily unavailable. Please try again later.');
-      }
-      throw new Error(`Failed to get users: ${error.message}`);
+      throw this.handleApiError(error, 'Failed to get users');
     }
   }
 
@@ -122,7 +158,7 @@ class JellyfinAPI {
       const response = await this.client.get(`/Users/${userId}`);
       return response.data;
     } catch (error) {
-      throw new Error(`Failed to get user: ${error.message}`);
+      throw this.handleApiError(error, `Failed to get user ${userId}`);
     }
   }
 

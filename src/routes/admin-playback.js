@@ -4,24 +4,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
-
-// Middleware: Require authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    next();
-  } else {
-    res.status(401).json({ success: false, message: 'Unauthorized' });
-  }
-};
-
-// Middleware: Require admin access
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.Policy && req.session.user.Policy.IsAdministrator) {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Admin access required' });
-  }
-};
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 /**
  * PHASE 2: ADMIN-LEVEL PLAYBACK CONTROL

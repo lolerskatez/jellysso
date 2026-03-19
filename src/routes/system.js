@@ -4,24 +4,7 @@ const AuditLogger = require('../models/AuditLogger');
 const SessionStore = require('../models/SessionStore');
 const CacheManager = require('../models/CacheManager');
 const PluginManager = require('../models/PluginManager');
-
-// Middleware: Require authentication
-const requireAuth = (req, res, next) => {
-  if (req.session.accessToken) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
-};
-
-// Middleware: Require admin access
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.Policy && req.session.user.Policy.IsAdministrator) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Admin access required' });
-  }
-};
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // ===== SESSION MANAGEMENT =====
 

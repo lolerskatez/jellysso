@@ -114,12 +114,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      // Styles: self + nonce for inline styles (eliminates unsafe-inline)
-      styleSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
-      // Scripts: self + nonce for inline scripts (eliminates unsafe-inline)
-      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, 'https://static.cloudflareinsights.com'],
-      // Script attributes: use nonce instead of unsafe-inline
-      scriptSrcAttr: [(req, res) => `'nonce-${res.locals.nonce}'`],
+      // Styles: allow unsafe-inline for dynamic JS style assignments
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      // Scripts: allow unsafe-inline for inline scripts and event handlers
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com'],
+      // Script attributes (event handlers): allow unsafe-inline
+      scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", 'https://cloudflareinsights.com'],

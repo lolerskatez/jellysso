@@ -1,4 +1,4 @@
-# Policy-to-Jellyfin Synchronization Guide
+\  # Policy-to-Jellyfin Synchronization Guide
 
 ## Overview
 This document explains how JellySSO policies are synchronized with Jellyfin and what happens when policies are updated.

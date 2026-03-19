@@ -147,6 +147,140 @@ class DatabaseManager {
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email)', (err) => {
         if (err) console.error('Error creating index idx_user_profiles_email:', err.message);
+      });
+
+      // Message Templates table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS message_templates (
+          id TEXT PRIMARY KEY,
+          key TEXT UNIQUE NOT NULL,
+          title TEXT NOT NULL,
+          subject TEXT,
+          body TEXT NOT NULL,
+          format TEXT DEFAULT 'markdown',
+          variables JSON,
+          is_active BOOLEAN DEFAULT 1,
+          created_by TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id)
+        )
+      `, (err) => {
+        if (err) console.error('Error creating message_templates table:', err.message);
+      });
+
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_message_templates_key ON message_templates(key)', (err) => {
+        if (err) console.error('Error creating index idx_message_templates_key:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_message_templates_active ON message_templates(is_active)', (err) => {
+        if (err) console.error('Error creating index idx_message_templates_active:', err.message);
+      });
+
+      // User Notification Preferences table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS user_notification_preferences (
+          id TEXT PRIMARY KEY,
+          user_id TEXT UNIQUE NOT NULL,
+          email_enabled BOOLEAN DEFAULT 1,
+          discord_enabled BOOLEAN DEFAULT 0,
+          discord_user_id TEXT,
+          discord_verified BOOLEAN DEFAULT 0,
+          telegram_enabled BOOLEAN DEFAULT 0,
+          telegram_chat_id TEXT,
+          telegram_verified BOOLEAN DEFAULT 0,
+          matrix_enabled BOOLEAN DEFAULT 0,
+          matrix_user_id TEXT,
+          matrix_verified BOOLEAN DEFAULT 0,
+          notification_digest BOOLEAN DEFAULT 0,
+          digest_frequency TEXT DEFAULT 'daily',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `, (err) => {
+        if (err) console.error('Error creating user_notification_preferences table:', err.message);
+      });
+
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_prefs_user ON user_notification_preferences(user_id)', (err) => {
+        if (err) console.error('Error creating index idx_notif_prefs_user:', err.message);
+      });
+
+      // Integration Configs table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS integration_configs (
+          id TEXT PRIMARY KEY,
+          service_name TEXT UNIQUE NOT NULL,
+          config TEXT NOT NULL,
+          is_active BOOLEAN DEFAULT 0,
+          last_tested DATETIME,
+          test_status TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Error creating integration_configs table:', err.message);
+      });
+
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_integration_service ON integration_configs(service_name)', (err) => {
+        if (err) console.error('Error creating index idx_integration_service:', err.message);
+      });
+
+      // Notification Queue table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS notification_queue (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          template_key TEXT NOT NULL,
+          channels TEXT NOT NULL,
+          variables TEXT,
+          status TEXT DEFAULT 'pending',
+          retry_count INTEGER DEFAULT 0,
+          max_retries INTEGER DEFAULT 3,
+          priority TEXT DEFAULT 'normal',
+          error_message TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          sent_at DATETIME,
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `, (err) => {
+        if (err) console.error('Error creating notification_queue table:', err.message);
+      });
+
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_queue_status ON notification_queue(status)', (err) => {
+        if (err) console.error('Error creating index idx_notif_queue_status:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_queue_user ON notification_queue(user_id)', (err) => {
+        if (err) console.error('Error creating index idx_notif_queue_user:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_queue_created ON notification_queue(created_at)', (err) => {
+        if (err) console.error('Error creating index idx_notif_queue_created:', err.message);
+      });
+
+      // Notification Logs table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS notification_logs (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          template_key TEXT,
+          channel TEXT,
+          status TEXT,
+          error_message TEXT,
+          delivered_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `, (err) => {
+        if (err) console.error('Error creating notification_logs table:', err.message);
+      });
+
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_user ON notification_logs(user_id)', (err) => {
+        if (err) console.error('Error creating index idx_notif_logs_user:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_channel ON notification_logs(channel)', (err) => {
+        if (err) console.error('Error creating index idx_notif_logs_channel:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_created ON notification_logs(created_at)', (err) => {
+        if (err) console.error('Error creating index idx_notif_logs_created:', err.message);
         
         // Mark database as ready after all tables are created
         this.isReady = true;

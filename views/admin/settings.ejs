@@ -309,369 +309,379 @@
 
         <!-- Application Settings -->
         <div id="app" class="settings-panel active">
-          <div class="settings-section">
-            <h3><i class="fas fa-info-circle"></i> Application Configuration</h3>
-            
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Application Name</div>
-                <div class="setting-description">Display name shown in the sidebar and browser title</div>
+          <form id="appForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-info-circle"></i> Application Configuration</h3>
+              
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Application Name</div>
+                  <div class="setting-description">Display name shown in the sidebar and browser title</div>
+                </div>
+                <div>
+                  <input type="text" name="appName" value="<%= settings.appName || 'JellySSO' %>" placeholder="Application name">
+                </div>
               </div>
-              <div>
-                <input type="text" name="appName" value="<%= settings.appName || 'JellySSO' %>" placeholder="Application name">
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Session Timeout (minutes)</div>
+                  <div class="setting-description">Idle time before a logged-in session expires and the user is redirected to login (applies immediately, min 5)</div>
+                </div>
+                <div>
+                  <input type="number" name="sessionTimeout" value="<%= settings.sessionTimeout || 30 %>" min="5" max="1440">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Public URL</div>
+                  <div class="setting-description">Externally reachable URL for this server — used for OIDC SSO callback links</div>
+                </div>
+                <div>
+                  <input type="url" name="webAppPublicUrl" value="<%= jellyfinSettings.webAppPublicUrl || '' %>" placeholder="https://sso.example.com">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Theme</div>
+                  <div class="setting-description">UI color scheme — Light, Dark, or Auto (follows system preference). Applies immediately on next page load.</div>
+                </div>
+                <div>
+                  <select name="theme">
+                    <option value="light" <%= settings.theme === 'light' ? 'selected' : '' %>>Light</option>
+                    <option value="dark"  <%= settings.theme === 'dark'  ? 'selected' : '' %>>Dark</option>
+                    <option value="auto"  <%= settings.theme === 'auto'  || !settings.theme ? 'selected' : '' %>>Auto (system)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Session Timeout (minutes)</div>
-                <div class="setting-description">Idle time before a logged-in session expires and the user is redirected to login (applies immediately, min 5)</div>
-              </div>
-              <div>
-                <input type="number" name="sessionTimeout" value="<%= settings.sessionTimeout || 30 %>" min="5" max="1440">
-              </div>
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="app"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="app"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Public URL</div>
-                <div class="setting-description">Externally reachable URL for this server — used for OIDC SSO callback links</div>
-              </div>
-              <div>
-                <input type="url" name="webAppPublicUrl" value="<%= jellyfinSettings.webAppPublicUrl || '' %>" placeholder="https://sso.example.com">
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Theme</div>
-                <div class="setting-description">UI color scheme — Light, Dark, or Auto (follows system preference). Applies immediately on next page load.</div>
-              </div>
-              <div>
-                <select name="theme">
-                  <option value="light" <%= settings.theme === 'light' ? 'selected' : '' %>>Light</option>
-                  <option value="dark"  <%= settings.theme === 'dark'  ? 'selected' : '' %>>Dark</option>
-                  <option value="auto"  <%= settings.theme === 'auto'  || !settings.theme ? 'selected' : '' %>>Auto (system)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="button-group">
-            <button class="btn btn-primary" data-action="save" data-section="app"><i class="fas fa-save"></i> Save Changes</button>
-            <button class="btn btn-secondary" data-action="reset" data-section="app"><i class="fas fa-undo"></i> Reset to Defaults</button>
-          </div>
+          </form>
         </div>
 
         <!-- Jellyfin Settings -->
         <div id="jellyfin" class="settings-panel">
-          <div class="settings-section">
-            <h3><i class="fas fa-play"></i> Jellyfin Server Configuration</h3>
-            
-            <div class="info-box">
-              <i class="fas fa-info-circle"></i> These settings control how the app connects to your Jellyfin server. Changes require a server restart.
-            </div>
+          <form id="jellyfinForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-play"></i> Jellyfin Server Configuration</h3>
+              
+              <div class="info-box">
+                <i class="fas fa-info-circle"></i> These settings control how the app connects to your Jellyfin server. Changes require a server restart.
+              </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Jellyfin Server URL (Internal)</div>
-                <div class="setting-description">Internal URL used by the server to connect to Jellyfin</div>
-              </div>
-              <div>
-                <input type="url" name="jellyfinUrl" value="<%= jellyfinSettings.jellyfinUrl || '' %>" placeholder="http://jellyfin.local:8096">
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Jellyfin Public URL</div>
-                <div class="setting-description">Public URL users use to access Jellyfin</div>
-              </div>
-              <div>
-                <input type="url" name="jellyfinPublicUrl" value="<%= jellyfinSettings.jellyfinPublicUrl || '' %>" placeholder="https://jellyfin.example.com">
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">API Key</div>
-                <div class="setting-description">Jellyfin API key for server-to-server communication</div>
-              </div>
-              <div>
-                <input type="password" name="apiKey" value="" placeholder="<%= jellyfinSettings.apiKeySet ? 'Key set — enter new key to replace' : 'Enter Jellyfin API key' %>" autocomplete="new-password" style="font-family: monospace; font-size: 0.8125rem;">
-                <% if (jellyfinSettings.apiKeySet) { %>
-                  <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"><i class="fas fa-check-circle" style="color: var(--success);"></i> Key configured: <code><%= jellyfinSettings.apiKeyHint %></code></div>
-                <% } %>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Connection Status</div>
-                <div class="setting-description">Current connection to Jellyfin server</div>
-              </div>
-              <div>
-                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
-                  <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Connected</span>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Jellyfin Server URL (Internal)</div>
+                  <div class="setting-description">Internal URL used by the server to connect to Jellyfin</div>
+                </div>
+                <div>
+                  <input type="url" name="jellyfinUrl" value="<%= jellyfinSettings.jellyfinUrl || '' %>" placeholder="http://jellyfin.local:8096">
                 </div>
               </div>
-            </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Setup Completed</div>
-                <div class="setting-description">Initial setup status</div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Jellyfin Public URL</div>
+                  <div class="setting-description">Public URL users use to access Jellyfin</div>
+                </div>
+                <div>
+                  <input type="url" name="jellyfinPublicUrl" value="<%= jellyfinSettings.jellyfinPublicUrl || '' %>" placeholder="https://jellyfin.example.com">
+                </div>
               </div>
-              <div>
-                <span style="color: var(--success); font-weight: 500;">
-                  <i class="fas fa-check"></i> <%= jellyfinSettings.setupComplete ? 'Yes' : 'No' %>
-                </span>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">API Key</div>
+                  <div class="setting-description">Jellyfin API key for server-to-server communication</div>
+                </div>
+                <div>
+                  <input type="password" name="apiKey" value="" placeholder="<%= jellyfinSettings.apiKeySet ? 'Key set — enter new key to replace' : 'Enter Jellyfin API key' %>" autocomplete="new-password" style="font-family: monospace; font-size: 0.8125rem;">
+                  <% if (jellyfinSettings.apiKeySet) { %>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"><i class="fas fa-check-circle" style="color: var(--success);"></i> Key configured: <code><%= jellyfinSettings.apiKeyHint %></code></div>
+                  <% } %>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Connection Status</div>
+                  <div class="setting-description">Current connection to Jellyfin server</div>
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Connected</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Setup Completed</div>
+                  <div class="setting-description">Initial setup status</div>
+                </div>
+                <div>
+                  <span style="color: var(--success); font-weight: 500;">
+                    <i class="fas fa-check"></i> <%= jellyfinSettings.setupComplete ? 'Yes' : 'No' %>
+                  </span>
+                </div>
+              </div>
+
+              <div class="info-box" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning); margin-top: var(--spacing-lg); margin-bottom: 0;">
+                <i class="fas fa-exclamation-triangle"></i>
+                Changing Jellyfin URLs requires restarting the server to take effect.
               </div>
             </div>
 
-            <div class="info-box" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning); margin-top: var(--spacing-lg); margin-bottom: 0;">
-              <i class="fas fa-exclamation-triangle"></i>
-              Changing Jellyfin URLs requires restarting the server to take effect.
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="jellyfin"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="jellyfin"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
-          </div>
-
-          <div class="button-group">
-            <button class="btn btn-primary" data-action="save" data-section="jellyfin"><i class="fas fa-save"></i> Save Changes</button>
-            <button class="btn btn-secondary" data-action="reset" data-section="jellyfin"><i class="fas fa-undo"></i> Reset to Defaults</button>
-          </div>
+          </form>
         </div>
 
         <!-- Security Settings -->
         <div id="security" class="settings-panel">
-          <div class="settings-section">
-            <h3><i class="fas fa-shield-alt"></i> Security Configuration</h3>
+          <form id="securityForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-shield-alt"></i> Security Configuration</h3>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Enable CSRF Protection</div>
-                <div class="setting-description">Protect against Cross-Site Request Forgery attacks — applies immediately. <strong>Only disable for testing.</strong></div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable CSRF Protection</div>
+                  <div class="setting-description">Protect against Cross-Site Request Forgery attacks — applies immediately. <strong>Only disable for testing.</strong></div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.csrfProtection !== false ? 'active' : '' %>" data-name="csrfProtection"></div>
+                </div>
               </div>
-              <div>
-                <div class="toggle-switch <%= settings.csrfProtection !== false ? 'active' : '' %>" data-name="csrfProtection"></div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable Rate Limiting</div>
+                  <div class="setting-description">Limit the number of requests per IP address — applies immediately</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.rateLimitEnabled !== false ? 'active' : '' %>" data-name="rateLimitEnabled"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Rate Limit (requests / minute)</div>
+                  <div class="setting-description">Maximum requests allowed per minute per IP — applies immediately</div>
+                </div>
+                <div>
+                  <input type="number" name="rateLimit" value="<%= settings.rateLimit || 60 %>" min="1" max="1000">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require HTTPS</div>
+                  <div class="setting-description">Redirect all HTTP connections to HTTPS — applies immediately. Ensure a valid TLS certificate is configured before enabling.</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.requireHttps ? 'active' : '' %>" data-name="requireHttps"></div>
+                </div>
               </div>
             </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Enable Rate Limiting</div>
-                <div class="setting-description">Limit the number of requests per IP address — applies immediately</div>
-              </div>
-              <div>
-                <div class="toggle-switch <%= settings.rateLimitEnabled !== false ? 'active' : '' %>" data-name="rateLimitEnabled"></div>
-              </div>
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="security"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="security"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Rate Limit (requests / minute)</div>
-                <div class="setting-description">Maximum requests allowed per minute per IP — applies immediately</div>
-              </div>
-              <div>
-                <input type="number" name="rateLimit" value="<%= settings.rateLimit || 60 %>" min="1" max="1000">
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Require HTTPS</div>
-                <div class="setting-description">Redirect all HTTP connections to HTTPS — applies immediately. Ensure a valid TLS certificate is configured before enabling.</div>
-              </div>
-              <div>
-                <div class="toggle-switch <%= settings.requireHttps ? 'active' : '' %>" data-name="requireHttps"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="button-group">
-            <button class="btn btn-primary" data-action="save" data-section="security"><i class="fas fa-save"></i> Save Changes</button>
-            <button class="btn btn-secondary" data-action="reset" data-section="security"><i class="fas fa-undo"></i> Reset to Defaults</button>
-          </div>
+          </form>
         </div>
 
         <!-- Logging Settings -->
         <div id="logging" class="settings-panel">
-          <div class="settings-section">
-            <h3><i class="fas fa-file-alt"></i> Logging Configuration</h3>
+          <form id="loggingForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-file-alt"></i> Logging Configuration</h3>
 
-            <!-- Live audit log summary -->
-            <div class="info-box" id="auditLogSummary" style="display:none;">
-              <i class="fas fa-chart-bar"></i>
-              <strong>Audit Log Status:</strong>
-              <span id="auditLogTotal">—</span> total entries &nbsp;|&nbsp;
-              <span id="auditLogLast24h">—</span> in the last 24&nbsp;h &nbsp;|&nbsp;
-              Success rate: <span id="auditLogSuccessRate">—</span>
+              <!-- Live audit log summary -->
+              <div class="info-box" id="auditLogSummary" style="display:none;">
+                <i class="fas fa-chart-bar"></i>
+                <strong>Audit Log Status:</strong>
+                <span id="auditLogTotal">—</span> total entries &nbsp;|&nbsp;
+                <span id="auditLogLast24h">—</span> in the last 24&nbsp;h &nbsp;|&nbsp;
+                Success rate: <span id="auditLogSuccessRate">—</span>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Log Level</div>
+                  <div class="setting-description">Verbosity of application logs (applies immediately)</div>
+                </div>
+                <div>
+                  <select name="logLevel">
+                    <option value="error" <%= settings.logLevel === 'error' ? 'selected' : '' %>>Error</option>
+                    <option value="warn" <%= settings.logLevel === 'warn' ? 'selected' : '' %>>Warning</option>
+                    <option value="info" <%= settings.logLevel === 'info' || !settings.logLevel ? 'selected' : '' %>>Info</option>
+                    <option value="debug" <%= settings.logLevel === 'debug' ? 'selected' : '' %>>Debug</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Log to File</div>
+                  <div class="setting-description">Write application logs to <code>logs/error.log</code> and <code>logs/combined.log</code> on disk</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.logToFile !== false ? 'active' : '' %>" data-name="logToFile"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Log File Retention (days)</div>
+                  <div class="setting-description">Delete rotated log files older than this many days (active log files are never deleted)</div>
+                </div>
+                <div>
+                  <input type="number" name="logRetention" value="<%= settings.logRetention || 30 %>" min="1" max="365">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable Audit Logging</div>
+                  <div class="setting-description">Record all user and system actions to the audit log database (applies immediately)</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.auditLogging !== false ? 'active' : '' %>" data-name="auditLogging"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Audit Log Retention (days)</div>
+                  <div class="setting-description">How long to keep audit log entries. Older entries are removed during the Daily Cleanup scheduled task.</div>
+                </div>
+                <div>
+                  <input type="number" name="auditLogRetention" value="<%= settings.auditLogRetention || 90 %>" min="7" max="365">
+                </div>
+              </div>
             </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Log Level</div>
-                <div class="setting-description">Verbosity of application logs (applies immediately)</div>
-              </div>
-              <div>
-                <select name="logLevel">
-                  <option value="error" <%= settings.logLevel === 'error' ? 'selected' : '' %>>Error</option>
-                  <option value="warn" <%= settings.logLevel === 'warn' ? 'selected' : '' %>>Warning</option>
-                  <option value="info" <%= settings.logLevel === 'info' || !settings.logLevel ? 'selected' : '' %>>Info</option>
-                  <option value="debug" <%= settings.logLevel === 'debug' ? 'selected' : '' %>>Debug</option>
-                </select>
-              </div>
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="logging"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="logging"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Log to File</div>
-                <div class="setting-description">Write application logs to <code>logs/error.log</code> and <code>logs/combined.log</code> on disk</div>
-              </div>
-              <div>
-                <div class="toggle-switch <%= settings.logToFile !== false ? 'active' : '' %>" data-name="logToFile"></div>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Log File Retention (days)</div>
-                <div class="setting-description">Delete rotated log files older than this many days (active log files are never deleted)</div>
-              </div>
-              <div>
-                <input type="number" name="logRetention" value="<%= settings.logRetention || 30 %>" min="1" max="365">
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Enable Audit Logging</div>
-                <div class="setting-description">Record all user and system actions to the audit log database (applies immediately)</div>
-              </div>
-              <div>
-                <div class="toggle-switch <%= settings.auditLogging !== false ? 'active' : '' %>" data-name="auditLogging"></div>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Audit Log Retention (days)</div>
-                <div class="setting-description">How long to keep audit log entries. Older entries are removed during the Daily Cleanup scheduled task.</div>
-              </div>
-              <div>
-                <input type="number" name="auditLogRetention" value="<%= settings.auditLogRetention || 90 %>" min="7" max="365">
-              </div>
-            </div>
-          </div>
-
-          <div class="button-group">
-            <button class="btn btn-primary" data-action="save" data-section="logging"><i class="fas fa-save"></i> Save Changes</button>
-            <button class="btn btn-secondary" data-action="reset" data-section="logging"><i class="fas fa-undo"></i> Reset to Defaults</button>
-          </div>
+          </form>
         </div>
 
         <!-- Maintenance Settings -->
         <div id="maintenance" class="settings-panel">
-          <div class="settings-section">
-            <h3><i class="fas fa-wrench"></i> Database Maintenance Schedule</h3>
+          <form id="maintenanceForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-wrench"></i> Database Maintenance Schedule</h3>
 
-            <div class="info-box">
-              <i class="fas fa-info-circle"></i> Configure when automatic database maintenance tasks run. The server must be running for tasks to execute.
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Daily Cleanup</div>
-                <div class="setting-description">Time to remove old audit logs</div>
+              <div class="info-box">
+                <i class="fas fa-info-circle"></i> Configure when automatic database maintenance tasks run. The server must be running for tasks to execute.
               </div>
-              <div>
-                <div class="inline-controls">
-                  <input type="time" name="dailyCleanupTime" value="<%= settings.dailyCleanupTime || '02:00' %>">
-                  <span>(Daily)</span>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Daily Cleanup</div>
+                  <div class="setting-description">Time to remove old audit logs</div>
+                </div>
+                <div>
+                  <div class="inline-controls">
+                    <input type="time" name="dailyCleanupTime" value="<%= settings.dailyCleanupTime || '02:00' %>">
+                    <span>(Daily)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Weekly Optimization</div>
+                  <div class="setting-description">Day and time to run VACUUM and ANALYZE</div>
+                </div>
+                <div>
+                  <div class="inline-controls">
+                    <select name="weeklyOptimizationDay">
+                      <option value="0" <%= parseInt(settings.weeklyOptimizationDay) === 0 ? 'selected' : '' %>>Sunday</option>
+                      <option value="1" <%= parseInt(settings.weeklyOptimizationDay) === 1 ? 'selected' : '' %>>Monday</option>
+                      <option value="2" <%= parseInt(settings.weeklyOptimizationDay) === 2 ? 'selected' : '' %>>Tuesday</option>
+                      <option value="3" <%= parseInt(settings.weeklyOptimizationDay) === 3 ? 'selected' : '' %>>Wednesday</option>
+                      <option value="4" <%= parseInt(settings.weeklyOptimizationDay) === 4 ? 'selected' : '' %>>Thursday</option>
+                      <option value="5" <%= parseInt(settings.weeklyOptimizationDay) === 5 ? 'selected' : '' %>>Friday</option>
+                      <option value="6" <%= parseInt(settings.weeklyOptimizationDay) === 6 ? 'selected' : '' %>>Saturday</option>
+                    </select>
+                    <input type="time" name="weeklyOptimizationTime" value="<%= settings.weeklyOptimizationTime || '03:00' %>">
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Monthly Backup</div>
+                  <div class="setting-description">Day of month and time to create database backup</div>
+                </div>
+                <div>
+                  <div class="inline-controls">
+                    <select name="monthlyBackupDay">
+                      <% for (let i = 1; i <= 31; i++) { %>
+                        <option value="<%= i %>" <%= parseInt(settings.monthlyBackupDay) === i ? 'selected' : '' %>><%= i %></option>
+                      <% } %>
+                    </select>
+                    <input type="time" name="monthlyBackupTime" value="<%= settings.monthlyBackupTime || '04:00' %>">
+                  </div>
+                </div>
+              </div>
+
+              <div class="history-box">
+                <strong><i class="fas fa-history"></i> Maintenance History</strong>
+                <div class="history-item">Last Daily Cleanup: <strong id="lastCleanupHistory">Loading...</strong></div>
+                <div class="history-item">Last Weekly Optimization: <strong id="lastOptimizeHistory">Loading...</strong></div>
+                <div class="history-item">Last Monthly Backup: <strong id="lastBackupHistory">Loading...</strong></div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Backup Retention</div>
+                  <div class="setting-description">Number of monthly backups to keep</div>
+                </div>
+                <div>
+                  <input type="number" name="backupRetention" value="<%= settings.backupRetention || 12 %>" min="3" max="24">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Cleanup Threshold (days)</div>
+                  <div class="setting-description">Delete audit logs older than this many days</div>
+                </div>
+                <div>
+                  <input type="number" name="cleanupThreshold" value="<%= settings.cleanupThreshold || 90 %>" min="7" max="365">
                 </div>
               </div>
             </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Weekly Optimization</div>
-                <div class="setting-description">Day and time to run VACUUM and ANALYZE</div>
-              </div>
-              <div>
-                <div class="inline-controls">
-                  <select name="weeklyOptimizationDay">
-                    <option value="0" <%= parseInt(settings.weeklyOptimizationDay) === 0 ? 'selected' : '' %>>Sunday</option>
-                    <option value="1" <%= parseInt(settings.weeklyOptimizationDay) === 1 ? 'selected' : '' %>>Monday</option>
-                    <option value="2" <%= parseInt(settings.weeklyOptimizationDay) === 2 ? 'selected' : '' %>>Tuesday</option>
-                    <option value="3" <%= parseInt(settings.weeklyOptimizationDay) === 3 ? 'selected' : '' %>>Wednesday</option>
-                    <option value="4" <%= parseInt(settings.weeklyOptimizationDay) === 4 ? 'selected' : '' %>>Thursday</option>
-                    <option value="5" <%= parseInt(settings.weeklyOptimizationDay) === 5 ? 'selected' : '' %>>Friday</option>
-                    <option value="6" <%= parseInt(settings.weeklyOptimizationDay) === 6 ? 'selected' : '' %>>Saturday</option>
-                  </select>
-                  <input type="time" name="weeklyOptimizationTime" value="<%= settings.weeklyOptimizationTime || '03:00' %>">
-                </div>
-              </div>
+            <div class="warning-box">
+              <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong>
+              <ul>
+                <li>Maintenance tasks require the application server to be running</li>
+                <li>Tasks run in the background and do not affect application performance</li>
+                <li>Database backups are stored in the <code>backups/</code> directory</li>
+                <li>All maintenance actions are logged in the audit log</li>
+              </ul>
             </div>
 
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Monthly Backup</div>
-                <div class="setting-description">Day of month and time to create database backup</div>
-              </div>
-              <div>
-                <div class="inline-controls">
-                  <select name="monthlyBackupDay">
-                    <% for (let i = 1; i <= 31; i++) { %>
-                      <option value="<%= i %>" <%= parseInt(settings.monthlyBackupDay) === i ? 'selected' : '' %>><%= i %></option>
-                    <% } %>
-                  </select>
-                  <input type="time" name="monthlyBackupTime" value="<%= settings.monthlyBackupTime || '04:00' %>">
-                </div>
-              </div>
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="maintenance"><i class="fas fa-save"></i> Save Schedule</button>
+              <button type="button" class="btn btn-secondary" id="runMaintenanceBtn"><i class="fas fa-play"></i> Run Now</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="maintenance"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
-
-            <div class="history-box">
-              <strong><i class="fas fa-history"></i> Maintenance History</strong>
-              <div class="history-item">Last Daily Cleanup: <strong id="lastCleanupHistory">Loading...</strong></div>
-              <div class="history-item">Last Weekly Optimization: <strong id="lastOptimizeHistory">Loading...</strong></div>
-              <div class="history-item">Last Monthly Backup: <strong id="lastBackupHistory">Loading...</strong></div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Backup Retention</div>
-                <div class="setting-description">Number of monthly backups to keep</div>
-              </div>
-              <div>
-                <input type="number" name="backupRetention" value="<%= settings.backupRetention || 12 %>" min="3" max="24">
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <div>
-                <div class="setting-label">Cleanup Threshold (days)</div>
-                <div class="setting-description">Delete audit logs older than this many days</div>
-              </div>
-              <div>
-                <input type="number" name="cleanupThreshold" value="<%= settings.cleanupThreshold || 90 %>" min="7" max="365">
-              </div>
-            </div>
-          </div>
-
-          <div class="warning-box">
-            <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong>
-            <ul>
-              <li>Maintenance tasks require the application server to be running</li>
-              <li>Tasks run in the background and do not affect application performance</li>
-              <li>Database backups are stored in the <code>backups/</code> directory</li>
-              <li>All maintenance actions are logged in the audit log</li>
-            </ul>
-          </div>
-
-          <div class="button-group">
-            <button class="btn btn-primary" data-action="save" data-section="maintenance"><i class="fas fa-save"></i> Save Schedule</button>
-            <button class="btn btn-secondary" id="runMaintenanceBtn"><i class="fas fa-play"></i> Run Now</button>
-            <button class="btn btn-secondary" data-action="reset" data-section="maintenance"><i class="fas fa-undo"></i> Reset to Defaults</button>
-          </div>
+          </form>
         </div>
       </div>
     </main>

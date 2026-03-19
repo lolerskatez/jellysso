@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
   <title>User Expiry Management - JellySSO Admin</title>
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/layout.css">
@@ -194,10 +195,19 @@
   </style>
 </head>
 <body>
-  <div style="padding: var(--spacing-2xl);">
-    <div class="page-header">
-      <h1 style="margin: 0;">User Expiry Management</h1>
-    </div>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-expiry' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">User Expiry Management</h1>
+        </div>
+      </header>
+
+      <div class="page-content">
 
     <div id="alertContainer"></div>
 
@@ -281,6 +291,8 @@
         </table>
       </div>
     </div>
+  </div>
+  </main>
   </div>
 
   <script>
@@ -497,5 +509,7 @@
       loadExpiringUsers();
     });
   </script>
+
+  <script src="/js/mobile-nav.js"></script>
 </body>
 </html>

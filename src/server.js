@@ -127,9 +127,7 @@ app.use(helmet({
       objectSrc: ["'none'"],
       formAction: ["'self'"],
       baseUri: ["'self'"],
-      frameAncestors: ["'self'"],
-      // Upgrade insecure requests in production
-      upgradeInsecureRequests: isProduction ? [] : undefined,
+      frameAncestors: ["'self'"]
     },
     useDefaults: false
   },

@@ -288,6 +288,20 @@
   </style>
 </head>
 <body>
+  <!-- Announcements Banner -->
+  <div id="announcementsBanner" style="position: fixed; top: 0; left: 0; right: 0; background: #f0f9ff; border-bottom: 2px solid #0066cc; padding: var(--spacing-md) var(--spacing-lg); display: none; z-index: 1000; max-height: 200px; overflow-y: auto;">
+    <div style="max-width: 600px; margin: 0 auto;">
+      <div id="announcementsContainer"></div>
+      <button onclick="closeAnnouncements()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #0066cc; font-size: 1.5rem; cursor: pointer;">✕</button>
+    </div>
+  </div>
+
+  <style>
+    body.has-announcements {
+      margin-top: 120px;
+    }
+  </style>
+
   <div class="login-page-wrapper">
     <div class="login-header">
       <div class="login-logo">
@@ -334,6 +348,11 @@
               required
               autocomplete="current-password"
             >
+            <div style="text-align: right; margin-top: var(--spacing-sm);">
+              <a href="#forgotPasswordModal" style="font-size: 0.875rem; color: var(--primary); text-decoration: none;">
+                Forgot password?
+              </a>
+            </div>
           </div>
 
           <button type="submit" class="login-btn" id="loginBtn">
@@ -364,6 +383,123 @@
     </div>
   </div>
 
+  <!-- Forgot Password Modal -->
+  <div id="forgotPasswordModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000;">
+    <div style="background: white; border-radius: var(--border-radius-lg); padding: var(--spacing-2xl); max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+      <h2 style="margin-top: 0; color: var(--text-primary);">Forgot Password?</h2>
+      <p style="color: var(--text-secondary); margin-bottom: var(--spacing-lg);">Enter your username to receive a password reset link via email.</p>
+      
+      <div id="forgotPasswordAlert" style="display: none; padding: var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);"></div>
+      
+      <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+        <div class="form-group">
+          <label class="form-label" for="forgotUsername">Username</label>
+          <input 
+            type="text" 
+            id="forgotUsername" 
+            name="username" 
+            class="form-control" 
+            placeholder="Enter your username" 
+            required
+            autocomplete="username">
+        </div>
+        
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button type="submit" class="login-btn" style="flex: 1;">
+            Send Reset Link
+          </button>
+          <button type="button" onclick="closeForgotPassword()" class="login-btn" style="background: var(--bg-light); color: var(--text-primary); flex: 1;">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/js/login.js"></script>
+  <script>
+    // Handle forgot password modal
+    document.addEventListener('DOMContentLoaded', function() {
+      const modal = document.getElementById('forgotPasswordModal');
+      const link = document.querySelector('a[href="#forgotPasswordModal"]');
+      
+      if (link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          modal.style.display = 'flex';
+          document.getElementById('forgotUsername').focus();
+        });
+      }
+      
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          closeForgotPassword();
+        }
+      });
+
+      // Load announcements
+      loadAnnouncements();
+    });
+
+    function closeForgotPassword() {
+      document.getElementById('forgotPasswordModal').style.display = 'none';
+      document.getElementById('forgotPasswordForm').reset();
+      document.getElementById('forgotPasswordAlert').style.display = 'none';
+    }
+
+    async function handleForgotPassword(event) {
+      event.preventDefault();
+      const username = document.getElementById('forgotUsername').value;
+      const alertDiv = document.getElementById('forgotPasswordAlert');
+      
+      try {
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alertDiv.innerHTML = '<div style="background: rgba(16,185,129,0.1); color: #065f46; padding: var(--spacing-md); border-radius: var(--border-radius);">✓ Check your email for a password reset link</div>';
+          alertDiv.style.display = 'block';
+          setTimeout(() => closeForgotPassword(), 3000);
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (err) {
+        alertDiv.innerHTML = '<div style="background: rgba(239,68,68,0.1); color: #b91c1c; padding: var(--spacing-md); border-radius: var(--border-radius);">✗ ' + (err.message || 'Failed to send reset link') + '</div>';
+        alertDiv.style.display = 'block';
+      }
+    }
+
+    function closeAnnouncements() {
+      document.getElementById('announcementsBanner').style.display = 'none';
+      document.body.classList.remove('has-announcements');
+    }
+
+    async function loadAnnouncements() {
+      try {
+        const response = await fetch('/api/announcements');
+        const data = await response.json();
+        
+        if (data.success && data.announcements && data.announcements.length > 0) {
+          const container = document.getElementById('announcementsContainer');
+          container.innerHTML = data.announcements.map(a => `
+            <div style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid #bfdbfe;">
+              <h3 style="margin: 0 0 var(--spacing-sm) 0; color: #0066cc; font-size: 1rem;">${a.title || 'Announcement'}</h3>
+              <p style="margin: 0; color: #333; font-size: 0.9rem;">${a.message}</p>
+            </div>
+          `).join('');
+          
+          document.getElementById('announcementsBanner').style.display = 'block';
+          document.body.classList.add('has-announcements');
+        }
+      } catch (err) {
+        console.error('Failed to load announcements:', err);
+      }
+    }
+  </script>
 </body>
 </html>

@@ -418,6 +418,7 @@ app.get('/api/csrf-token', (req, res) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/users', require('./routes/bulk-operations')); // Bulk user operations
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/quickconnect', require('./routes/quickconnect'));
 app.use('/api/activity', require('./routes/activity'));
@@ -428,6 +429,7 @@ app.use('/api/admin/playback', require('./routes/admin-playback'));
 app.use('/api/policy', require('./routes/policy'));
 app.use('/api/me', require('./routes/me'));
 app.use('/api/monitoring', require('./routes/monitoring'));
+app.use('/api/announcements', require('./routes/announcements')); // Admin announcements
 app.use('/policy', require('./routes/user-policy'));
 app.use('/setup', require('./routes/setup'));
 
@@ -571,6 +573,28 @@ app.get('/login', async (req, res) => {
   }
   
   res.render('login', { csrfToken, errorMessage, oidcEnabled, oidcProviderName });
+});
+
+app.get('/auth/reset-password', async (req, res) => {
+  // If already logged in, redirect to quickconnect
+  if (req.session && req.session.user) {
+    return res.redirect('/quickconnect');
+  }
+
+  const { token } = req.query;
+  
+  if (!token) {
+    return res.render('reset-password', { 
+      appName: SetupManager.getConfig().appName || 'JellySSO',
+      token: null,
+      tokenInvalid: true
+    });
+  }
+
+  res.render('reset-password', { 
+    appName: SetupManager.getConfig().appName || 'JellySSO',
+    token: token
+  });
 });
 
 app.get('/quickconnect', requireWebAuth, csrfProtection, (req, res) => {

@@ -342,6 +342,24 @@
                 <span class="stat-value"><%= profile.email %></span>
               </div>
               <% } %>
+              <% if (profile && profile.created_at) { %>
+              <div class="stat-row">
+                <span class="stat-label">Account Created</span>
+                <span class="stat-value"><%= new Date(profile.created_at).toLocaleDateString() %></span>
+              </div>
+              <% } %>
+              <% if (user.Policy) { %>
+              <div class="stat-row">
+                <span class="stat-label">Account Status</span>
+                <span class="stat-value">
+                  <% if (user.Policy.IsDisabled) { %>
+                    <span class="status-pill disabled"><i class="fas fa-ban"></i> Disabled</span>
+                  <% } else { %>
+                    <span class="status-pill enabled"><i class="fas fa-check-circle"></i> Active</span>
+                  <% } %>
+                </span>
+              </div>
+              <% } %>
             </div>
           </div>
 

@@ -95,33 +95,57 @@ app.use(require('compression')()); // Enable gzip compression
 app.use(express.json({ limit: '10mb' })); // Limit payload size
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Configure Helmet with proper CSP for both HTTP and HTTPS
+// Configure Helmet with strict CSP (no unsafe-inline)
 const isProduction = process.env.NODE_ENV === 'production';
 const useHttps = false; // Force HTTP even if environment variable is set
+
+// Generate nonce for inline styles/scripts (more secure than unsafe-inline)
+const generateNonce = () => require('crypto').randomBytes(16).toString('hex');
+
+app.use((req, res, next) => {
+  res.locals.nonce = generateNonce();
+  next();
+});
 
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for theme
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com'], // Allow Cloudflare Insights + inline scripts in EJS templates
-      scriptSrcAttr: ["'unsafe-inline'"], // Allow onclick/onsubmit attributes
-      imgSrc: ["'self'", 'data:'],
+      // Styles: self + nonce for inline styles (eliminates unsafe-inline)
+      styleSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
+      // Scripts: self + nonce for inline scripts (eliminates unsafe-inline)
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, 'https://static.cloudflareinsights.com'],
+      // Script attributes: use nonce instead of unsafe-inline
+      scriptSrcAttr: [(req, res) => `'nonce-${res.locals.nonce}'`],
+      imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'", 'https://cloudflareinsights.com'], // Allow Cloudflare Insights API calls
+      connectSrc: ["'self'", 'https://cloudflareinsights.com'],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       formAction: ["'self'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"],
+      // Upgrade insecure requests in production
+      upgradeInsecureRequests: isProduction ? [] : undefined,
     },
-    useDefaults: false // Disable default directives including upgrade-insecure-requests
+    useDefaults: false
   },
-  crossOriginOpenerPolicy: false,   // Disable for compatibility
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  strictTransportSecurity: false,
-  originAgentCluster: false,        // Consistently opt-out; avoids "inconsistent agent cluster" warning
+  strictTransportSecurity: isProduction ? { maxAge: 31536000, includeSubDomains: true } : false,
+  originAgentCluster: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  permissionsPolicy: {
+    geolocation: [],
+    microphone: [],
+    camera: [],
+    payment: [],
+    usb: [],
+    magnetometer: [],
+    gyroscope: [],
+    accelerometer: []
+  }
 }));
 
 app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB

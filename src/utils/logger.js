@@ -1,6 +1,7 @@
 /**
- * Shared Winston logger instance.
+ * Shared Winston logger instance with structured logging support.
  * Exported as a singleton so admin routes can adjust level / transports at runtime.
+ * Supports request ID integration for request tracing.
  */
 const winston = require('winston');
 const path = require('path');
@@ -13,12 +14,26 @@ if (!fs.existsSync(LOGS_DIR)) {
   fs.mkdirSync(LOGS_DIR, { recursive: true });
 }
 
+/**
+ * Custom format for structured logging with request ID support
+ */
+const structuredFormat = winston.format.printf(({ level, message, timestamp, requestId, ...meta }) => {
+  const logObject = {
+    timestamp,
+    level,
+    message,
+    ...(requestId && { requestId }),
+    ...meta
+  };
+  return JSON.stringify(logObject);
+});
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
     winston.format.errors({ stack: true }),
-    winston.format.json()
+    structuredFormat
   ),
   defaultMeta: { service: 'jellysso' },
   transports: [
@@ -29,7 +44,14 @@ const logger = winston.createLogger({
 
 if (process.env.NODE_ENV !== 'production') {
   logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.printf(({ level, message, timestamp, requestId, ...meta }) => {
+        const requestIdStr = requestId ? ` [${requestId}]` : '';
+        const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+        return `${timestamp} ${level}${requestIdStr}: ${message}${metaStr}`;
+      })
+    ),
   }));
 }
 

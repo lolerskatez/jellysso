@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function showStatus(message, type) {
     if (!statusMessage) return;
     statusMessage.className = 'status-message status-' + type;
-    statusMessage.style.display = 'block';
+    statusMessage.classList.remove('hidden');
     
     let icon = '';
     switch (type) {
@@ -79,19 +79,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // Hide status message
   function hideStatus() {
     if (statusMessage) {
-      statusMessage.style.display = 'none';
+      statusMessage.classList.add('hidden');
     }
   }
 
   // Set loading state
   function setLoading(loading) {
     if (loading) {
-      if (btnText) btnText.style.display = 'none';
-      if (btnLoading) btnLoading.style.display = 'inline-flex';
+      if (btnText) btnText.classList.add('hidden');
+      if (btnLoading) btnLoading.classList.remove('hidden');
       if (authorizeBtn) authorizeBtn.disabled = true;
     } else {
-      if (btnText) btnText.style.display = 'inline-flex';
-      if (btnLoading) btnLoading.style.display = 'none';
+      if (btnText) btnText.classList.remove('hidden');
+      if (btnLoading) btnLoading.classList.add('hidden');
       if (authorizeBtn) authorizeBtn.disabled = false;
     }
   }

@@ -19,6 +19,10 @@ class DatabaseManager {
     this.ensureDatabase();
   }
 
+  getInstance() {
+    return this;
+  }
+
   onReady(callback) {
     if (this.isReady) {
       callback();

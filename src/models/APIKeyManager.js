@@ -22,7 +22,8 @@ class APIKeyManager {
    * Initialize database schema
    */
   async initializeSchema() {
-    const db = DatabaseManager.getInstance();
+    const dbManager = DatabaseManager.getInstance();
+    const db = dbManager.db;
 
     return new Promise((resolve, reject) => {
       db.serialize(() => {
@@ -97,7 +98,7 @@ class APIKeyManager {
    */
   async createAPIKey(userId, name, permissions = [], expiresAt = null) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       
       // Generate random key
       const key = crypto.randomBytes(32).toString('hex');
@@ -132,7 +133,7 @@ class APIKeyManager {
    */
   async validateAPIKey(key) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       const keyHash = crypto.createHash('sha256').update(key).digest('hex');
 
       db.get(
@@ -167,7 +168,7 @@ class APIKeyManager {
    */
   async getUserAPIKeys(userId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       db.all(
         `SELECT id, name, permissions, last_used, last_ip, request_count, active, created_at, expires_at 
          FROM api_keys 
@@ -195,7 +196,7 @@ class APIKeyManager {
    */
   async getAPIKey(keyId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       db.get(
         `SELECT id, user_id, name, permissions, last_used, last_ip, request_count, active, created_at, expires_at 
          FROM api_keys 
@@ -223,7 +224,7 @@ class APIKeyManager {
    */
   async updateAPIKey(keyId, updates) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       const { name, permissions, active, expiresAt } = updates;
 
       const fields = [];
@@ -274,7 +275,7 @@ class APIKeyManager {
    */
   async revokeAPIKey(keyId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       db.run(
         `UPDATE api_keys SET active = 0 WHERE id = ?`,
         [keyId],
@@ -296,7 +297,7 @@ class APIKeyManager {
    */
   async deleteAPIKey(keyId) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
 
       db.serialize(() => {
         // Delete usage logs
@@ -321,7 +322,7 @@ class APIKeyManager {
    */
   async recordUsage(keyId, endpoint, method, statusCode, ip, userAgent) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
 
       db.serialize(() => {
         // Insert usage log
@@ -354,7 +355,7 @@ class APIKeyManager {
    */
   async getUsageStats(keyId, days = 30) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
       db.all(
@@ -380,7 +381,7 @@ class APIKeyManager {
    */
   async getUsageLog(keyId, limit = 50, offset = 0) {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
       db.all(
         `SELECT endpoint, method, status_code, ip_address, created_at 
          FROM api_key_usage 
@@ -405,7 +406,7 @@ class APIKeyManager {
    */
   async cleanupExpiredKeys() {
     return new Promise((resolve, reject) => {
-      const db = DatabaseManager.getInstance();
+      const db = DatabaseManager.getInstance().db;
 
       db.serialize(() => {
         // Get expired keys

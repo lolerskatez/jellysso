@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+    <style nonce="<%= nonce %>">
         .policy-container {
             max-width: 900px;
             margin: 0 auto;
@@ -335,6 +335,55 @@
         input:checked + .toggle-slider:before {
             transform: translateX(26px);
         }
+        
+        .tier-info-box {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .tier-list {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+        
+        .enforcement-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .enforcement-label {
+            margin: 0;
+        }
+        
+        .enforcement-text {
+            margin-right: 8px;
+        }
+        
+        .device-whitelist-desc {
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+        
+        .form-group-inline {
+            margin: 0;
+        }
+        
+        .form-label-small {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .device-list-container {
+            margin-top: 15px;
+        }
+        
+        .audit-log-container {
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -366,10 +415,10 @@
                 </div>
             </div>
 
-            <div style="background: #f9f9f9; padding: 12px; border-radius: 4px; border-left: 3px solid var(--primary-color);">
+            <div class="tier-info-box">
                 <i class="fas fa-info-circle"></i>
                 <strong>Tiers Available:</strong>
-                <ul style="margin: 10px 0 0 20px; padding: 0;">
+                <ul class="tier-list">
                     <li><strong>Single:</strong> 1 concurrent stream</li>
                     <li><strong>Standard:</strong> 2 concurrent streams</li>
                     <li><strong>Unlimited:</strong> No limit on concurrent streams</li>
@@ -382,9 +431,9 @@
         <div class="policy-section">
             <div class="policy-header">
                 <h2>Whitelisted Devices</h2>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label style="margin: 0;">
-                        <span style="margin-right: 8px;">Enforcement Enabled</span>
+                <div class="enforcement-toggle">
+                    <label class="enforcement-label">
+                        <span class="enforcement-text">Enforcement Enabled</span>
                         <label class="toggle-switch">
                             <input type="checkbox" id="deviceWhitelistToggle">
                             <span class="toggle-slider"></span>
@@ -393,18 +442,18 @@
                 </div>
             </div>
 
-            <p style="color: var(--text-muted); margin-bottom: 15px;">
+            <p class="device-whitelist-desc">
                 When enabled, playback is only allowed from whitelisted devices. Leave blank to allow all devices.
             </p>
 
             <!-- Add Device Form -->
             <div class="add-device-form">
-                <div class="form-group" style="margin: 0;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Device Name</label>
+                <div class="form-group form-group-inline">
+                    <label class="form-label-small">Device Name</label>
                     <input type="text" id="deviceName" placeholder="e.g., Living Room TV" />
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Device Type</label>
+                <div class="form-group form-group-inline">
+                    <label class="form-label-small">Device Type</label>
                     <select id="deviceType">
                         <option value="web">Web Browser</option>
                         <option value="mobile">Mobile App</option>
@@ -412,19 +461,19 @@
                         <option value="desktop">Desktop App</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="display: block; margin-bottom: 5px; font-size: 12px;">Current Device</label>
+                <div class="form-group form-group-inline">
+                    <label class="form-label-small">Current Device</label>
                     <select id="currentDevice">
                         <option value="">-- Select Device --</option>
                     </select>
                 </div>
-                <button class="btn-primary" onclick="addDevice()">
+                <button class="btn-primary" id="addDeviceBtn">
                     <i class="fas fa-plus"></i> Add Device
                 </button>
             </div>
 
             <!-- Device List -->
-            <div id="deviceList" style="margin-top: 15px;">
+            <div id="deviceList" class="device-list-container">
                 <div class="empty-state">
                     <i class="fas fa-spinner"></i>
                     <p>Loading devices...</p>
@@ -436,12 +485,12 @@
         <div class="policy-section">
             <div class="policy-header">
                 <h2>Activity Log</h2>
-                <button class="btn-primary" onclick="refreshAuditLog()">
+                <button class="btn-primary" id="refreshAuditLogBtn">
                     <i class="fas fa-sync"></i> Refresh
                 </button>
             </div>
 
-            <div id="auditLog" style="margin-top: 15px;">
+            <div id="auditLog" class="audit-log-container">
                 <div class="empty-state">
                     <i class="fas fa-spinner"></i>
                     <p>Loading activity...</p>
@@ -450,13 +499,17 @@
         </div>
     </div>
 
-    <script src="/js/policy.js"></script>
-    <script>
+    <script src="/js/policy.js" nonce="<%= nonce %>"></script>
+    <script nonce="<%= nonce %>">
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadUserPolicy();
             loadWhitelistedDevices();
             loadAuditLog();
+            
+            // Add event listeners
+            document.getElementById('addDeviceBtn')?.addEventListener('click', addDevice);
+            document.getElementById('refreshAuditLogBtn')?.addEventListener('click', refreshAuditLog);
         });
     </script>
 </body>

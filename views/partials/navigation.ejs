@@ -2,6 +2,51 @@
 <!-- Pass user and currentPage variables when including this partial -->
 <!-- theme-init.js reads localStorage and sets data-theme on <html> before paint -->
 <script src="/js/theme-init.js"></script>
+<style>
+  .nav-group-header {
+    display: flex;
+    align-items: center;
+  }
+  .nav-group-link {
+    flex: 1;
+    min-width: 0;
+  }
+  .nav-group-toggle {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.45);
+    padding: 4px 12px 4px 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .nav-group-toggle:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .nav-group-toggle i {
+    transition: transform 0.2s ease;
+    font-size: 0.7rem;
+  }
+  .nav-group-toggle[aria-expanded="true"] i {
+    transform: rotate(90deg);
+  }
+  .nav-subnav {
+    display: none;
+    border-left: 2px solid rgba(255, 255, 255, 0.12);
+    margin-left: 22px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+  }
+  .nav-subnav.open {
+    display: block;
+  }
+  .nav-subnav .nav-link {
+    font-size: 0.875rem;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+</style>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
@@ -76,28 +121,35 @@
         </a>
       </div>
       <div class="nav-item">
-        <a href="/admin/settings" class="nav-link <%= currentPage === 'admin-settings' ? 'active' : '' %>">
-          <i class="fas fa-cog"></i>
-          Settings
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/audit-logs" class="nav-link <%= currentPage === 'admin-audit-logs' ? 'active' : '' %>">
-          <i class="fas fa-file-alt"></i>
-          Audit Logs
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/backups" class="nav-link <%= currentPage === 'admin-backups' ? 'active' : '' %>">
-          <i class="fas fa-database"></i>
-          Backups
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/oidc" class="nav-link <%= currentPage === 'admin-oidc' ? 'active' : '' %>">
-          <i class="fas fa-key"></i>
-          OIDC SSO
-        </a>
+        <div class="nav-group-header">
+          <a href="/admin/settings" class="nav-link nav-group-link <%= ['admin-settings','admin-audit-logs','admin-backups','admin-oidc'].includes(currentPage) ? 'active' : '' %>">
+            <i class="fas fa-cog"></i>
+            Settings
+          </a>
+          <button class="nav-group-toggle" id="settingsToggle" aria-label="Toggle settings submenu" aria-expanded="false">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <div class="nav-subnav" id="settingsSubnav">
+          <div class="nav-item">
+            <a href="/admin/audit-logs" class="nav-link <%= currentPage === 'admin-audit-logs' ? 'active' : '' %>">
+              <i class="fas fa-file-alt"></i>
+              Audit Logs
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/backups" class="nav-link <%= currentPage === 'admin-backups' ? 'active' : '' %>">
+              <i class="fas fa-database"></i>
+              Backups
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/oidc" class="nav-link <%= currentPage === 'admin-oidc' ? 'active' : '' %>">
+              <i class="fas fa-key"></i>
+              OIDC SSO
+            </a>
+          </div>
+        </div>
       </div>
       <div class="nav-item">
         <a href="/admin/plugins" class="nav-link <%= currentPage === 'admin-plugins' ? 'active' : '' %>">
@@ -164,3 +216,29 @@
     </button>
   </div>
 </aside>
+<script>
+  (function () {
+    var settingsPages = ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-oidc'];
+    var currentPage = '<%= currentPage %>';
+    var toggle = document.getElementById('settingsToggle');
+    var subnav = document.getElementById('settingsSubnav');
+
+    if (!toggle || !subnav) return;
+
+    function open() {
+      subnav.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+
+    function close() {
+      subnav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    if (settingsPages.includes(currentPage)) open();
+
+    toggle.addEventListener('click', function () {
+      subnav.classList.contains('open') ? close() : open();
+    });
+  })();
+</script>

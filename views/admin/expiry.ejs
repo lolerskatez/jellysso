@@ -424,7 +424,11 @@
 
       try {
         const response = await fetch(`/api/users/${userId}/expiry`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          }
         });
 
         const data = await response.json();
@@ -449,7 +453,12 @@
 
       try {
         const response = await fetch('/api/users/expiry/send-warnings', {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({})
         });
 
         const data = await response.json();
@@ -474,7 +483,12 @@
 
       try {
         const response = await fetch('/api/users/expiry/disable-expired', {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({})
         });
 
         const data = await response.json();

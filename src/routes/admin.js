@@ -13,6 +13,7 @@ const fsSyncApi = require('fs');
 const path = require('path');
 const { getBaseUrl } = require('../utils/urlHelper');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { csrfProtection } = require('../middleware/csrf');
 const multer = require('multer');
 const os = require('os');
 
@@ -1955,11 +1956,11 @@ router.get('/signup-profiles', requireAuth, requireAdmin, (req, res) => {
 });
 
 // User expiry management page
-router.get('/user-expiry', requireAuth, requireAdmin, (req, res) => {
+router.get('/user-expiry', csrfProtection, requireAuth, requireAdmin, (req, res) => {
   try {
     res.render('admin/expiry', {
       user: req.session.user,
-      csrfToken: res.locals.csrfToken
+      csrfToken: req.csrfToken()
     });
   } catch (error) {
     console.error('User expiry management page error:', error);

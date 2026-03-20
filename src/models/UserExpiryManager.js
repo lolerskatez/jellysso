@@ -31,17 +31,9 @@ class UserExpiryManager {
    */
   initializeTables() {
     try {
-      // Add expiresAt column to users table
-      this.db.run(
-        `ALTER TABLE users ADD COLUMN expiresAt DATETIME`,
-        (err) => {
-          // Ignore if column already exists
-          if (err && !err.message.includes('duplicate column')) {
-            console.error('Error adding expiresAt column:', err);
-          }
-        }
-      );
-
+      // Users table is now created in DatabaseManager, no need to alter it
+      // If column doesn't exist, it was created in migration
+      
       // Create lifecycle events table for tracking
       this.db.run(`
         CREATE TABLE IF NOT EXISTS user_lifecycle_events (
@@ -58,16 +50,7 @@ class UserExpiryManager {
         }
       });
 
-      // Index for faster lookups
-      this.db.run(
-        'CREATE INDEX IF NOT EXISTS idx_users_expires ON users(expiresAt)',
-        (err) => {
-          if (err && !err.message.includes('already exists')) {
-            console.error('Error creating expiry index:', err);
-          }
-        }
-      );
-
+      // Index for lifecycle events - for faster lookups
       this.db.run(
         'CREATE INDEX IF NOT EXISTS idx_lifecycle_user_event ON user_lifecycle_events(userId, eventType)',
         (err) => {

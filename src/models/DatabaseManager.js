@@ -283,6 +283,32 @@ class DatabaseManager {
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_channel ON notification_logs(channel)', (err) => {
         if (err) console.error('Error creating index idx_notif_logs_channel:', err.message);
       });
+      
+      // Users table - for account expiry and admin state (linked to Jellyfin accounts)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          username TEXT,
+          email TEXT,
+          enabled BOOLEAN DEFAULT 1,
+          expiresAt DATETIME,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Error creating users table:', err.message);
+      });
+
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_users_expires ON users(expiresAt)', (err) => {
+        if (err) console.error('Error creating index idx_users_expires:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)', (err) => {
+        if (err) console.error('Error creating index idx_users_email:', err.message);
+      });
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_users_enabled ON users(enabled)', (err) => {
+        if (err) console.error('Error creating index idx_users_enabled:', err.message);
+      });
+
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_created ON notification_logs(created_at)', (err) => {
         if (err) console.error('Error creating index idx_notif_logs_created:', err.message);
         

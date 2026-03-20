@@ -73,7 +73,7 @@ router.post('/:id/expiry', csrfProtection, requireAuth, requireAdmin, async (req
     await expiryManager.setUserExpiry(id, new Date(expiresAt), reason);
 
     auditLogger.log('info', 'USER_EXPIRY_SET', {
-      adminId: req.user.id,
+      adminId: req.session.user?.Id,
       userId: id,
       expiresAt,
       reason
@@ -86,7 +86,7 @@ router.post('/:id/expiry', csrfProtection, requireAuth, requireAdmin, async (req
     });
   } catch (error) {
     auditLogger.log('error', 'USER_EXPIRY_SET_ERROR', {
-      adminId: req.user?.id,
+      adminId: req.session.user?.Id,
       userId: req.params.id,
       error: error.message
     });
@@ -104,7 +104,7 @@ router.delete('/:id/expiry', csrfProtection, requireAuth, requireAdmin, async (r
     await expiryManager.clearUserExpiry(id);
 
     auditLogger.log('info', 'USER_EXPIRY_CLEARED', {
-      adminId: req.user.id,
+      adminId: req.session.user?.Id,
       userId: id
     });
 
@@ -122,7 +122,7 @@ router.get('/:id/lifecycle', requireAuth, async (req, res) => {
     const { id } = req.params;
 
     // Allow user to see their own, or admin to see any
-    if (req.user.id !== id && !req.user.isAdmin) {
+    if (req.session.user?.Id !== id && !req.session.user?.Policy?.IsAdministrator) {
       return res.status(403).json({ success: false, error: 'Forbidden' });
     }
 
@@ -151,7 +151,7 @@ router.post('/cleanup', csrfProtection, requireAuth, requireAdmin, async (req, r
     const deletedCount = await expiryManager.bulkCleanupDisabledUsers(olderThanDays);
 
     auditLogger.log('info', 'USERS_CLEANUP_PERFORMED', {
-      adminId: req.user.id,
+      adminId: req.session.user?.Id,
       deletedCount,
       olderThanDays
     });
@@ -163,7 +163,7 @@ router.post('/cleanup', csrfProtection, requireAuth, requireAdmin, async (req, r
     });
   } catch (error) {
     auditLogger.log('error', 'CLEANUP_ERROR', {
-      adminId: req.user?.id,
+      adminId: req.session.user?.Id,
       error: error.message
     });
     res.status(500).json({ success: false, error: error.message });
@@ -178,7 +178,7 @@ router.post('/send-warnings', csrfProtection, requireAuth, requireAdmin, async (
     const count = await expiryManager.sendExpiryWarnings();
 
     auditLogger.log('info', 'EXPIRY_WARNINGS_MANUAL', {
-      adminId: req.user.id,
+      adminId: req.session.user?.Id,
       count
     });
 
@@ -200,7 +200,7 @@ router.post('/disable-expired', csrfProtection, requireAuth, requireAdmin, async
     const count = await expiryManager.disableExpiredUsers();
 
     auditLogger.log('info', 'EXPIRED_USERS_MANUAL_DISABLE', {
-      adminId: req.user.id,
+      adminId: req.session.user?.Id,
       count
     });
 

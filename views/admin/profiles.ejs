@@ -239,55 +239,6 @@
     </div>
   </div>
 
-  <!-- Create/Edit Profile Modal -->
-  <div id="profileModal" class="modal">
-    <div class="modal-content">
-      <h2 style="margin-top: 0;" id="modalTitle">Create Profile</h2>
-      
-      <form id="profileForm" onsubmit="handleSaveProfile(event)">
-        <div class="form-group">
-          <label class="form-label">Profile Name</label>
-          <input type="text" id="nameInput" class="form-control" required placeholder="e.g., Premium Tier">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Description</label>
-          <textarea id="descInput" class="form-control" placeholder="What is this profile for?"></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Jellyfin Tier</label>
-          <select id="tierInput" class="form-control">
-            <option value="basic">Basic</option>
-            <option value="premium">Premium</option>
-            <option value="family">Family</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Max Concurrent Streams</label>
-          <input type="number" id="streamsInput" class="form-control" min="1" max="10" value="1" placeholder="1">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Max Bitrate</label>
-          <select id="bitrateInput" class="form-control">
-            <option value="720p">720p</option>
-            <option value="1080p" selected>1080p</option>
-            <option value="2160p">2160p (4K)</option>
-            <option value="unlimited">Unlimited</option>
-          </select>
-        </div>
-
-        <div style="display: flex; gap: var(--spacing-md);">
-          <button type="submit" class="btn-primary" style="flex: 1;">Save</button>
-          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" onclick="closeModal()">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script>
     let profiles = [];
     let editingProfileId = null;
@@ -500,5 +451,54 @@
   </script>
 
   <script src="/js/mobile-nav.js"></script>
+
+  <!-- Create/Edit Profile Modal -->
+  <div id="profileModal" class="modal">
+    <div class="modal-content">
+      <h2 style="margin-top: 0;" id="modalTitle">Create Profile</h2>
+      
+      <form id="profileForm" onsubmit="handleSaveProfile(event)">
+        <div class="form-group">
+          <label class="form-label">Profile Name</label>
+          <input type="text" id="nameInput" class="form-control" required placeholder="e.g., Premium Tier">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="descInput" class="form-control" placeholder="What is this profile for?"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Jellyfin Tier</label>
+          <select id="tierInput" class="form-control">
+            <option value="basic">Basic</option>
+            <option value="premium">Premium</option>
+            <option value="family">Family</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Max Concurrent Streams</label>
+          <input type="number" id="streamsInput" class="form-control" min="1" max="10" value="1" placeholder="1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Max Bitrate</label>
+          <select id="bitrateInput" class="form-control">
+            <option value="720p">720p</option>
+            <option value="1080p" selected>1080p</option>
+            <option value="2160p">2160p (4K)</option>
+            <option value="unlimited">Unlimited</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button type="submit" class="btn-primary" style="flex: 1;">Save</button>
+          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

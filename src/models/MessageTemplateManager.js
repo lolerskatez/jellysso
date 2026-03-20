@@ -145,6 +145,24 @@ Log in to the admin panel to manage this user.`,
         variables: ['serverName', 'title', 'content']
       },
       {
+        key: 'invite_send',
+        title: 'Invite Sent',
+        subject: "You've been invited to {{serverName}}",
+        body: `# You've Been Invited!
+
+You have been invited to join **{{serverName}}**.
+
+Click the link below to create your account:
+
+{{inviteUrl}}
+
+{{#if expiresAt}}This invite expires on **{{expiresAt}}**.{{/if}}
+
+If you didn't request this, you can safely ignore this message.`,
+        format: 'markdown',
+        variables: ['serverName', 'inviteUrl', 'expiresAt']
+      },
+      {
         key: 'discord_verification',
         title: 'Verify Your Discord Account',
         subject: 'Verify your Discord account for {{serverName}}',

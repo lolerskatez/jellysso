@@ -52,6 +52,14 @@ class InviteManager {
         }
       });
 
+      // Migrations: add maxUses and userExpiryDays if they don't exist
+      this.db.run('ALTER TABLE invites ADD COLUMN maxUses INTEGER DEFAULT 1', (err) => {
+        // Ignore "duplicate column" errors — means migration already ran
+      });
+      this.db.run('ALTER TABLE invites ADD COLUMN userExpiryDays INTEGER', (err) => {
+        // Ignore "duplicate column" errors — means migration already ran
+      });
+
       // Index for faster lookups
       this.db.run(
         'CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code)',
@@ -115,13 +123,16 @@ class InviteManager {
    * @param {string} createdBy - Admin user ID who created the invite
    * @param {Date} expiresAt - Optional expiry date (null = never expires)
    * @param {Object} metadata - Additional metadata
+   * @param {number} maxUses - Maximum number of times the invite can be used (default 1)
+   * @param {number|null} userExpiryDays - Days until the accepted user's account expires (null = never)
    * @returns {Promise<Object>} Invite object with code
    */
-  async createInvite(signupProfileId, createdBy, expiresAt = null, metadata = {}) {
+  async createInvite(signupProfileId, createdBy, expiresAt = null, metadata = {}, maxUses = 1, userExpiryDays = null) {
     return new Promise((resolve, reject) => {
       try {
         const inviteId = crypto.randomBytes(16).toString('hex');
         const code = this.generateInviteCode();
+        const safeMaxUses = Math.max(1, parseInt(maxUses) || 1);
 
         // Verify profile exists
         this.db.get(
@@ -140,9 +151,9 @@ class InviteManager {
 
             // Insert invite
             this.db.run(
-              `INSERT INTO invites (id, code, signupProfileId, createdBy, expiresAt, status, metadata)
-               VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-              [inviteId, code, signupProfileId, createdBy, expiresAt, JSON.stringify(metadata)],
+              `INSERT INTO invites (id, code, signupProfileId, createdBy, expiresAt, status, metadata, maxUses, userExpiryDays)
+               VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+              [inviteId, code, signupProfileId, createdBy, expiresAt, JSON.stringify(metadata), safeMaxUses, userExpiryDays || null],
               function (err) {
                 if (err) {
                   this.logger.log('error', 'INVITE_INSERT_ERROR', { error: err.message });
@@ -154,7 +165,9 @@ class InviteManager {
                   code,
                   profileId: signupProfileId,
                   createdBy,
-                  expiresAt
+                  expiresAt,
+                  maxUses: safeMaxUses,
+                  userExpiryDays
                 });
 
                 resolve({
@@ -165,7 +178,9 @@ class InviteManager {
                   createdAt: new Date(),
                   expiresAt,
                   status: 'pending',
-                  usageCount: 0
+                  usageCount: 0,
+                  maxUses: safeMaxUses,
+                  userExpiryDays: userExpiryDays || null
                 });
               }
             );
@@ -205,9 +220,10 @@ class InviteManager {
               return reject(new Error('This invite has been revoked'));
             }
 
-            // Check if already accepted
-            if (invite.status === 'accepted') {
-              this.logger.log('warn', 'INVITE_ALREADY_USED', { code });
+            // Check if fully used up (maxUses reached)
+            const maxUses = invite.maxUses || 1;
+            if (invite.usageCount >= maxUses || invite.status === 'accepted') {
+              this.logger.log('warn', 'INVITE_ALREADY_USED', { code, usageCount: invite.usageCount, maxUses });
               return reject(new Error('This invite has already been used'));
             }
 
@@ -236,30 +252,53 @@ class InviteManager {
 
   /**
    * Accept an invite (create user from invite)
+   * Increments usageCount; marks status='accepted' only when maxUses is reached.
    * @param {string} code - Invite code
    * @param {string} userId - User ID accepting the invite
-   * @returns {Promise<boolean>} Success
+   * @returns {Promise<Object>} Invite row after update (includes userExpiryDays)
    */
   async acceptInvite(code, userId) {
     return new Promise((resolve, reject) => {
       try {
         const now = new Date();
 
-        this.db.run(
-          `UPDATE invites 
-           SET status = 'accepted', acceptedBy = ?, acceptedAt = ?
-           WHERE code = ?`,
-          [userId, now.toISOString(), code],
-          (err) => {
-            if (err) {
-              this.logger.log('error', 'INVITE_ACCEPT_ERROR', { code, userId, error: err.message });
-              return reject(new Error('Failed to accept invite'));
-            }
-
-            this.logger.log('info', 'INVITE_ACCEPTED', { code, userId, timestamp: now });
-            resolve(true);
+        // Fetch current invite state so we can compute new usageCount and maxUses
+        this.db.get('SELECT * FROM invites WHERE code = ?', [code], (err, invite) => {
+          if (err) {
+            this.logger.log('error', 'INVITE_ACCEPT_FETCH_ERROR', { code, error: err.message });
+            return reject(new Error('Failed to fetch invite'));
           }
-        );
+          if (!invite) {
+            return reject(new Error('Invite not found'));
+          }
+
+          const newUsageCount = (invite.usageCount || 0) + 1;
+          const maxUses = invite.maxUses || 1;
+          const fullyUsed = newUsageCount >= maxUses;
+
+          // If fully used: mark accepted + record first acceptor; otherwise keep pending
+          const newStatus = fullyUsed ? 'accepted' : 'pending';
+          const acceptedBy = fullyUsed ? userId : (invite.acceptedBy || userId);
+          const acceptedAt = fullyUsed ? now.toISOString() : (invite.acceptedAt || now.toISOString());
+
+          this.db.run(
+            `UPDATE invites 
+             SET status = ?, acceptedBy = ?, acceptedAt = ?, usageCount = ?, lastUsedAt = ?
+             WHERE code = ?`,
+            [newStatus, acceptedBy, acceptedAt, newUsageCount, now.toISOString(), code],
+            (updateErr) => {
+              if (updateErr) {
+                this.logger.log('error', 'INVITE_ACCEPT_ERROR', { code, userId, error: updateErr.message });
+                return reject(new Error('Failed to accept invite'));
+              }
+
+              this.logger.log('info', 'INVITE_ACCEPTED', {
+                code, userId, usageCount: newUsageCount, maxUses, fullyUsed
+              });
+              resolve({ ...invite, usageCount: newUsageCount, status: newStatus });
+            }
+          );
+        });
       } catch (error) {
         reject(error);
       }
@@ -385,12 +424,12 @@ class InviteManager {
    * @param {Date} expiresAt - Optional expiry for all
    * @returns {Promise<Array>} Array of created invites
    */
-  async bulkGenerateInvites(signupProfileId, createdBy, count = 10, expiresAt = null) {
+  async bulkGenerateInvites(signupProfileId, createdBy, count = 10, expiresAt = null, maxUses = 1, userExpiryDays = null) {
     const invites = [];
 
     try {
       for (let i = 0; i < count; i++) {
-        const invite = await this.createInvite(signupProfileId, createdBy, expiresAt);
+        const invite = await this.createInvite(signupProfileId, createdBy, expiresAt, {}, maxUses, userExpiryDays);
         invites.push(invite);
       }
 

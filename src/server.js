@@ -432,6 +432,7 @@ app.use('/api/me', require('./routes/me'));
 app.use('/api/monitoring', require('./routes/monitoring'));
 app.use('/api/announcements', require('./routes/announcements')); // Admin announcements
 app.use('/api/invites', require('./routes/invites')); // User invites
+app.use('/api/admin/templates', require('./routes/admin-templates')); // Message template CRUD
 app.use('/api/signup-profiles', require('./routes/signup-profiles')); // Signup profiles
 app.use('/api/contact-methods', require('./routes/contact-methods')); // Multi-channel contact methods
 app.use('/api/user', require('./routes/user-account')); // User account info and status

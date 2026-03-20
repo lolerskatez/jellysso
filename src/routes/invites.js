@@ -3,6 +3,10 @@ const router = express.Router();
 const InviteManager = require('../models/InviteManager');
 const SignupProfileManager = require('../models/SignupProfileManager');
 const AuditLogger = require('../models/AuditLogger');
+const UserExpiryManager = require('../models/UserExpiryManager');
+const NotificationManager = require('../models/NotificationManager');
+const SetupManager = require('../models/SetupManager');
+const { getBaseUrl } = require('../utils/urlHelper');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
@@ -32,10 +36,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     if (status) filters.status = status;
     if (limit) filters.limit = parseInt(limit);
 
-    const invites = await inviteManager.listInvites({
-      ...filters,
-      createdBy: req.user.id // Admins only see invites they created (unless super admin)
-    });
+    const invites = await inviteManager.listInvites(filters);
 
     res.json({
       success: true,
@@ -44,7 +45,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     auditLogger.log('error', 'INVITES_LIST_ERROR', {
-      userId: req.user?.id,
+      userId: req.session.user?.Id,
       error: error.message
     });
     res.status(500).json({ success: false, error: 'Failed to list invites' });
@@ -74,7 +75,9 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
     const {
       signupProfileId,
       count = 1,
-      expiryDays = null
+      expiryDays = null,
+      maxUses = 1,
+      userExpiryDays = null
     } = req.body;
 
     // Validate inputs
@@ -82,28 +85,35 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
       return res.status(400).json({ success: false, error: 'Signup profile ID is required' });
     }
 
-    // Calculate expiry date if specified
+    const safeMaxUses = Math.max(1, parseInt(maxUses) || 1);
+    const safeUserExpiryDays = userExpiryDays ? Math.max(1, parseInt(userExpiryDays)) : null;
+
+    // Calculate invite expiry date if specified
     let expiresAt = null;
     if (expiryDays) {
       expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + expiryDays);
+      expiresAt.setDate(expiresAt.getDate() + parseInt(expiryDays));
     }
+
+    const adminId = req.session.user?.Id || 'admin';
 
     // Generate invites
     let invites;
     if (count === 1) {
-      invites = [await inviteManager.createInvite(signupProfileId, req.user.id, expiresAt)];
+      invites = [await inviteManager.createInvite(signupProfileId, adminId, expiresAt, {}, safeMaxUses, safeUserExpiryDays)];
     } else if (count > 1 && count <= 1000) {
-      invites = await inviteManager.bulkGenerateInvites(signupProfileId, req.user.id, count, expiresAt);
+      invites = await inviteManager.bulkGenerateInvites(signupProfileId, adminId, count, expiresAt, safeMaxUses, safeUserExpiryDays);
     } else {
       return res.status(400).json({ success: false, error: 'Count must be between 1 and 1000' });
     }
 
     auditLogger.log('info', 'INVITES_CREATED', {
-      userId: req.user.id,
+      userId: adminId,
       count: invites.length,
       profileId: signupProfileId,
-      expiryDays
+      expiryDays,
+      maxUses: safeMaxUses,
+      userExpiryDays: safeUserExpiryDays
     });
 
     res.json({
@@ -113,7 +123,7 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
     });
   } catch (error) {
     auditLogger.log('error', 'INVITE_CREATE_ERROR', {
-      userId: req.user?.id,
+      userId: req.session.user?.Id,
       error: error.message
     });
     res.status(500).json({ success: false, error: error.message || 'Failed to create invite' });
@@ -160,10 +170,10 @@ router.delete('/:code', csrfProtection, requireAuth, requireAdmin, async (req, r
   try {
     const { code } = req.params;
 
-    await inviteManager.revokeInvite(code, req.user.id);
+    await inviteManager.revokeInvite(code, req.session.user?.Id);
 
     auditLogger.log('info', 'INVITE_REVOKED', {
-      userId: req.user.id,
+      userId: req.session.user?.Id,
       code
     });
 
@@ -191,8 +201,21 @@ router.post('/:code/accept', csrfProtection, publicLimiter, async (req, res) => 
     // Validate invite
     const invite = await inviteManager.validateInvite(code);
 
-    // Accept the invite
-    await inviteManager.acceptInvite(code, userId);
+    // Accept the invite (returns updated invite row with userExpiryDays)
+    const acceptedInvite = await inviteManager.acceptInvite(code, userId);
+
+    // Wire per-invite user account expiry if configured
+    const userExpiryDays = invite.userExpiryDays || acceptedInvite.userExpiryDays;
+    if (userExpiryDays && parseInt(userExpiryDays) > 0) {
+      try {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + parseInt(userExpiryDays));
+        await UserExpiryManager.getInstance().setUserExpiry(userId, expiryDate, 'invite');
+        auditLogger.log('info', 'USER_EXPIRY_SET_FROM_INVITE', { userId, userExpiryDays, expiryDate });
+      } catch (expiryErr) {
+        auditLogger.log('warn', 'INVITE_EXPIRY_WIRE_FAILED', { userId, error: expiryErr.message });
+      }
+    }
 
     // Track acceptance
     await inviteManager.trackInviteUsage(code, 'accepted', { userId });
@@ -375,7 +398,45 @@ router.post('/:code/send', csrfProtection, requireAuth, requireAdmin, async (req
     // Record the pre-send
     await inviteManager.recordPreSend(code, method, recipient.trim());
 
-    // TODO: Add actual email/Discord sending logic here using NotificationService
+    // Attempt actual delivery via NotificationManager
+    try {
+      const config = SetupManager.getConfig();
+      const baseUrl = getBaseUrl(config);
+      const inviteUrl = `${baseUrl}/signup?invite=${encodeURIComponent(code)}`;
+      const serverName = config.serverName || config.appName || 'JellySSO';
+      const notificationMgr = NotificationManager.getInstance();
+
+      if (method === 'email') {
+        await notificationMgr.sendEmailNotification(recipient.trim(), 'invite_send', {
+          inviteUrl,
+          serverName,
+          expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : 'Never'
+        });
+      } else if (method === 'discord') {
+        await notificationMgr.sendDiscordNotification(recipient.trim(), 'invite_send', {
+          inviteUrl,
+          serverName,
+          expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : 'Never'
+        });
+      } else if (method === 'telegram') {
+        await notificationMgr.sendTelegramNotification(recipient.trim(), 'invite_send', {
+          inviteUrl,
+          serverName,
+          expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : 'Never'
+        });
+      } else if (method === 'matrix') {
+        await notificationMgr.sendMatrixNotification(recipient.trim(), 'invite_send', {
+          inviteUrl,
+          serverName,
+          expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : 'Never'
+        });
+      }
+    } catch (sendErr) {
+      auditLogger.log('warn', 'INVITE_SEND_DELIVERY_FAILED', {
+        code, method, recipient, error: sendErr.message
+      });
+      // Still respond success — pre-send was recorded even if delivery failed
+    }
 
     auditLogger.log('info', 'INVITE_PRESEND', {
       userId: req.session.user?.Id,

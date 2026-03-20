@@ -143,13 +143,8 @@
       cursor: pointer;
     }
 
-    .status-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+    .usage-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; font-weight: 600; }
 
     .status-pending { background: #fef3c7; color: #92400e; }
     .status-accepted { background: #d1fae5; color: #065f46; }
@@ -266,6 +261,7 @@
             <th>Code</th>
             <th>Profile</th>
             <th>Status</th>
+            <th>Uses</th>
             <th>Created</th>
             <th>Expires</th>
             <th>Actions</th>
@@ -299,6 +295,16 @@
         <div class="form-group">
           <label class="form-label">Expiry (Days) - Leave blank for no expiry</label>
           <input type="number" id="expiryInput" class="form-control" min="1" max="365" placeholder="30">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Max Uses (how many users can use this invite)</label>
+          <input type="number" id="maxUsesInput" class="form-control" value="1" min="1" max="10000">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">User Account Expiry (days after signup, blank = never)</label>
+          <input type="number" id="userExpiryInput" class="form-control" min="1" max="3650" placeholder="e.g. 365">
         </div>
 
         <div style="display: flex; gap: var(--spacing-md);">
@@ -364,6 +370,12 @@
         const createdDate = new Date(invite.createdAt).toLocaleDateString();
         const expiresDate = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : 'Never';
         
+        const maxUses = invite.maxUses || 1;
+        const usageCount = invite.usageCount || 0;
+        const usageBadge = maxUses > 1
+          ? `<span class="usage-badge">${usageCount}/${maxUses}</span>`
+          : (usageCount > 0 ? `<span class="usage-badge">${usageCount}/1</span>` : '');
+
         row.innerHTML = `
           <td>
             <span class="code-badge" onclick="copyToClipboard('${invite.code}')" title="Click to copy">
@@ -376,6 +388,7 @@
               ${invite.status}
             </span>
           </td>
+          <td>${usageBadge || (usageCount + '/' + maxUses)}</td>
           <td>${createdDate}</td>
           <td>${expiresDate}</td>
           <td>
@@ -403,6 +416,8 @@
       const profileId = document.getElementById('profileSelect').value;
       const count = parseInt(document.getElementById('countInput').value);
       const expiryDays = document.getElementById('expiryInput').value ? parseInt(document.getElementById('expiryInput').value) : null;
+      const maxUses = parseInt(document.getElementById('maxUsesInput').value) || 1;
+      const userExpiryDays = document.getElementById('userExpiryInput').value ? parseInt(document.getElementById('userExpiryInput').value) : null;
 
       if (!profileId) {
         showAlert('Please select a profile', 'error');
@@ -423,7 +438,9 @@
           body: JSON.stringify({
             signupProfileId: profileId,
             count,
-            expiryDays
+            expiryDays,
+            maxUses,
+            userExpiryDays
           })
         });
 

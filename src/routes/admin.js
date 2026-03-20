@@ -1406,6 +1406,11 @@ router.post('/api/oidc/test', requireAuth, requireAdmin, async (req, res) => {
 router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
   try {
     const config = SetupManager.getConfig();
+    const [expiryReminderDays, expiryAction, expiryGraceDays] = await Promise.all([
+      DatabaseManager.getSetting('expiry_reminder_days'),
+      DatabaseManager.getSetting('expiry_action'),
+      DatabaseManager.getSetting('expiry_grace_days')
+    ]);
     res.json({
       success: true,
       settings: {
@@ -1423,6 +1428,11 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         apiKeyHint: config.apiKey
           ? config.apiKey.substring(0, 4) + '\u2022'.repeat(24) + config.apiKey.slice(-4)
           : ''
+      },
+      expirySettings: {
+        expiryReminderDays: parseInt(expiryReminderDays) || 7,
+        expiryAction: expiryAction || 'disable',
+        expiryGraceDays: parseInt(expiryGraceDays) || 0
       }
     });
   } catch (error) {
@@ -1497,6 +1507,16 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
 
       // Invalidate the AuditLogger cache so the next write re-checks the DB flag
       AuditLogger.invalidateCache();
+
+    } else if (section === 'expiry') {
+      if (s.expiryReminderDays !== undefined) await DatabaseManager.setSetting('expiry_reminder_days', String(Math.max(1, parseInt(s.expiryReminderDays) || 7)));
+      if (s.expiryAction      !== undefined) {
+        const validActions = ['disable', 'delete', 'disable_then_delete'];
+        if (validActions.includes(s.expiryAction)) {
+          await DatabaseManager.setSetting('expiry_action', s.expiryAction);
+        }
+      }
+      if (s.expiryGraceDays !== undefined) await DatabaseManager.setSetting('expiry_grace_days', String(Math.max(0, parseInt(s.expiryGraceDays) || 0)));
 
     } else if (section === 'maintenance') {
       // Parse HH:MM time strings into hour integers
@@ -1978,6 +1998,19 @@ router.get('/notifications', csrfProtection, requireAuth, requireAdmin, (req, re
   } catch (error) {
     console.error('Notification management page error:', error);
     res.status(500).render('error', { message: 'Error loading notifications page', code: 500 });
+  }
+});
+
+// Message template editor page
+router.get('/message-templates', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/message-templates', {
+      user: req.session.user,
+      csrfToken: req.csrfToken()
+    });
+  } catch (error) {
+    console.error('Message templates page error:', error);
+    res.status(500).render('error', { message: 'Error loading message templates page', code: 500 });
   }
 });
 

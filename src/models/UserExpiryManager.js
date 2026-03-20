@@ -215,7 +215,12 @@ class UserExpiryManager {
    */
   async sendExpiryWarnings() {
     try {
-      const expiringUsers = await this.getUsersExpiringWithin(7);
+      // Read configurable reminder window from settings (default 7 days)
+      const DatabaseManager = require('./DatabaseManager');
+      const reminderDaysSetting = await DatabaseManager.getInstance().getSetting('expiry_reminder_days');
+      const reminderDays = Math.max(1, parseInt(reminderDaysSetting) || 7);
+
+      const expiringUsers = await this.getUsersExpiringWithin(reminderDays);
       let notificationsSent = 0;
 
       for (const user of expiringUsers) {
@@ -258,20 +263,26 @@ class UserExpiryManager {
   }
 
   /**
-   * Disable all expired users (called daily)
-   * @returns {Promise<number>} Number of users disabled
+   * Process all expired users according to configured expiry_action setting.
+   * Modes: 'disable' (default), 'delete', 'disable_then_delete'
+   * @returns {Promise<number>} Number of users acted upon
    */
   async disableExpiredUsers() {
     try {
+      const DatabaseManager = require('./DatabaseManager');
+      const actionSetting = await DatabaseManager.getInstance().getSetting('expiry_action');
+      const graceDaysSetting = await DatabaseManager.getInstance().getSetting('expiry_grace_days');
+      const expiryAction = actionSetting || 'disable';
+      const graceDays = Math.max(0, parseInt(graceDaysSetting) || 0);
+
       const expiredUsers = await this.getExpiredUsers();
-      let usersDisabled = 0;
+      let usersActedOn = 0;
 
       for (const user of expiredUsers) {
         try {
-          // Get current user data
           const userData = await new Promise((resolve, reject) => {
             this.db.get(
-              'SELECT id, enabled FROM users WHERE id = ?',
+              'SELECT id, enabled, expiresAt FROM users WHERE id = ?',
               [user.id],
               (err, row) => {
                 if (err) reject(err);
@@ -280,21 +291,42 @@ class UserExpiryManager {
             );
           });
 
-          // Only disable if still enabled
-          if (userData && userData.enabled) {
-            await this.disableUserAccount(user.id, 'expired');
-            usersDisabled++;
+          if (!userData) continue;
+
+          if (expiryAction === 'delete') {
+            await this.deleteUserAccount(user.id, 'expired');
+            usersActedOn++;
+          } else if (expiryAction === 'disable_then_delete') {
+            if (userData.enabled) {
+              // First pass: disable
+              await this.disableUserAccount(user.id, 'expired');
+              usersActedOn++;
+            } else if (graceDays > 0) {
+              // Check if already disabled for longer than grace period → delete
+              const expiredAt = userData.expiresAt ? new Date(userData.expiresAt) : new Date(0);
+              const disabledForDays = (Date.now() - expiredAt.getTime()) / (1000 * 60 * 60 * 24);
+              if (disabledForDays >= graceDays) {
+                await this.deleteUserAccount(user.id, 'expired_grace_elapsed');
+                usersActedOn++;
+              }
+            }
+          } else {
+            // Default: 'disable'
+            if (userData.enabled) {
+              await this.disableUserAccount(user.id, 'expired');
+              usersActedOn++;
+            }
           }
         } catch (error) {
           this.logger.log('error', 'EXPIRY_DISABLE_ERROR', { userId: user.id, error: error.message });
         }
       }
 
-      if (usersDisabled > 0) {
-        this.logger.log('info', 'EXPIRED_USERS_DISABLED', { count: usersDisabled });
+      if (usersActedOn > 0) {
+        this.logger.log('info', 'EXPIRED_USERS_PROCESSED', { count: usersActedOn, action: expiryAction });
       }
 
-      return usersDisabled;
+      return usersActedOn;
     } catch (error) {
       this.logger.log('error', 'EXPIRY_DISABLE_BATCH_ERROR', { error: error.message });
       throw error;
@@ -321,6 +353,34 @@ class UserExpiryManager {
 
             this.logLifecycleEvent(userId, 'user_disabled', { reason });
             this.logger.log('info', 'USER_DISABLED', { userId, reason });
+            resolve(true);
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Permanently delete a user account (removes from local DB; does NOT call Jellyfin)
+   * @param {string} userId - User ID
+   * @param {string} reason - Audit reason
+   * @returns {Promise<boolean>} Success
+   */
+  async deleteUserAccount(userId, reason = 'manual') {
+    return new Promise((resolve, reject) => {
+      try {
+        this.db.run(
+          'DELETE FROM users WHERE id = ?',
+          [userId],
+          (err) => {
+            if (err) {
+              this.logger.log('error', 'USER_DELETE_ERROR', { userId, error: err.message });
+              return reject(new Error('Failed to delete user'));
+            }
+
+            this.logger.log('info', 'USER_DELETED', { userId, reason });
             resolve(true);
           }
         );

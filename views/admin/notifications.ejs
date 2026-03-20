@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Notification Management - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-2xl);
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+    }
+
+    /* ── Stat cards ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .stat-card.stat-pending  { border-top: 3px solid #f59e0b; }
+    .stat-card.stat-sent     { border-top: 3px solid #10b981; }
+    .stat-card.stat-failed   { border-top: 3px solid #ef4444; }
+    .stat-card.stat-skipped  { border-top: 3px solid #6b7280; }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin: 5px 0 0 0;
+    }
+
+    /* ── Channel status cards ── */
+    .channels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .channel-card {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+    }
+
+    .channel-icon {
+      font-size: 1.8rem;
+      width: 48px;
+      text-align: center;
+    }
+
+    .channel-info { flex: 1; }
+
+    .channel-name {
+      font-weight: 600;
+      margin: 0 0 4px;
+      font-size: 1rem;
+    }
+
+    .channel-status {
+      font-size: 0.8rem;
+      margin: 0;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    .status-dot.connected    { background: #10b981; }
+    .status-dot.disconnected { background: #ef4444; }
+    .status-dot.disabled     { background: #9ca3af; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+      border-bottom: 2px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: var(--spacing-md) var(--spacing-lg);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .data-table td {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+
+    .table-wrapper { overflow-x: auto; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-pending  { background: #fef3c7; color: #92400e; }
+    .badge-sent     { background: #d1fae5; color: #065f46; }
+    .badge-failed   { background: #fee2e2; color: #991b1b; }
+    .badge-skipped  { background: #f3f4f6; color: #374151; }
+
+    /* ── Actions bar ── */
+    .actions-bar {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #0066cc);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: opacity 0.2s;
+    }
+
+    .btn-danger:hover { opacity: 0.85; }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: background 0.2s;
+    }
+
+    .btn-secondary:hover { background: var(--border-color); }
+
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-cancel { background: #ef4444; color: white; }
+    .btn-cancel:hover { opacity: 0.85; }
+
+    /* ── Filters ── */
+    .filter-bar {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      flex-wrap: wrap;
+    }
+
+    .filter-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    /* ── Manual send form ── */
+    .send-form {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      max-width: 600px;
+    }
+
+    .form-group { margin-bottom: var(--spacing-lg); }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    .channel-checkboxes {
+      display: flex;
+      gap: var(--spacing-lg);
+      flex-wrap: wrap;
+    }
+
+    .channel-checkboxes label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    /* ── Alert ── */
+    .alert {
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      font-weight: 500;
+    }
+
+    .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .alert-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-info    { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-2xl);
+      color: var(--text-secondary);
+    }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      gap: var(--spacing-sm);
+      justify-content: flex-end;
+      margin-top: var(--spacing-lg);
+      align-items: center;
+    }
+
+    .page-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+
+    .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .truncate-text {
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-notifications' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Notification Management</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-secondary" onclick="refreshAll()">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div id="alertContainer"></div>
+
+        <!-- Queue stat cards -->
+        <div class="stats-grid">
+          <div class="stat-card stat-pending">
+            <p class="stat-value" id="statPending">-</p>
+            <p class="stat-label">Pending</p>
+          </div>
+          <div class="stat-card stat-sent">
+            <p class="stat-value" id="statSent">-</p>
+            <p class="stat-label">Sent</p>
+          </div>
+          <div class="stat-card stat-failed">
+            <p class="stat-value" id="statFailed">-</p>
+            <p class="stat-label">Failed</p>
+          </div>
+          <div class="stat-card stat-skipped">
+            <p class="stat-value" id="statSkipped">-</p>
+            <p class="stat-label">Skipped</p>
+          </div>
+        </div>
+
+        <!-- Channel status -->
+        <h2 style="margin-bottom: var(--spacing-lg); font-size: 1.1rem;">Channel Status</h2>
+        <div class="channels-grid" id="channelsGrid">
+          <div class="channel-card">
+            <div class="channel-icon" style="color:#6b7280;"><i class="fas fa-spinner fa-spin"></i></div>
+            <div class="channel-info"><p class="channel-name">Loading...</p></div>
+          </div>
+        </div>
+
+        <!-- Main tabs -->
+        <div class="tabs">
+          <button class="tab active" id="tabQueue" onclick="switchTab('queue', this)">
+            <i class="fas fa-list"></i> Queue
+          </button>
+          <button class="tab" id="tabLogs" onclick="switchTab('logs', this)">
+            <i class="fas fa-history"></i> Delivery Logs
+          </button>
+          <button class="tab" id="tabSend" onclick="switchTab('send', this)">
+            <i class="fas fa-paper-plane"></i> Send Manual
+          </button>
+        </div>
+
+        <!-- ── Queue Tab ── -->
+        <div id="queueTab" class="tab-content active">
+          <div class="actions-bar">
+            <div class="filter-bar">
+              <select id="queueStatusFilter" onchange="loadQueue()">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="sent">Sent</option>
+                <option value="failed">Failed</option>
+                <option value="skipped">Skipped</option>
+              </select>
+            </div>
+            <div style="margin-left: auto; display: flex; gap: var(--spacing-md);">
+              <button class="btn-danger" onclick="clearQueue()">
+                <i class="fas fa-trash"></i> Clear Completed
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Template</th>
+                  <th>Channels</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Retries</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="queueTableBody">
+                <tr>
+                  <td colspan="8" class="empty-state">Loading queue...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="queuePagination"></div>
+        </div>
+
+        <!-- ── Logs Tab ── -->
+        <div id="logsTab" class="tab-content">
+          <div class="actions-bar">
+            <div class="filter-bar">
+              <select id="logsChannelFilter" onchange="loadLogs()">
+                <option value="">All Channels</option>
+                <option value="email">Email</option>
+                <option value="discord">Discord</option>
+                <option value="telegram">Telegram</option>
+                <option value="matrix">Matrix</option>
+              </select>
+              <select id="logsStatusFilter" onchange="loadLogs()">
+                <option value="">All Statuses</option>
+                <option value="sent">Sent</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div style="margin-left: auto;">
+              <button class="btn-danger" onclick="clearLogs()">
+                <i class="fas fa-trash"></i> Clear All Logs
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Template</th>
+                  <th>Channel</th>
+                  <th>Status</th>
+                  <th>Error</th>
+                  <th>Delivered</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody">
+                <tr>
+                  <td colspan="7" class="empty-state">Select the Delivery Logs tab to load.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="logsPagination"></div>
+        </div>
+
+        <!-- ── Send Manual Tab ── -->
+        <div id="sendTab" class="tab-content">
+          <div class="send-form">
+            <h3 style="margin: 0 0 var(--spacing-lg);">Send Manual Notification</h3>
+
+            <div class="form-group">
+              <label for="sendUserId">User ID (Jellyfin user ID)</label>
+              <input type="text" id="sendUserId" placeholder="e.g. a1b2c3d4-000...">
+            </div>
+
+            <div class="form-group">
+              <label for="sendTemplate">Template</label>
+              <select id="sendTemplate">
+                <option value="">Loading templates...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Channels</label>
+              <div class="channel-checkboxes">
+                <label><input type="checkbox" name="sendChannel" value="email" checked> Email</label>
+                <label><input type="checkbox" name="sendChannel" value="discord"> Discord</label>
+                <label><input type="checkbox" name="sendChannel" value="telegram"> Telegram</label>
+                <label><input type="checkbox" name="sendChannel" value="matrix"> Matrix</label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="sendVariables">Variables (JSON, optional)</label>
+              <textarea id="sendVariables" placeholder='{"username": "john", "expiryDate": "2025-01-01"}'></textarea>
+            </div>
+
+            <button class="btn-primary" onclick="sendManualNotification()">
+              <i class="fas fa-paper-plane"></i> Send Notification
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /.page-content -->
+    </main>
+  </div><!-- /.app-container -->
+
+  <script>
+    const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    let queuePage = 1;
+    let logsPage = 1;
+
+    // ─────────────────────────────────────────────
+    // Tab switching
+    // ─────────────────────────────────────────────
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(name + 'Tab').classList.add('active');
+
+      if (name === 'logs') loadLogs();
+      if (name === 'send') loadTemplates();
+    }
+
+    // ─────────────────────────────────────────────
+    // Load stats
+    // ─────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/admin/notifications/stats');
+        const data = await res.json();
+        if (data.success && data.stats) {
+          const s = data.stats;
+          document.getElementById('statPending').textContent = s.pending ?? '-';
+          document.getElementById('statSent').textContent    = s.sent    ?? '-';
+          document.getElementById('statFailed').textContent  = s.failed  ?? '-';
+          document.getElementById('statSkipped').textContent = s.skipped ?? '-';
+        }
+      } catch (err) {
+        console.error('Stats load error:', err);
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Load channel status cards
+    // ─────────────────────────────────────────────
+    async function loadChannelStatus() {
+      const grid = document.getElementById('channelsGrid');
+      try {
+        const res = await fetch('/api/admin/notifications/channels/status');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        const channels = [
+          { key: 'email',    icon: 'fa-envelope',    label: 'Email' },
+          { key: 'discord',  icon: 'fa-discord',     label: 'Discord',  brand: true },
+          { key: 'telegram', icon: 'fa-telegram',    label: 'Telegram', brand: true },
+          { key: 'matrix',   icon: 'fa-comments',    label: 'Matrix' }
+        ];
+
+        grid.innerHTML = channels.map(ch => {
+          const s = data.status[ch.key] || {};
+          const dotClass = !s.enabled ? 'disabled' : (s.connected ? 'connected' : 'disconnected');
+          const statusText = !s.enabled ? 'Disabled' : (s.connected ? 'Connected' : 'Disconnected');
+          const iconClass = ch.brand ? 'fab' : 'fas';
+          const sub = s.botTag || s.userId || s.botUserId || '';
+          return `
+            <div class="channel-card">
+              <div class="channel-icon" style="color:${dotClass === 'connected' ? '#10b981' : dotClass === 'disabled' ? '#9ca3af' : '#ef4444'}">
+                <i class="${iconClass} ${ch.icon}"></i>
+              </div>
+              <div class="channel-info">
+                <p class="channel-name">${ch.label}</p>
+                <p class="channel-status">
+                  <span class="status-dot ${dotClass}"></span>${statusText}
+                  ${sub ? `<br><small style="color:var(--text-secondary)">${sub}</small>` : ''}
+                </p>
+              </div>
+            </div>`;
+        }).join('');
+      } catch (err) {
+        grid.innerHTML = `<div class="alert alert-error">Failed to load channel status: ${err.message}</div>`;
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Load queue
+    // ─────────────────────────────────────────────
+    async function loadQueue() {
+      const status = document.getElementById('queueStatusFilter').value;
+      const tbody = document.getElementById('queueTableBody');
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+
+      try {
+        const params = new URLSearchParams({ page: queuePage, limit: 25 });
+        if (status) params.set('status', status);
+
+        const res = await fetch('/api/admin/notifications/queue?' + params);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        if (!data.entries.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No queue entries found</td></tr>';
+          document.getElementById('queuePagination').innerHTML = '';
+          return;
+        }
+
+        tbody.innerHTML = data.entries.map(e => `
+          <tr>
+            <td class="truncate-text" title="${e.user_id}">${e.user_id}</td>
+            <td>${e.template_key}</td>
+            <td>${(e.channels || []).join(', ')}</td>
+            <td>${e.priority || 'normal'}</td>
+            <td><span class="badge badge-${e.status}">${e.status}</span></td>
+            <td>${e.retry_count}/${e.max_retries}</td>
+            <td>${formatDate(e.created_at)}</td>
+            <td>
+              ${e.status === 'pending'
+                ? `<button class="btn-small btn-cancel" onclick="cancelQueueEntry('${e.id}')">Cancel</button>`
+                : '-'}
+            </td>
+          </tr>`).join('');
+
+        renderPagination('queuePagination', data.total, 25, queuePage, (p) => {
+          queuePage = p;
+          loadQueue();
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:#ef4444">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function cancelQueueEntry(id) {
+      if (!confirm('Cancel this queue entry?')) return;
+      try {
+        const res = await fetch(`/api/admin/notifications/queue/${id}`, {
+          method: 'DELETE',
+          headers: { 'X-CSRF-Token': CSRF_TOKEN }
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert('Entry cancelled', 'success');
+          loadQueue();
+          loadStats();
+        } else {
+          showAlert(data.message, 'error');
+        }
+      } catch (err) {
+        showAlert('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function clearQueue() {
+      if (!confirm('Clear all completed, failed, and skipped queue entries?')) return;
+      try {
+        const res = await fetch('/api/admin/notifications/queue', {
+          method: 'DELETE',
+          headers: { 'X-CSRF-Token': CSRF_TOKEN }
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert(data.message, 'success');
+          loadQueue();
+          loadStats();
+        } else {
+          showAlert(data.message, 'error');
+        }
+      } catch (err) {
+        showAlert('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Load delivery logs
+    // ─────────────────────────────────────────────
+    async function loadLogs() {
+      const channel = document.getElementById('logsChannelFilter').value;
+      const status  = document.getElementById('logsStatusFilter').value;
+      const tbody   = document.getElementById('logsTableBody');
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+
+      try {
+        const params = new URLSearchParams({ page: logsPage, limit: 25 });
+        if (channel) params.set('channel', channel);
+        if (status)  params.set('status', status);
+
+        const res  = await fetch('/api/admin/notifications/logs?' + params);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        if (!data.logs.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No delivery logs found</td></tr>';
+          document.getElementById('logsPagination').innerHTML = '';
+          return;
+        }
+
+        tbody.innerHTML = data.logs.map(l => `
+          <tr>
+            <td class="truncate-text" title="${l.user_id || ''}">${l.user_id || '-'}</td>
+            <td>${l.template_key || '-'}</td>
+            <td>${l.channel || '-'}</td>
+            <td><span class="badge badge-${l.status}">${l.status}</span></td>
+            <td class="truncate-text" title="${l.error_message || ''}">${l.error_message || '-'}</td>
+            <td>${l.delivered_at ? formatDate(l.delivered_at) : '-'}</td>
+            <td>${formatDate(l.created_at)}</td>
+          </tr>`).join('');
+
+        renderPagination('logsPagination', data.total, 25, logsPage, (p) => {
+          logsPage = p;
+          loadLogs();
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:#ef4444">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function clearLogs() {
+      if (!confirm('Delete ALL notification delivery logs? This cannot be undone.')) return;
+      try {
+        const res  = await fetch('/api/admin/notifications/logs', {
+          method: 'DELETE',
+          headers: { 'X-CSRF-Token': CSRF_TOKEN }
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert(`${data.deleted} log entries deleted`, 'success');
+          loadLogs();
+        } else {
+          showAlert(data.message, 'error');
+        }
+      } catch (err) {
+        showAlert('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Load template list for manual send
+    // ─────────────────────────────────────────────
+    async function loadTemplates() {
+      const sel = document.getElementById('sendTemplate');
+      if (sel.dataset.loaded) return;
+      try {
+        const res  = await fetch('/api/admin/notifications/templates');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        sel.innerHTML = data.templates.map(t =>
+          `<option value="${t.key}">${t.name || t.key}</option>`
+        ).join('');
+        sel.dataset.loaded = '1';
+      } catch (err) {
+        sel.innerHTML = '<option value="">Failed to load templates</option>';
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Manual send
+    // ─────────────────────────────────────────────
+    async function sendManualNotification() {
+      const userId      = document.getElementById('sendUserId').value.trim();
+      const templateKey = document.getElementById('sendTemplate').value;
+      const channels    = [...document.querySelectorAll('input[name="sendChannel"]:checked')].map(c => c.value);
+      const varText     = document.getElementById('sendVariables').value.trim();
+
+      if (!userId) return showAlert('User ID is required', 'error');
+      if (!templateKey) return showAlert('Please select a template', 'error');
+      if (!channels.length) return showAlert('Select at least one channel', 'error');
+
+      let variables = {};
+      if (varText) {
+        try { variables = JSON.parse(varText); }
+        catch { return showAlert('Variables must be valid JSON', 'error'); }
+      }
+
+      try {
+        const res = await fetch('/api/admin/notifications/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
+          },
+          body: JSON.stringify({ userId, templateKey, channels, variables })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert('Notification queued successfully', 'success');
+          loadStats();
+          loadQueue();
+        } else {
+          showAlert(data.message || 'Failed to send', 'error');
+        }
+      } catch (err) {
+        showAlert('Error: ' + err.message, 'error');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Utilities
+    // ─────────────────────────────────────────────
+    function refreshAll() {
+      loadStats();
+      loadChannelStatus();
+      // Reload active tab
+      if (document.getElementById('queueTab').classList.contains('active')) loadQueue();
+      if (document.getElementById('logsTab').classList.contains('active'))  loadLogs();
+    }
+
+    function formatDate(str) {
+      if (!str) return '-';
+      try {
+        return new Date(str).toLocaleString();
+      } catch {
+        return str;
+      }
+    }
+
+    function renderPagination(containerId, total, perPage, currentPage, onPage) {
+      const totalPages = Math.ceil(total / perPage);
+      const el = document.getElementById(containerId);
+      if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+      let html = `<span style="color:var(--text-secondary);font-size:0.85rem;">${total} total</span>`;
+      html += `<button class="page-btn" onclick="(${onPage.toString()})(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
+      const start = Math.max(1, currentPage - 2);
+      const end   = Math.min(totalPages, currentPage + 2);
+      for (let i = start; i <= end; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="(${onPage.toString()})(${i})">${i}</button>`;
+      }
+      html += `<button class="page-btn" onclick="(${onPage.toString()})(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>`;
+      el.innerHTML = html;
+    }
+
+    function showAlert(msg, type) {
+      const el = document.getElementById('alertContainer');
+      el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+      setTimeout(() => { el.innerHTML = ''; }, 6000);
+    }
+
+    // ─────────────────────────────────────────────
+    // Init
+    // ─────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      loadChannelStatus();
+      loadQueue();
+    });
+  </script>
+
+  <script src="/js/mobile-nav.js"></script>
+</body>
+</html>

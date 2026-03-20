@@ -8,7 +8,6 @@
  * - Error handling and reconnection
  */
 
-const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const SetupManager = require('./SetupManager');
@@ -39,6 +38,14 @@ class DiscordAdapter {
     try {
       if (!botToken) {
         logger.warn('Discord bot token not provided');
+        return false;
+      }
+
+      let Client, GatewayIntentBits;
+      try {
+        ({ Client, GatewayIntentBits } = require('discord.js'));
+      } catch {
+        logger.warn('discord.js is not installed — Discord notifications disabled. Run: npm install discord.js');
         return false;
       }
 
@@ -250,7 +257,7 @@ class DiscordAdapter {
   /**
    * Handle bot disconnection with retry
    */
-  private handleDisconnection() {
+  handleDisconnection() {
     this.isConnected = false;
 
     if (this.retryCount < this.maxRetries) {

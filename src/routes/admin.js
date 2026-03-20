@@ -1968,4 +1968,17 @@ router.get('/user-expiry', csrfProtection, requireAuth, requireAdmin, (req, res)
   }
 });
 
+// Notification management page
+router.get('/notifications', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/notifications', {
+      user: req.session.user,
+      csrfToken: req.csrfToken()
+    });
+  } catch (error) {
+    console.error('Notification management page error:', error);
+    res.status(500).render('error', { message: 'Error loading notifications page', code: 500 });
+  }
+});
+
 module.exports = router;

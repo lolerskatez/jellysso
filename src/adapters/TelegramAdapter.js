@@ -8,7 +8,6 @@
  * - Error handling and retries
  */
 
-const { Telegraf } = require('telegraf');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const SetupManager = require('./SetupManager');
@@ -37,6 +36,14 @@ class TelegramAdapter {
     try {
       if (!botToken) {
         logger.warn('Telegram bot token not provided');
+        return false;
+      }
+
+      let Telegraf;
+      try {
+        ({ Telegraf } = require('telegraf'));
+      } catch {
+        logger.warn('telegraf is not installed — Telegram notifications disabled. Run: npm install telegraf');
         return false;
       }
 

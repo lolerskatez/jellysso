@@ -311,11 +311,35 @@ class DatabaseManager {
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_created ON notification_logs(created_at)', (err) => {
         if (err) console.error('Error creating index idx_notif_logs_created:', err.message);
-        
-        // Mark database as ready after all tables are created
-        this.isReady = true;
-        this.readyCallbacks.forEach(cb => cb());
-        this.readyCallbacks = [];
+
+        // contact_verifications — used by ContactMethodManager
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS contact_verifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            method TEXT NOT NULL,
+            contact_id TEXT NOT NULL,
+            code TEXT NOT NULL,
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 5,
+            verified BOOLEAN DEFAULT 0,
+            expires_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )`, (cvErr) => {
+          if (cvErr) console.error('Error creating contact_verifications table:', cvErr.message);
+          this.db.run('CREATE INDEX IF NOT EXISTS idx_contact_verif_user ON contact_verifications(user_id)', (idxErr) => {
+            if (idxErr) console.error('Error creating index idx_contact_verif_user:', idxErr.message);
+          });
+          this.db.run('CREATE INDEX IF NOT EXISTS idx_contact_verif_expires ON contact_verifications(expires_at)', (idxErr) => {
+            if (idxErr) console.error('Error creating index idx_contact_verif_expires:', idxErr.message);
+          });
+
+          // Mark database as ready after all tables are created
+          this.isReady = true;
+          this.readyCallbacks.forEach(cb => cb());
+          this.readyCallbacks = [];
+        });
       });
     });
   }

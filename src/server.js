@@ -702,6 +702,9 @@ app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) =
 // Admin dashboard routes
 app.use('/admin', require('./routes/admin'));
 
+// Notification management API (admin only)
+app.use('/api/admin/notifications', require('./routes/admin-notifications'));
+
 // System management routes (sessions, cache, plugins)
 app.use('/admin', require('./routes/system'));
 

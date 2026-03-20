@@ -11,7 +11,6 @@
  */
 
 const nodemailer = require('nodemailer');
-const axios = require('axios');
 const logger = require('../utils/logger');
 const SetupManager = require('./SetupManager');
 const UserProfileManager = require('./UserProfileManager');
@@ -100,9 +99,52 @@ class NotificationManager {
    * Initialize channel adapters (Discord, Telegram, Matrix)
    */
   async initializeAdapters() {
-    // Adapters will be initialized on-demand when needed
-    // This allows system to work even if a service is down
-    logger.info('Adapters ready for initialization');
+    const config = SetupManager.getConfig();
+
+    // Initialize Discord adapter
+    if (config.discord?.enabled && config.discord?.botToken) {
+      try {
+        const DiscordAdapter = require('../adapters/DiscordAdapter');
+        const discord = DiscordAdapter.getInstance();
+        await discord.initialize(config.discord.botToken, config.discord.serverId);
+        NotificationManager.adapters.discord = discord;
+        logger.info('Discord adapter initialized');
+      } catch (err) {
+        logger.warn('Discord adapter initialization failed:', err.message);
+      }
+    }
+
+    // Initialize Telegram adapter
+    if (config.telegram?.enabled && config.telegram?.botToken) {
+      try {
+        const TelegramAdapter = require('../adapters/TelegramAdapter');
+        const telegram = TelegramAdapter.getInstance();
+        await telegram.initialize(config.telegram.botToken);
+        NotificationManager.adapters.telegram = telegram;
+        logger.info('Telegram adapter initialized');
+      } catch (err) {
+        logger.warn('Telegram adapter initialization failed:', err.message);
+      }
+    }
+
+    // Initialize Matrix adapter
+    if (config.matrix?.enabled && config.matrix?.homeserverUrl && config.matrix?.accessToken) {
+      try {
+        const MatrixAdapter = require('../adapters/MatrixAdapter');
+        const matrix = MatrixAdapter.getInstance();
+        await matrix.initialize(
+          config.matrix.homeserverUrl,
+          config.matrix.accessToken,
+          config.matrix.botUserId
+        );
+        NotificationManager.adapters.matrix = matrix;
+        logger.info('Matrix adapter initialized');
+      } catch (err) {
+        logger.warn('Matrix adapter initialization failed:', err.message);
+      }
+    }
+
+    logger.info('Adapters initialization complete');
   }
 
   /**
@@ -302,13 +344,19 @@ class NotificationManager {
    * Send Discord notification
    */
   async sendDiscordNotification(discordUserId, rendered) {
-    // Discord adapter will be called here when ready
-    // For now, placeholder
     if (!discordUserId) {
       throw new Error('Discord user ID not found');
     }
-    logger.info(`Discord notification (placeholder): ${rendered.title}`);
-    // Will implement with actual Discord.js bot
+
+    const discord = NotificationManager.adapters.discord;
+    if (!discord) {
+      throw new Error('Discord adapter not initialized');
+    }
+
+    return await discord.send(discordUserId, {
+      title: rendered.title,
+      body: rendered.body
+    });
   }
 
   /**
@@ -319,22 +367,12 @@ class NotificationManager {
       throw new Error('Telegram chat ID not found');
     }
 
-    const config = SetupManager.getConfig();
-    const botToken = config.telegram?.botToken;
-
-    if (!botToken) {
-      throw new Error('Telegram bot token not configured');
+    const telegram = NotificationManager.adapters.telegram;
+    if (!telegram) {
+      throw new Error('Telegram adapter not initialized');
     }
 
-    const message = `*${rendered.title}*\n\n${rendered.body}`;
-
-    const response = await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      chat_id: telegramChatId,
-      text: message,
-      parse_mode: 'Markdown'
-    });
-
-    return response.data;
+    return await telegram.send(telegramChatId, `*${rendered.title}*\n\n${rendered.body}`);
   }
 
   /**
@@ -344,8 +382,13 @@ class NotificationManager {
     if (!matrixUserId) {
       throw new Error('Matrix user ID not found');
     }
-    logger.info(`Matrix notification (placeholder): ${rendered.title}`);
-    // Will implement with Matrix client library
+
+    const matrix = NotificationManager.adapters.matrix;
+    if (!matrix) {
+      throw new Error('Matrix adapter not initialized');
+    }
+
+    return await matrix.send(matrixUserId, rendered.title, rendered.body);
   }
 
   /**

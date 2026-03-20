@@ -19,6 +19,9 @@ const AccountManager = {
     // Load user profile
     await this.loadProfile();
     
+    // Load account status
+    await this.loadAccountStatus();
+    
     // Setup event listeners
     this.setupEventListeners();
     
@@ -35,6 +38,18 @@ const AccountManager = {
     document.querySelectorAll('.account-nav-item').forEach(item => {
       item.addEventListener('click', (e) => this.switchSection(e));
     });
+
+    // Add Contact Method button
+    const addContactBtn = document.getElementById('addContactBtn');
+    if (addContactBtn) {
+      addContactBtn.addEventListener('click', () => this.showAddContactMethodModal());
+    }
+
+    // Copy referral link button
+    const copyReferralBtn = document.getElementById('copyReferralBtn');
+    if (copyReferralBtn) {
+      copyReferralBtn.addEventListener('click', () => this.copyReferralLink());
+    }
 
     // Profile form
     ['firstName', 'lastName', 'email', 'displayName'].forEach(id => {
@@ -478,36 +493,253 @@ const AccountManager = {
   },
 
   /**
-   * Export user data (GDPR)
+   * Load account status (expiry, contact methods, referral)
    */
-  async exportData() {
+  async loadAccountStatus() {
     try {
-      const response = await fetch('/api/me/export', {
-        method: 'POST',
-        headers: {
-          'X-CSRF-Token': this.csrfToken
-        }
+      const response = await fetch('/api/user/account-status', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
       });
 
-      if (!response.ok) throw new Error('Failed to export data');
+      if (!response.ok) throw new Error('Failed to load account status');
 
-      // Download as JSON file
       const data = await response.json();
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `jellysso-data-export-${Date.now()}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      this.showSuccess('export', 'Data exported successfully');
+      if (data.success && data.accountStatus) {
+        this.displayAccountStatus(data.accountStatus);
+      }
     } catch (err) {
-      this.showError('export', err.message);
+      console.error('Failed to load account status:', err);
     }
+  },
+
+  /**
+   * Display account status information
+   */
+  displayAccountStatus(status) {
+    // Update account status card
+    const accountStatusValue = document.getElementById('accountStatusValue');
+    const accountStatusMessage = document.getElementById('accountStatusMessage');
+    
+    if (accountStatusValue) {
+      accountStatusValue.textContent = status.expiry.status === 'expired' ? 'Expired' : 'Active';
+      accountStatusValue.className = `account-expiry-${status.expiry.status === 'expired' ? 'expired' : 'active'}`;
+    }
+
+    if (accountStatusMessage) {
+      accountStatusMessage.textContent = status.expiry.message;
+    }
+
+    // Update expiry card
+    const expiryDateValue = document.getElementById('expiryDateValue');
+    const expiryDaysValue = document.getElementById('expiryDaysValue');
+
+    if (status.expiry.expiresAt) {
+      const expiryDate = new Date(status.expiry.expiresAt);
+      if (expiryDateValue) {
+        expiryDateValue.textContent = expiryDate.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
+        // Color code based on days remaining
+        if (status.expiry.daysRemaining > 30) {
+          expiryDateValue.className = 'card-value account-expiry-active';
+        } else if (status.expiry.daysRemaining > 7) {
+          expiryDateValue.className = 'card-value account-expiry-warning';
+        } else if (status.expiry.daysRemaining > 0) {
+          expiryDateValue.className = 'card-value account-expiry-warning';
+        } else {
+          expiryDateValue.className = 'card-value account-expiry-expired';
+        }
+      }
+
+      if (expiryDaysValue) {
+        expiryDaysValue.textContent = `${status.expiry.daysRemaining} days remaining`;
+        if (status.expiry.daysRemaining <= 0) {
+          expiryDaysValue.textContent = 'Your account has expired';
+        }
+      }
+    } else {
+      if (expiryDateValue) expiryDateValue.textContent = 'No expiry';
+      if (expiryDaysValue) expiryDaysValue.textContent = 'Your account does not expire';
+    }
+
+    // Update verified contacts count
+    const verifiedContactsCount = document.getElementById('verifiedContactsCount');
+    if (verifiedContactsCount && status.verifiedMethods) {
+      verifiedContactsCount.textContent = status.verifiedMethods.length;
+    }
+
+    // Display contact methods
+    this.displayContactMethods(status.contactMethods);
+
+    // Display referral info if enabled
+    if (status.referral && status.referral.enabled) {
+      this.displayReferralInfo(status.referral);
+    }
+
+    // Update account information
+    if (status.profile) {
+      const createdDate = document.getElementById('accountCreatedDate');
+      const lastLogin = document.getElementById('lastLoginDate');
+      
+      if (status.profile.created_date && createdDate) {
+        const created = new Date(status.profile.created_date);
+        createdDate.textContent = created.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      if (status.profile.last_login && lastLogin) {
+        const lastLoginDate = new Date(status.profile.last_login);
+        lastLogin.textContent = lastLoginDate.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
+  },
+
+  /**
+   * Display contact methods
+   */
+  displayContactMethods(contactMethods) {
+    const contactMethodsList = document.getElementById('contactMethodsList');
+    if (!contactMethodsList) return;
+
+    const methods = ['email', 'discord', 'telegram', 'matrix'];
+    const icons = {
+      email: 'fa-envelope',
+      discord: 'fa-discord',
+      telegram: 'fa-telegram',
+      matrix: 'fa-cube'
+    };
+
+    const labels = {
+      email: 'Email',
+      discord: 'Discord',
+      telegram: 'Telegram',
+      matrix: 'Matrix'
+    };
+
+    contactMethodsList.innerHTML = '';
+
+    methods.forEach(method => {
+      const data = contactMethods[method];
+      if (!data) return;
+
+      const statusClass = data.verified ? 'verified' : (data.enabled ? 'unverified' : 'disabled');
+      const statusText = data.verified ? '✓ Verified' : (data.enabled ? 'Pending' : 'Disabled');
+      const icon = icons[method];
+
+      const card = document.createElement('div');
+      card.className = 'contact-method-item';
+      card.innerHTML = `
+        <div class="contact-method-header">
+          <div class="contact-method-title">
+            <i class="fas ${icon}"></i>
+            <span>${labels[method]}</span>
+          </div>
+          <span class="contact-method-status ${statusClass}">
+            ${statusText}
+          </span>
+        </div>
+        ${data.enabled && method !== 'email' ? `
+          <div class="contact-method-info">
+            ${method === 'discord' ? `Discord ID: ${data.userId || 'Not set'}` : ''}
+            ${method === 'telegram' ? `Chat ID: ${data.chatId || 'Not set'}` : ''}
+            ${method === 'matrix' ? `Matrix ID: ${data.userId || 'Not set'}` : ''}
+          </div>
+        ` : ''}
+        <div class="contact-method-actions">
+          ${method !== 'email' ? `
+            ${!data.enabled ? `<button class="btn btn-secondary btn-sm" onclick="AccountManager.enableContactMethod('${method}')"><i class="fas fa-plus"></i> Enable</button>` : ''}
+            ${data.enabled && !data.verified ? `<button class="btn btn-primary btn-sm" onclick="AccountManager.verifyContactMethod('${method}')"><i class="fas fa-check"></i> Verify</button>` : ''}
+            ${data.enabled ? `<button class="btn btn-danger btn-sm" onclick="AccountManager.removeContactMethod('${method}')"><i class="fas fa-trash"></i> Remove</button>` : ''}
+          ` : ''}
+        </div>
+      `;
+
+      contactMethodsList.appendChild(card);
+    });
+  },
+
+  /**
+   * Display referral information
+   */
+  displayReferralInfo(referral) {
+    const referralCard = document.getElementById('referralCard');
+    if (!referralCard) return;
+
+    referralCard.style.display = 'block';
+
+    const referralLink = document.getElementById('referralLink');
+    const referralCode = document.getElementById('referralCode');
+    const referralCount = document.getElementById('referralCount');
+
+    if (referralLink) referralLink.value = referral.referralLink || '';
+    if (referralCode) referralCode.value = referral.referralCode || '';
+    if (referralCount) referralCount.textContent = referral.referralsUsed || 0;
+  },
+
+  /**
+   * Copy referral link to clipboard
+   */
+  async copyReferralLink() {
+    const referralLink = document.getElementById('referralLink');
+    if (!referralLink) return;
+
+    try {
+      await navigator.clipboard.writeText(referralLink.value);
+      this.showSuccess('referral', 'Referral link copied to clipboard');
+      
+      // Reset button text
+      const btn = document.getElementById('copyReferralBtn');
+      if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 2000);
+      }
+    } catch (err) {
+      this.showError('referral', 'Failed to copy to clipboard');
+    }
+  },
+
+  /**
+   * Enable a contact method (placeholder for full implementation)
+   */
+  async enableContactMethod(method) {
+    // This would typically open a modal to add the contact method
+    alert(`Enable ${method} contact method - implementation pending`);
+  },
+
+  /**
+   * Verify a contact method (placeholder for full implementation)
+   */
+  async verifyContactMethod(method) {
+    // This would typically open a verification modal
+    alert(`Verify ${method} contact method - implementation pending`);
+  },
+
+  /**
+   * Remove a contact method (placeholder for full implementation)
+   */
+  async removeContactMethod(method) {
+    if (!confirm(`Remove ${method} contact method?`)) return;
+    
+    // Implementation would call DELETE /api/contact-methods/:method
+    alert(`Remove ${method} contact method - implementation pending`);
   },
 
   /**

@@ -207,7 +207,18 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .captcha-wrapper {
+      margin-bottom: 16px;
+    }
   </style>
+  <% if (captchaEnabled) { %>
+    <% if (captchaProvider === 'recaptcha') { %>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <% } else { %>
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <% } %>
+  <% } %>
 </head>
 <body>
   <div class="signup-container">
@@ -251,6 +262,18 @@
         <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm password">
         <div class="error-message" id="confirmPasswordError"></div>
       </div>
+
+      <button type="submit" id="submitBtn">Create Account</button>
+
+      <% if (captchaEnabled) { %>
+      <div class="captcha-wrapper">
+        <% if (captchaProvider === 'recaptcha') { %>
+        <div class="g-recaptcha" data-sitekey="<%= captchaSiteKey %>"></div>
+        <% } else { %>
+        <div class="h-captcha" data-sitekey="<%= captchaSiteKey %>"></div>
+        <% } %>
+      </div>
+      <% } %>
 
       <button type="submit" id="submitBtn">Create Account</button>
 
@@ -391,6 +414,20 @@
 
       if (hasError) return;
 
+      // Collect CAPTCHA token if enabled
+      let captchaToken = null;
+      <% if (captchaEnabled) { %>
+      <% if (captchaProvider === 'recaptcha') { %>
+      captchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : null;
+      <% } else { %>
+      captchaToken = typeof hcaptcha !== 'undefined' ? hcaptcha.getResponse() : null;
+      <% } %>
+      if (!captchaToken) {
+        showAlert('error', 'Please complete the CAPTCHA before signing up.');
+        return;
+      }
+      <% } %>
+
       // Submit to signup endpoint
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
@@ -406,7 +443,7 @@
             email: email || null,
             password,
             inviteCode,
-            signupProfileId: window.signupProfile.id
+            captchaToken
           })
         });
 

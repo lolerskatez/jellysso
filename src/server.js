@@ -332,6 +332,7 @@ app.use(async (req, res, next) => {
 
   if (req.path.startsWith('/setup') ||
       (req.path === '/api/auth/logout' && req.method === 'POST') ||
+      (req.path === '/api/auth/signup' && req.method === 'POST') ||
       req.path.startsWith('/admin/') ||
       req.path.startsWith('/admin/api/') ||
       req.path.startsWith('/api/admin/')) {
@@ -610,9 +611,28 @@ app.get('/signup', async (req, res) => {
     return res.redirect('/quickconnect');
   }
 
+  // Read CAPTCHA settings from DB (non-blocking; fall back to disabled on error)
+  let captchaEnabled = false;
+  let captchaProvider = 'hcaptcha';
+  let captchaSiteKey = '';
+  try {
+    const DatabaseManager = require('./models/DatabaseManager');
+    const [enabledVal, providerVal, siteKeyVal] = await Promise.all([
+      DatabaseManager.getSetting('captcha_enabled'),
+      DatabaseManager.getSetting('captcha_provider'),
+      DatabaseManager.getSetting('captcha_site_key')
+    ]);
+    captchaEnabled = enabledVal === 'true' && !!siteKeyVal;
+    captchaProvider = providerVal || 'hcaptcha';
+    captchaSiteKey = siteKeyVal || '';
+  } catch (_) { /* ignore — CAPTCHA disabled */ }
+
   // Render signup page with public invite validation
   res.render('signup', {
-    appName: SetupManager.getConfig().appName || 'JellySSO'
+    appName: SetupManager.getConfig().appName || 'JellySSO',
+    captchaEnabled,
+    captchaProvider,
+    captchaSiteKey
   });
 });
 
@@ -646,10 +666,15 @@ app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
 
 app.get('/account', requireWebAuth, csrfProtection, async (req, res) => {
   try {
+    const DatabaseManager = require('./models/DatabaseManager');
+    const renewalEnabled = (await DatabaseManager.getSetting('renewal_enabled').catch(() => null)) === 'true';
+    const renewalWindowDays = parseInt(await DatabaseManager.getSetting('renewal_window_days').catch(() => null)) || 30;
     res.render('account', { 
       user: req.session.user, 
       csrfToken: req.csrfToken(),
-      currentPage: 'account'
+      currentPage: 'account',
+      renewalEnabled,
+      renewalWindowDays
     });
   } catch (err) {
     logger.error('Account page error:', err);

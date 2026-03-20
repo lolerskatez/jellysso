@@ -6,6 +6,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const AuditLogger = require('../models/AuditLogger');
 const TokenManager = require('../models/TokenManager');
 const PolicyManager = require('../models/PolicyManager');
+const DatabaseManager = require('../models/DatabaseManager');
 const { getInstance: getAccountLockoutManager } = require('../models/AccountLockoutManager');
 const { csrfProtection } = require('../middleware/csrf');
 const { criticalLimiter } = require('../middleware/rate-limit');
@@ -371,7 +372,6 @@ router.get('/token-stats', (req, res) => {
 // ============================================
 
 const crypto = require('crypto');
-const DatabaseManager = require('../models/DatabaseManager');
 
 // Get OIDC config helper
 async function getOidcConfig() {
@@ -939,6 +939,109 @@ router.post('/reset-password', criticalLimiter, async (req, res) => {
       success: false,
       message: 'An unexpected error occurred'
     });
+  }
+});
+
+// ============================================================================
+// SELF-SERVICE SIGNUP VIA INVITE CODE
+// ============================================================================
+
+// POST /api/auth/signup — create Jellyfin account via invite
+// Public endpoint; protected by invite code validation + optional CAPTCHA + rate limit.
+// No CSRF required (CSRF middleware exempts this path in server.js).
+router.post('/signup', criticalLimiter, async (req, res) => {
+  try {
+    const { username, email, password, inviteCode, captchaToken } = req.body;
+
+    // Basic validation
+    if (!username || !password || !inviteCode) {
+      return res.status(400).json({ success: false, error: 'Username, password, and invite code are required' });
+    }
+
+    const cleanUsername = String(username).trim();
+    if (!/^[a-zA-Z0-9_.\- ]+$/.test(cleanUsername) || cleanUsername.length < 2 || cleanUsername.length > 50) {
+      return res.status(400).json({ success: false, error: 'Invalid username. Use 2–50 characters: letters, numbers, spaces, hyphens, underscores, or dots.' });
+    }
+
+    if (String(password).length < 8) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+    }
+
+    // CAPTCHA verification (if enabled)
+    const captchaEnabled = await DatabaseManager.getSetting('captcha_enabled');
+    if (captchaEnabled === 'true') {
+      if (!captchaToken) {
+        return res.status(400).json({ success: false, error: 'CAPTCHA verification required' });
+      }
+      const provider = (await DatabaseManager.getSetting('captcha_provider')) || 'hcaptcha';
+      const secretKey = await DatabaseManager.getSetting('captcha_secret_key');
+      if (!secretKey) {
+        logger.error('CAPTCHA enabled but secret key not configured');
+        return res.status(500).json({ success: false, error: 'CAPTCHA is not configured on the server' });
+      }
+      const verifyUrl = provider === 'recaptcha'
+        ? 'https://www.google.com/recaptcha/api/siteverify'
+        : 'https://api.hcaptcha.com/siteverify';
+      const params = new URLSearchParams();
+      params.append('secret', secretKey);
+      params.append('response', String(captchaToken));
+      params.append('remoteip', req.ip);
+      try {
+        const captchaRes = await axios.post(verifyUrl, params.toString(), {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: 5000
+        });
+        if (!captchaRes.data?.success) {
+          logger.warn('CAPTCHA verification failed on signup', { ip: req.ip, provider, codes: captchaRes.data?.['error-codes'] });
+          return res.status(400).json({ success: false, error: 'CAPTCHA verification failed. Please try again.' });
+        }
+      } catch (captchaErr) {
+        logger.error('CAPTCHA API request failed', { error: captchaErr.message });
+        return res.status(502).json({ success: false, error: 'CAPTCHA service unavailable. Please try again.' });
+      }
+    }
+
+    // Validate invite code
+    const InviteManager = require('../models/InviteManager');
+    let invite;
+    try {
+      invite = await InviteManager.getInstance().validateInvite(String(inviteCode).trim());
+    } catch (inviteErr) {
+      return res.status(400).json({ success: false, error: inviteErr.message });
+    }
+
+    // Create Jellyfin user with admin API key (no user session available)
+    const config = SetupManager.getConfig();
+    const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+
+    // Check username uniqueness
+    const existingUsers = await jellyfin.getUsers();
+    if (existingUsers.some(u => u.Name.toLowerCase() === cleanUsername.toLowerCase())) {
+      return res.status(409).json({ success: false, error: 'That username is already taken' });
+    }
+
+    // Create user with the password chosen by the registrant
+    const newUser = await jellyfin.createUser({ Name: cleanUsername, Password: String(password) });
+
+    // Sync the new user to Jellyseerr (if enabled) — fire-and-forget
+    const JellyseerrManager = require('../models/JellyseerrManager');
+    JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
+      logger.warn('Jellyseerr sync failed on signup:', e.message)
+    );
+
+    await AuditLogger.log({
+      action: 'USER_SIGNUP',
+      userId: newUser.Id,
+      resource: cleanUsername,
+      details: { inviteCode: String(inviteCode).substring(0, 8) + '...', email: email || null },
+      status: 'success',
+      ip: req.ip
+    });
+
+    res.json({ success: true, user: { id: newUser.Id, name: newUser.Name } });
+  } catch (error) {
+    logger.error('Signup error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create account' });
   }
 });
 

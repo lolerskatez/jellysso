@@ -266,6 +266,12 @@ router.post('/api/users/create', requireAuth, requireAdmin, async (req, res) => 
       Password: password || ''
     });
 
+    // Sync new user to Jellyseerr (fire-and-forget)
+    const JellyseerrManager = require('../models/JellyseerrManager');
+    JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
+      console.warn('Jellyseerr sync failed on admin user create:', e.message)
+    );
+
     // Log the action
     await AuditLogger.log({
       action: 'USER_CREATED',
@@ -383,8 +389,14 @@ router.delete('/users/:userId', requireAuth, requireAdmin, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
-    // Delete the user
+    // Delete the user from Jellyfin
     await jellyfin.deleteUser(userId);
+
+    // Remove from Jellyseerr (fire-and-forget)
+    const JellyseerrManager = require('../models/JellyseerrManager');
+    JellyseerrManager.getInstance().removeUser(userId).catch(e =>
+      console.warn('Jellyseerr remove failed on user delete:', e.message)
+    );
     
     // Log the action
     await AuditLogger.log({
@@ -435,8 +447,13 @@ router.delete('/api/users/:userId', requireAuth, requireAdmin, async (req, res) 
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
-    // Delete the user
+    // Delete the user from Jellyfin
     await jellyfin.deleteUser(userId);
+
+    // Remove from Jellyseerr (fire-and-forget)
+    JellyseerrManager.getInstance().removeUser(userId).catch(e =>
+      console.warn('Jellyseerr remove failed on user delete (alt path):', e.message)
+    );
     
     // Log the action
     await AuditLogger.log({
@@ -583,6 +600,18 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       rateLimitEnabled:  rawSettings.rate_limit_enabled !== 'false',
       rateLimit:         rawSettings.rate_limit         ?? 60,
       requireHttps:      rawSettings.require_https      === 'true',
+      // CAPTCHA
+      captchaEnabled:   rawSettings.captcha_enabled    === 'true',
+      captchaProvider:  rawSettings.captcha_provider   || 'hcaptcha',
+      captchaSiteKey:   rawSettings.captcha_site_key   || '',
+      // captcha_secret_key intentionally excluded — never sent to browser
+      // Jellyseerr
+      jellyseerrUrl:         rawSettings.jellyseerr_url          || '',
+      jellyseerrSyncEnabled: rawSettings.jellyseerr_sync_enabled === 'true',
+      // jellyseerr_api_key intentionally excluded — never sent to browser
+      // Renewal
+      renewalEnabled:     rawSettings.renewal_enabled      === 'true',
+      renewalWindowDays:  parseInt(rawSettings.renewal_window_days) || 30,
       // Logging
       logLevel:          rawSettings.log_level          || 'info',
       logToFile:         rawSettings.log_to_file        !== 'false',
@@ -1402,14 +1431,42 @@ router.post('/api/oidc/test', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Test Jellyseerr connection
+router.post('/api/jellyseerr/test', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    // Save submitted credentials first (so the test uses the just-entered values)
+    const { jellyseerrUrl, jellyseerrApiKey } = req.body;
+    if (jellyseerrUrl) await DatabaseManager.setSetting('jellyseerr_url', String(jellyseerrUrl).trim());
+    if (jellyseerrApiKey && !/^\u2022/.test(String(jellyseerrApiKey).trim())) {
+      await DatabaseManager.setSetting('jellyseerr_api_key', String(jellyseerrApiKey).trim());
+    }
+    const JellyseerrManager = require('../models/JellyseerrManager');
+    const result = await JellyseerrManager.getInstance().testConnection();
+    res.json(result);
+  } catch (error) {
+    console.error('Jellyseerr test error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get application settings
 router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
   try {
     const config = SetupManager.getConfig();
-    const [expiryReminderDays, expiryAction, expiryGraceDays] = await Promise.all([
+    const [expiryReminderDays, expiryAction, expiryGraceDays,
+           captchaEnabled, captchaProvider, captchaSiteKey,
+           jellyseerrUrl, jellyseerrSyncEnabled,
+           renewalEnabled, renewalWindowDays] = await Promise.all([
       DatabaseManager.getSetting('expiry_reminder_days'),
       DatabaseManager.getSetting('expiry_action'),
-      DatabaseManager.getSetting('expiry_grace_days')
+      DatabaseManager.getSetting('expiry_grace_days'),
+      DatabaseManager.getSetting('captcha_enabled'),
+      DatabaseManager.getSetting('captcha_provider'),
+      DatabaseManager.getSetting('captcha_site_key'),
+      DatabaseManager.getSetting('jellyseerr_url'),
+      DatabaseManager.getSetting('jellyseerr_sync_enabled'),
+      DatabaseManager.getSetting('renewal_enabled'),
+      DatabaseManager.getSetting('renewal_window_days')
     ]);
     res.json({
       success: true,
@@ -1433,6 +1490,21 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         expiryReminderDays: parseInt(expiryReminderDays) || 7,
         expiryAction: expiryAction || 'disable',
         expiryGraceDays: parseInt(expiryGraceDays) || 0
+      },
+      captchaSettings: {
+        captchaEnabled: captchaEnabled === 'true',
+        captchaProvider: captchaProvider || 'hcaptcha',
+        captchaSiteKey: captchaSiteKey || ''
+        // captchaSecretKey intentionally omitted — never sent to browser
+      },
+      jellyseerrSettings: {
+        jellyseerrUrl: jellyseerrUrl || '',
+        jellyseerrSyncEnabled: jellyseerrSyncEnabled === 'true'
+        // jellyseerrApiKey intentionally omitted — never sent to browser
+      },
+      renewalSettings: {
+        renewalEnabled: renewalEnabled === 'true',
+        renewalWindowDays: parseInt(renewalWindowDays) || 30
       }
     });
   } catch (error) {
@@ -1474,6 +1546,19 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       if (s.rateLimitEnabled !== undefined) await DatabaseManager.setSetting('rate_limit_enabled', String(s.rateLimitEnabled));
       if (s.rateLimit        !== undefined) await DatabaseManager.setSetting('rate_limit',          String(parseInt(s.rateLimit) || 60));
       if (s.requireHttps     !== undefined) await DatabaseManager.setSetting('require_https',      String(s.requireHttps));
+      // CAPTCHA settings
+      if (s.captchaEnabled  !== undefined) await DatabaseManager.setSetting('captcha_enabled',  String(s.captchaEnabled));
+      if (s.captchaProvider !== undefined) {
+        const validProviders = ['hcaptcha', 'recaptcha'];
+        if (validProviders.includes(s.captchaProvider)) {
+          await DatabaseManager.setSetting('captcha_provider', s.captchaProvider);
+        }
+      }
+      if (s.captchaSiteKey  !== undefined) await DatabaseManager.setSetting('captcha_site_key',   String(s.captchaSiteKey).trim());
+      // Secret key: only update when a real value is sent (not blank or a masked placeholder)
+      if (s.captchaSecretKey && String(s.captchaSecretKey).trim() && !/^\u2022/.test(String(s.captchaSecretKey).trim())) {
+        await DatabaseManager.setSetting('captcha_secret_key', String(s.captchaSecretKey).trim());
+      }
 
       // Apply changes to the running server immediately (no restart required)
       securityConfig.invalidateCache();
@@ -1517,6 +1602,18 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         }
       }
       if (s.expiryGraceDays !== undefined) await DatabaseManager.setSetting('expiry_grace_days', String(Math.max(0, parseInt(s.expiryGraceDays) || 0)));
+
+    } else if (section === 'jellyseerr') {
+      if (s.jellyseerrSyncEnabled !== undefined) await DatabaseManager.setSetting('jellyseerr_sync_enabled', String(s.jellyseerrSyncEnabled));
+      if (s.jellyseerrUrl !== undefined) await DatabaseManager.setSetting('jellyseerr_url', String(s.jellyseerrUrl).trim());
+      // API key: only update when a real value is sent (not blank or masked)
+      if (s.jellyseerrApiKey && String(s.jellyseerrApiKey).trim() && !/^\u2022/.test(String(s.jellyseerrApiKey).trim())) {
+        await DatabaseManager.setSetting('jellyseerr_api_key', String(s.jellyseerrApiKey).trim());
+      }
+
+    } else if (section === 'renewal') {
+      if (s.renewalEnabled     !== undefined) await DatabaseManager.setSetting('renewal_enabled',      String(s.renewalEnabled));
+      if (s.renewalWindowDays  !== undefined) await DatabaseManager.setSetting('renewal_window_days',  String(Math.max(1, parseInt(s.renewalWindowDays) || 30)));
 
     } else if (section === 'maintenance') {
       // Parse HH:MM time strings into hour integers

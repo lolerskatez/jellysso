@@ -193,6 +193,21 @@ To link your Telegram account with {{serverName}}, send this command to the bot:
 This code expires in 10 minutes.`,
         format: 'markdown',
         variables: ['serverName', 'verificationCode']
+      },
+      {
+        key: 'renewal_request',
+        title: 'Account Renewal Request',
+        subject: 'Renewal request from {{username}} on {{serverName}}',
+        body: `# Account Renewal Request
+
+**User:** {{username}}
+**Server:** {{serverName}}
+**Account expires:** {{expiresAt}}
+**Days remaining:** {{daysRemaining}}
+
+This user has requested a renewal of their account. Please log in to the admin panel to extend their account expiry.`,
+        format: 'markdown',
+        variables: ['serverName', 'username', 'expiresAt', 'daysRemaining']
       }
     ];
 

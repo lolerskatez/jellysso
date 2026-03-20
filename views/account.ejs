@@ -122,6 +122,20 @@
                 </div>
               </div>
 
+              <% if (renewalEnabled) { %>
+              <!-- Account Renewal Request -->
+              <div id="renewalSection" class="section-card" style="display:none;">
+                <h3>Account Renewal</h3>
+                <p class="card-description" id="renewalMessage">
+                  Your account is expiring soon. Request a renewal from the server administrator.
+                </p>
+                <button id="renewalRequestBtn" class="btn btn-primary" onclick="submitRenewalRequest()">
+                  <i class="fas fa-redo"></i> Request Renewal
+                </button>
+                <div id="renewalStatus" style="margin-top:8px;font-size:0.875rem;"></div>
+              </div>
+              <% } %>
+
               <!-- Contact Methods Section -->
               <div class="section-card">
                 <h3>Contact Methods</h3>
@@ -372,5 +386,65 @@
       </div>
     </main>
   </div>
+  <% if (renewalEnabled) { %>
+  <script>
+    // Show renewal section when account is expiring within the configured window
+    const _renewalWindowDays = <%= renewalWindowDays %>;
+    (function checkRenewalVisibility() {
+      // Poll until account data is loaded (account.js populates #expiryDaysValue)
+      const observer = new MutationObserver(() => {
+        const daysEl = document.getElementById('expiryDaysValue');
+        if (!daysEl) return;
+        const match = daysEl.textContent.match(/^(-?\d+)/);
+        if (match) {
+          const days = parseInt(match[1]);
+          const section = document.getElementById('renewalSection');
+          const msg = document.getElementById('renewalMessage');
+          if (section) {
+            if (days <= _renewalWindowDays) {
+              section.style.display = '';
+              if (msg) {
+                msg.textContent = days < 0
+                  ? 'Your account has expired. Contact the server administrator or request a renewal.'
+                  : `Your account expires in ${days} day${days === 1 ? '' : 's'}. Request a renewal from the server administrator.`;
+              }
+            } else {
+              section.style.display = 'none';
+            }
+          }
+        }
+      });
+      const target = document.getElementById('expiryDaysValue');
+      if (target) observer.observe(target, { characterData: true, childList: true, subtree: true });
+    })();
+
+    async function submitRenewalRequest() {
+      const btn = document.getElementById('renewalRequestBtn');
+      const statusEl = document.getElementById('renewalStatus');
+      if (btn) btn.disabled = true;
+      if (statusEl) statusEl.textContent = 'Sending request...';
+      try {
+        const resp = await fetch('/api/user/renewal-request', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': '<%= csrfToken %>'
+          }
+        });
+        const data = await resp.json();
+        if (data.success) {
+          if (statusEl) { statusEl.textContent = '\u2705 ' + data.message; statusEl.style.color = 'var(--success)'; }
+          if (btn) btn.style.display = 'none';
+        } else {
+          if (statusEl) { statusEl.textContent = '\u274c ' + (data.error || 'Failed to send request'); statusEl.style.color = 'var(--danger)'; }
+          if (btn) btn.disabled = false;
+        }
+      } catch (e) {
+        if (statusEl) { statusEl.textContent = '\u274c ' + e.message; statusEl.style.color = 'var(--danger)'; }
+        if (btn) btn.disabled = false;
+      }
+    }
+  </script>
+  <% } %>
 </body>
 </html>

@@ -3,6 +3,7 @@ const router = express.Router();
 const UserExpiryManager = require('../models/UserExpiryManager');
 const ContactMethodManager = require('../models/ContactMethodManager');
 const UserProfileManager = require('../models/UserProfileManager');
+const DatabaseManager = require('../models/DatabaseManager');
 const AuditLogger = require('../models/AuditLogger');
 const { getBaseUrl } = require('../utils/urlHelper');
 const { requireAuth } = require('../middleware/auth');
@@ -148,6 +149,86 @@ router.get('/lifecycle', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error getting lifecycle events:', error);
     res.status(500).json({ success: false, error: 'Failed to load lifecycle events' });
+  }
+});
+
+/**
+ * POST /api/user/renewal-request
+ * User requests account renewal. Server notifies admin(s) via configured channels.
+ * Rate-limited: one successful request per day per user (enforced by audit log check).
+ */
+router.post('/renewal-request', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user?.Id;
+    const username = req.session.user?.Name;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+
+    // Check renewal is enabled
+    const renewalEnabled = await DatabaseManager.getSetting('renewal_enabled');
+    if (renewalEnabled !== 'true') {
+      return res.status(403).json({ success: false, error: 'Account renewal requests are not enabled on this server' });
+    }
+
+    // Get user expiry
+    const expiry = await expiryManager.getUserExpiry(userId).catch(() => null);
+    if (!expiry) {
+      return res.status(400).json({ success: false, error: 'Your account does not have an expiry date set' });
+    }
+
+    const now = new Date();
+    const expiryDate = new Date(expiry);
+    const daysRemaining = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
+
+    // Check within renewal window (configured days before or after expiry)
+    const renewalWindowDays = parseInt(await DatabaseManager.getSetting('renewal_window_days')) || 30;
+    if (daysRemaining > renewalWindowDays) {
+      return res.status(400).json({
+        success: false,
+        error: `Renewal requests can only be submitted within ${renewalWindowDays} days of your account expiry date`
+      });
+    }
+
+    // Rate limit: allow max one request per 24 hours per user
+    const recentLogs = await AuditLogger.getLogs({ userId, action: 'RENEWAL_REQUEST', limit: 1 }).catch(() => []);
+    if (recentLogs.length > 0) {
+      const lastRequest = new Date(recentLogs[0].timestamp || recentLogs[0].created_at);
+      const hoursSince = (now - lastRequest) / (1000 * 60 * 60);
+      if (hoursSince < 24) {
+        return res.status(429).json({ success: false, error: 'You have already submitted a renewal request today. Please wait 24 hours.' });
+      }
+    }
+
+    // Send notification to admin(s) via email + configured channels
+    const SetupManager = require('../models/SetupManager');
+    const NotificationManager = require('../models/NotificationManager');
+    const config = SetupManager.getConfig();
+    const serverName = config.appName || 'JellySSO';
+    const expiresAtStr = expiryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const variables = { serverName, username, expiresAt: expiresAtStr, daysRemaining: String(daysRemaining) };
+
+    // Email to admin if configured
+    const adminEmail = config.adminEmail || config.smtpFrom;
+    if (adminEmail) {
+      NotificationManager.getInstance().sendEmailNotification(adminEmail, 'renewal_request', variables)
+        .catch(e => console.warn('Renewal request email failed:', e.message));
+    }
+
+    // Log the request
+    await AuditLogger.log({
+      action: 'RENEWAL_REQUEST',
+      userId,
+      resource: username,
+      details: { expiresAt: expiry, daysRemaining },
+      status: 'success',
+      ip: req.ip
+    });
+
+    res.json({ success: true, message: 'Your renewal request has been sent to the server administrator.' });
+  } catch (error) {
+    console.error('Renewal request error:', error);
+    res.status(500).json({ success: false, error: 'Failed to submit renewal request' });
   }
 });
 

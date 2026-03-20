@@ -324,6 +324,26 @@
 
           <button class="btn-primary" onclick="saveExpirySettings()"><i class="fas fa-save"></i> Save Settings</button>
         </div>
+
+        <!-- Self-Service Renewal -->
+        <div style="margin-top:var(--spacing-xl);background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--border-radius);padding:var(--spacing-xl);">
+          <h3 style="margin-top:0;">Self-Service Renewal</h3>
+          <p style="color:var(--text-secondary);font-size:.875rem;">Allow users to request an account renewal from their account page when their account is expiring soon.</p>
+          <div id="renewalAlert"></div>
+
+          <div style="margin-bottom:var(--spacing-lg);display:flex;align-items:center;gap:12px;">
+            <div class="toggle-switch" id="renewalEnabledToggle" style="cursor:pointer;"></div>
+            <label style="font-weight:600;cursor:pointer;" onclick="document.getElementById('renewalEnabledToggle').click()">Enable self-service renewal requests</label>
+          </div>
+
+          <div style="margin-bottom:var(--spacing-lg);">
+            <label style="display:block;font-weight:600;margin-bottom:6px;">Renewal Request Window (days before expiry)</label>
+            <input type="number" id="renewalWindowDays" class="form-control" min="1" max="365" value="30" style="max-width:120px;">
+            <small style="color:var(--text-secondary);">Users can request renewal when this many days or fewer remain.</small>
+          </div>
+
+          <button class="btn-primary" onclick="saveRenewalSettings()"><i class="fas fa-save"></i> Save Renewal Settings</button>
+        </div>
       </div>
     </div>
   </div>
@@ -472,8 +492,34 @@
         document.getElementById('expiryAction').value = s.expiryAction || 'disable';
         document.getElementById('expiryGraceDays').value = s.expiryGraceDays || 0;
         toggleGraceDaysRow();
+        // Renewal settings
+        const r = data.renewalSettings || {};
+        const t = document.getElementById('renewalEnabledToggle');
+        if (r.renewalEnabled) t.classList.add('active');
+        else t.classList.remove('active');
+        document.getElementById('renewalWindowDays').value = r.renewalWindowDays || 30;
       } catch (e) {
         console.warn('Could not load expiry settings:', e.message);
+      }
+    }
+
+    async function saveRenewalSettings() {
+      const renewalEnabled = document.getElementById('renewalEnabledToggle').classList.contains('active');
+      const renewalWindowDays = parseInt(document.getElementById('renewalWindowDays').value) || 30;
+      try {
+        const res = await fetch('/admin/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+          body: JSON.stringify({ section: 'renewal', settings: { renewalEnabled, renewalWindowDays } })
+        });
+        const data = await res.json();
+        const alertEl = document.getElementById('renewalAlert');
+        alertEl.innerHTML = data.success
+          ? '<div class="alert alert-success">Renewal settings saved!</div>'
+          : `<div class="alert alert-error">${data.message || 'Save failed'}</div>`;
+        setTimeout(() => { alertEl.innerHTML = ''; }, 4000);
+      } catch (e) {
+        document.getElementById('renewalAlert').innerHTML = `<div class="alert alert-error">Save failed: ${e.message}</div>`;
       }
     }
 
@@ -486,6 +532,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       const sel = document.getElementById('expiryAction');
       if (sel) sel.addEventListener('change', toggleGraceDaysRow);
+      const renewalToggle = document.getElementById('renewalEnabledToggle');
+      if (renewalToggle) renewalToggle.addEventListener('click', () => renewalToggle.classList.toggle('active'));
     });
 
     async function saveExpirySettings() {

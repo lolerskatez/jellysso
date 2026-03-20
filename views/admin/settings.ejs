@@ -303,6 +303,7 @@
           <button class="settings-tab-btn active" data-tab="app"><i class="fas fa-cogs"></i> Application</button>
           <button class="settings-tab-btn" data-tab="jellyfin"><i class="fas fa-play"></i> Jellyfin</button>
           <button class="settings-tab-btn" data-tab="security"><i class="fas fa-shield-alt"></i> Security</button>
+          <button class="settings-tab-btn" data-tab="jellyseerr"><i class="fas fa-film"></i> Jellyseerr</button>
           <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
           <button class="settings-tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Maintenance</button>
         </div>
@@ -495,9 +496,119 @@
               </div>
             </div>
 
+            <div class="settings-section">
+              <h3><i class="fas fa-robot"></i> CAPTCHA (Signup Protection)</h3>
+              <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:12px;">
+                Require visitors to solve a CAPTCHA when signing up via invite. Reduces automated bot registrations.
+                Obtain API keys from <a href="https://www.hcaptcha.com" target="_blank" rel="noopener noreferrer">hCaptcha</a>
+                or <a href="https://www.google.com/recaptcha" target="_blank" rel="noopener noreferrer">reCAPTCHA</a>.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable CAPTCHA on Signup</div>
+                  <div class="setting-description">Show a CAPTCHA widget on the invite signup page</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.captchaEnabled ? 'active' : '' %>" data-name="captchaEnabled" id="captchaEnabledToggle"></div>
+                </div>
+              </div>
+
+              <div id="captchaFields" style="<%= settings.captchaEnabled ? '' : 'display:none' %>">
+                <div class="setting-row">
+                  <div>
+                    <div class="setting-label">CAPTCHA Provider</div>
+                    <div class="setting-description">Which CAPTCHA service to use</div>
+                  </div>
+                  <div>
+                    <select name="captchaProvider" id="captchaProviderSelect">
+                      <option value="hcaptcha" <%= settings.captchaProvider === 'hcaptcha' ? 'selected' : '' %>>hCaptcha</option>
+                      <option value="recaptcha" <%= settings.captchaProvider === 'recaptcha' ? 'selected' : '' %>>Google reCAPTCHA v2</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="setting-row">
+                  <div>
+                    <div class="setting-label">Site Key (public)</div>
+                    <div class="setting-description">Embedded in the signup page HTML — safe to expose publicly</div>
+                  </div>
+                  <div>
+                    <input type="text" name="captchaSiteKey" value="<%= settings.captchaSiteKey %>" placeholder="e.g. 10000000-ffff-ffff-ffff-000000000001">
+                  </div>
+                </div>
+
+                <div class="setting-row">
+                  <div>
+                    <div class="setting-label">Secret Key (private)</div>
+                    <div class="setting-description">Used server-side to verify tokens — never exposed to users. Leave blank to keep existing key.</div>
+                  </div>
+                  <div>
+                    <input type="password" name="captchaSecretKey" placeholder="Enter new secret key (leave blank to keep current)" autocomplete="new-password">
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="button-group">
               <button type="button" class="btn btn-primary" data-action="save" data-section="security"><i class="fas fa-save"></i> Save Changes</button>
               <button type="button" class="btn btn-secondary" data-action="reset" data-section="security"><i class="fas fa-undo"></i> Reset to Defaults</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Jellyseerr Settings -->
+        <div id="jellyseerr" class="settings-panel">
+          <form id="jellyseerrForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-film"></i> Jellyseerr Integration</h3>
+              <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:12px;">
+                Automatically sync new and deleted users to your
+                <a href="https://jellyseerr.dev" target="_blank" rel="noopener noreferrer">Jellyseerr</a> instance.
+                Get your API key from Jellyseerr → Settings → General.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable Jellyseerr Sync</div>
+                  <div class="setting-description">Mirror user creation and deletion to Jellyseerr automatically</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.jellyseerrSyncEnabled ? 'active' : '' %>" data-name="jellyseerrSyncEnabled"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Jellyseerr URL</div>
+                  <div class="setting-description">Base URL of your Jellyseerr instance (e.g. http://localhost:5055)</div>
+                </div>
+                <div>
+                  <input type="url" name="jellyseerrUrl" value="<%= settings.jellyseerrUrl %>" placeholder="http://localhost:5055">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">API Key</div>
+                  <div class="setting-description">Jellyseerr API key — leave blank to keep existing</div>
+                </div>
+                <div>
+                  <input type="password" name="jellyseerrApiKey" placeholder="Enter new API key (leave blank to keep current)" autocomplete="new-password">
+                </div>
+              </div>
+
+              <div style="margin-top:8px;">
+                <button type="button" class="btn btn-secondary" id="testJellyseerrBtn" onclick="testJellyseerrConnection()">
+                  <i class="fas fa-plug"></i> Test Connection
+                </button>
+                <span id="jellyseerrTestResult" style="margin-left:12px;font-size:0.875rem;"></span>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="jellyseerr"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="jellyseerr"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
           </form>
         </div>
@@ -693,5 +804,51 @@
   <script src="/js/mobile-nav.js"></script>
   <script src="/js/admin-settings.js"></script>
   <script src="/js/admin-dashboard.js"></script>
+  <script>
+    // Toggle CAPTCHA fields when the captchaEnabled toggle is clicked
+    (function () {
+      const toggle = document.getElementById('captchaEnabledToggle');
+      const fields = document.getElementById('captchaFields');
+      if (toggle && fields) {
+        const observer = new MutationObserver(() => {
+          fields.style.display = toggle.classList.contains('active') ? '' : 'none';
+        });
+        observer.observe(toggle, { attributes: true, attributeFilter: ['class'] });
+      }
+    })();
+
+    // Test Jellyseerr connection
+    async function testJellyseerrConnection() {
+      const btn = document.getElementById('testJellyseerrBtn');
+      const result = document.getElementById('jellyseerrTestResult');
+      const url = document.querySelector('#jellyseerr input[name="jellyseerrUrl"]')?.value || '';
+      const apiKey = document.querySelector('#jellyseerr input[name="jellyseerrApiKey"]')?.value || '';
+      if (!url) { result.textContent = 'Enter a Jellyseerr URL first.'; result.style.color = 'var(--danger)'; return; }
+      btn.disabled = true;
+      result.textContent = 'Testing...';
+      result.style.color = 'var(--text-secondary)';
+      try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const resp = await fetch('/admin/api/jellyseerr/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          body: JSON.stringify({ jellyseerrUrl: url, jellyseerrApiKey: apiKey })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          result.textContent = '\u2705 ' + (data.message || 'Connected');
+          result.style.color = 'var(--success)';
+        } else {
+          result.textContent = '\u274c ' + (data.message || 'Failed');
+          result.style.color = 'var(--danger)';
+        }
+      } catch (e) {
+        result.textContent = '\u274c ' + e.message;
+        result.style.color = 'var(--danger)';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
 </body>
 </html>

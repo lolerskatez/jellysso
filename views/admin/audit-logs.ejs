@@ -393,6 +393,14 @@
               </select>
             </div>
             <div class="filter-group">
+              <label>From Date</label>
+              <input type="date" name="startDate" value="<%= filters.startDate || '' %>">
+            </div>
+            <div class="filter-group">
+              <label>To Date</label>
+              <input type="date" name="endDate" value="<%= filters.endDate || '' %>">
+            </div>
+            <div class="filter-group">
               <label>Per Page</label>
               <select name="limit">
                 <option value="25" <%= filters.limit === '25' || !filters.limit ? 'selected' : '' %>>25</option>

@@ -163,7 +163,7 @@ router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
 // Audit log viewer page
 router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { action, userId, status, limit = 25, page = 1 } = req.query;
+    const { action, userId, status, limit = 25, page = 1, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     // Fetch ALL matching logs (up to 10000) so totals/stats are accurate
@@ -171,6 +171,8 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
       action: action || undefined,
       userId: userId || undefined,
       status: status || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate ? endDate + 'T23:59:59.999Z' : undefined,
       limit: 10000
     });
 
@@ -218,7 +220,7 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
       failureCount: failureCount,
       currentPage: parseInt(page),
       pageSize: parseInt(limit),
-      filters: { action, userId, status, limit: limit.toString() },
+      filters: { action, userId, status, limit: limit.toString(), startDate: startDate || '', endDate: endDate || '' },
       pages: Math.ceil(totalLogs / parseInt(limit))
     });
   } catch (error) {
@@ -612,6 +614,9 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       // Renewal
       renewalEnabled:     rawSettings.renewal_enabled      === 'true',
       renewalWindowDays:  parseInt(rawSettings.renewal_window_days) || 30,
+      // Referrals
+      referralsEnabled:     rawSettings.referrals_enabled       === 'true',
+      maxReferralsPerUser:  parseInt(rawSettings.max_referrals_per_user) || 5,
       // Logging
       logLevel:          rawSettings.log_level          || 'info',
       logToFile:         rawSettings.log_to_file        !== 'false',
@@ -1456,7 +1461,8 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
     const [expiryReminderDays, expiryAction, expiryGraceDays,
            captchaEnabled, captchaProvider, captchaSiteKey,
            jellyseerrUrl, jellyseerrSyncEnabled,
-           renewalEnabled, renewalWindowDays] = await Promise.all([
+           renewalEnabled, renewalWindowDays,
+           referralsEnabled, maxReferralsPerUser] = await Promise.all([
       DatabaseManager.getSetting('expiry_reminder_days'),
       DatabaseManager.getSetting('expiry_action'),
       DatabaseManager.getSetting('expiry_grace_days'),
@@ -1466,7 +1472,9 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       DatabaseManager.getSetting('jellyseerr_url'),
       DatabaseManager.getSetting('jellyseerr_sync_enabled'),
       DatabaseManager.getSetting('renewal_enabled'),
-      DatabaseManager.getSetting('renewal_window_days')
+      DatabaseManager.getSetting('renewal_window_days'),
+      DatabaseManager.getSetting('referrals_enabled'),
+      DatabaseManager.getSetting('max_referrals_per_user')
     ]);
     res.json({
       success: true,
@@ -1505,6 +1513,10 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       renewalSettings: {
         renewalEnabled: renewalEnabled === 'true',
         renewalWindowDays: parseInt(renewalWindowDays) || 30
+      },
+      referralSettings: {
+        referralsEnabled: referralsEnabled === 'true',
+        maxReferralsPerUser: parseInt(maxReferralsPerUser) || 5
       }
     });
   } catch (error) {
@@ -1614,6 +1626,10 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
     } else if (section === 'renewal') {
       if (s.renewalEnabled     !== undefined) await DatabaseManager.setSetting('renewal_enabled',      String(s.renewalEnabled));
       if (s.renewalWindowDays  !== undefined) await DatabaseManager.setSetting('renewal_window_days',  String(Math.max(1, parseInt(s.renewalWindowDays) || 30)));
+
+    } else if (section === 'referral') {
+      if (s.referralsEnabled      !== undefined) await DatabaseManager.setSetting('referrals_enabled',       String(s.referralsEnabled));
+      if (s.maxReferralsPerUser   !== undefined) await DatabaseManager.setSetting('max_referrals_per_user', String(Math.max(1, parseInt(s.maxReferralsPerUser) || 5)));
 
     } else if (section === 'maintenance') {
       // Parse HH:MM time strings into hour integers

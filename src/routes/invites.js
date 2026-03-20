@@ -40,7 +40,11 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
 
     res.json({
       success: true,
-      invites,
+      invites: invites.map(inv => {
+        let meta = {};
+        try { meta = typeof inv.metadata === 'string' ? JSON.parse(inv.metadata) : (inv.metadata || {}); } catch {}
+        return { ...inv, label: meta.label || null };
+      }),
       total: invites.length
     });
   } catch (error) {
@@ -77,7 +81,8 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
       count = 1,
       expiryDays = null,
       maxUses = 1,
-      userExpiryDays = null
+      userExpiryDays = null,
+      label = null
     } = req.body;
 
     // Validate inputs
@@ -97,12 +102,19 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
 
     const adminId = req.session.user?.Id || 'admin';
 
+    const safeLabel = label ? String(label).trim().substring(0, 64) : null;
+    const metadata = safeLabel ? { label: safeLabel } : {};
+
     // Generate invites
     let invites;
     if (count === 1) {
-      invites = [await inviteManager.createInvite(signupProfileId, adminId, expiresAt, {}, safeMaxUses, safeUserExpiryDays)];
+      invites = [await inviteManager.createInvite(signupProfileId, adminId, expiresAt, metadata, safeMaxUses, safeUserExpiryDays)];
     } else if (count > 1 && count <= 1000) {
       invites = await inviteManager.bulkGenerateInvites(signupProfileId, adminId, count, expiresAt, safeMaxUses, safeUserExpiryDays);
+      // Apply label to bulk invites if provided
+      if (safeLabel) {
+        await Promise.all(invites.map(inv => inviteManager.setInviteLabel(inv.code, safeLabel)));
+      }
     } else {
       return res.status(400).json({ success: false, error: 'Count must be between 1 and 1000' });
     }
@@ -118,7 +130,10 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
 
     res.json({
       success: true,
-      invites,
+      invites: invites.map(inv => ({
+        ...inv,
+        label: safeLabel || (inv.metadata && typeof inv.metadata === 'object' ? inv.metadata.label : null) || null
+      })),
       count: invites.length
     });
   } catch (error) {

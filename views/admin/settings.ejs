@@ -304,6 +304,7 @@
           <button class="settings-tab-btn" data-tab="jellyfin"><i class="fas fa-play"></i> Jellyfin</button>
           <button class="settings-tab-btn" data-tab="security"><i class="fas fa-shield-alt"></i> Security</button>
           <button class="settings-tab-btn" data-tab="jellyseerr"><i class="fas fa-film"></i> Jellyseerr</button>
+          <button class="settings-tab-btn" data-tab="referrals"><i class="fas fa-share-alt"></i> Referrals</button>
           <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
           <button class="settings-tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Maintenance</button>
         </div>
@@ -613,13 +614,45 @@
           </form>
         </div>
 
+        <!-- Referrals Settings -->
+        <div id="referrals" class="settings-panel">
+          <form id="referralsForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-share-alt"></i> Referral Invites</h3>
+              <p style="color:var(--text-secondary);font-size:.875rem;margin-top:0;">
+                Allow existing users to share invite links with friends. Each user gets a personal invite code that counts their referrals.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable Referral Invites</div>
+                  <div class="setting-description">Show users a shareable invite link on their account page</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.referralsEnabled ? 'active' : '' %>" data-name="referralsEnabled"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Max Referrals Per User</div>
+                  <div class="setting-description">How many people each user can invite using their referral code</div>
+                </div>
+                <div>
+                  <input type="number" name="maxReferralsPerUser" value="<%= settings.maxReferralsPerUser || 5 %>" min="1" max="1000" style="width:90px;">
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="referral"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="referral"><i class="fas fa-undo"></i> Reset to Defaults</button>
+            </div>
+          </form>
+        </div>
+
         <!-- Logging Settings -->
         <div id="logging" class="settings-panel">
-          <form id="loggingForm">
-            <div class="settings-section">
-              <h3><i class="fas fa-file-alt"></i> Logging Configuration</h3>
-
-              <!-- Live audit log summary -->
               <div class="info-box" id="auditLogSummary" style="display:none;">
                 <i class="fas fa-chart-bar"></i>
                 <strong>Audit Log Status:</strong>

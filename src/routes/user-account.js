@@ -5,6 +5,7 @@ const ContactMethodManager = require('../models/ContactMethodManager');
 const UserProfileManager = require('../models/UserProfileManager');
 const DatabaseManager = require('../models/DatabaseManager');
 const AuditLogger = require('../models/AuditLogger');
+const InviteManager = require('../models/InviteManager');
 const { getBaseUrl } = require('../utils/urlHelper');
 const { requireAuth } = require('../middleware/auth');
 
@@ -65,20 +66,47 @@ router.get('/account-status', requireAuth, async (req, res) => {
     const contactMethods = await contactManager.getContactMethods(userId);
     const verifiedMethods = await contactManager.getVerifiedMethods(userId);
 
-    // Get referral information (if applicable)
-    const referralInfo = {
-      enabled: process.env.ENABLE_REFERRALS === 'true' || false,
-      referralLink: null,
-      referralCode: null,
-      referralsUsed: 0
-    };
+    // Get referral information
+    const referralsEnabled = await DatabaseManager.getSetting('referrals_enabled');
+    const referralInfo = { enabled: referralsEnabled === 'true', referralLink: null, referralCode: null, referralsUsed: 0 };
 
     if (referralInfo.enabled) {
-      // Generate referral link for this user
-      const referralCode = Buffer.from(userId).toString('base64').substring(0, 12);
-      const baseUrl = getBaseUrl(req);
-      referralInfo.referralCode = referralCode;
-      referralInfo.referralLink = `${baseUrl}/invite?ref=${referralCode}`;
+      try {
+        const inviteManager = InviteManager.getInstance();
+        const maxUses = parseInt(await DatabaseManager.getSetting('max_referrals_per_user')) || 5;
+        const baseUrl = getBaseUrl(req);
+
+        // Find existing referral invite created by this user
+        const existing = await inviteManager.listInvites({ createdBy: userId, status: 'pending' });
+        const referralInvite = existing.find(inv => {
+          try { return JSON.parse(inv.metadata || '{}').type === 'referral'; } catch { return false; }
+        });
+
+        if (referralInvite) {
+          referralInfo.referralCode = referralInvite.code;
+          referralInfo.referralLink = `${baseUrl}/signup?invite=${referralInvite.code}`;
+          referralInfo.referralsUsed = referralInvite.usageCount || 0;
+        } else {
+          // Create a referral invite — find first active signup profile
+          let profileId = null;
+          await new Promise(resolve => {
+            DatabaseManager.db.get('SELECT id FROM signup_profiles WHERE isActive = 1 ORDER BY createdAt ASC LIMIT 1', [], (err, row) => {
+              profileId = row ? row.id : null;
+              resolve();
+            });
+          });
+          if (profileId) {
+            const newInvite = await inviteManager.createInvite(
+              profileId, userId, null, { type: 'referral', referredBy: userId }, maxUses, null
+            );
+            referralInfo.referralCode = newInvite.code;
+            referralInfo.referralLink = `${baseUrl}/signup?invite=${newInvite.code}`;
+            referralInfo.referralsUsed = 0;
+          }
+        }
+      } catch (refErr) {
+        console.warn('Referral info error:', refErr.message);
+      }
     }
 
     // Compile full account status

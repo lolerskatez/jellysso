@@ -49,32 +49,34 @@ body {
 
 .sidebar {
   width: var(--sidebar-width);
-  background: linear-gradient(135deg, var(--bg-dark) 0%, #495057 100%);
-  color: var(--text-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   position: fixed;
   height: 100vh;
   left: 0;
   top: 0;
   z-index: 1000;
   overflow-y: auto;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
+  border-right: 1px solid var(--border-color);
 }
 
 .sidebar-header {
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
 }
 
 .sidebar-header h2 {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  color: var(--text-primary);
 }
 
 .sidebar-header p {
   font-size: 0.875rem;
-  opacity: 0.8;
+  color: var(--text-secondary);
 }
 
 .sidebar-nav {
@@ -88,23 +90,24 @@ body {
 .nav-link {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1.5rem;
-  color: rgba(255, 255, 255, 0.8);
+  padding: 11px 1.5rem;
+  color: var(--text-primary);
   text-decoration: none;
   transition: var(--transition);
   border-left: 3px solid transparent;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-light);
+  background: var(--bg-secondary);
+  color: var(--primary);
   border-left-color: var(--primary-color);
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text-light);
+  background: var(--bg-secondary);
+  color: var(--primary);
   border-left-color: var(--primary-color);
+  font-weight: 600;
 }
 
 .nav-link i {

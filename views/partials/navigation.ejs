@@ -3,39 +3,53 @@
 <!-- theme-init.js reads localStorage and sets data-theme on <html> before paint -->
 <script src="/js/theme-init.js"></script>
 <style>
-  .nav-group-header {
+  /* Collapsible section group button (acts as header + toggle) */
+  .nav-group-btn {
     display: flex;
     align-items: center;
-  }
-  .nav-group-link {
-    flex: 1;
-    min-width: 0;
-  }
-  .nav-group-toggle {
-    flex-shrink: 0;
+    gap: 12px;
+    width: 100%;
+    padding: 9px var(--spacing-lg);
     background: none;
     border: none;
-    cursor: pointer;
-    color: rgba(255, 255, 255, 0.45);
-    padding: 4px 12px 4px 4px;
-    line-height: 1;
-    transition: color 0.15s;
-  }
-  .nav-group-toggle:hover {
-    color: rgba(255, 255, 255, 0.9);
-  }
-  .nav-group-toggle i {
-    transition: transform 0.2s ease;
+    border-left: 3px solid transparent;
+    color: var(--text-muted);
     font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.15s, background 0.15s;
   }
-  .nav-group-toggle[aria-expanded="true"] i {
+  .nav-group-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+  }
+  .nav-group-btn.active {
+    color: var(--text-secondary);
+    border-left-color: var(--border-color);
+  }
+  .nav-group-btn i.group-icon {
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+  }
+  .nav-group-btn .toggle-icon {
+    margin-left: auto;
+    font-size: 0.6rem;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+  .nav-group-btn[aria-expanded="true"] .toggle-icon {
     transform: rotate(90deg);
   }
+  /* Subnav panel */
   .nav-subnav {
     display: none;
-    border-left: 2px solid rgba(255, 255, 255, 0.12);
-    margin-left: 22px;
-    margin-top: 2px;
+    border-left: 2px solid var(--border-color);
+    margin-left: 28px;
+    margin-top: 1px;
     margin-bottom: 4px;
   }
   .nav-subnav.open {
@@ -45,6 +59,24 @@
     font-size: 0.875rem;
     padding-top: 7px;
     padding-bottom: 7px;
+  }
+  .nav-subnav .nav-link i {
+    font-size: 0.875rem;
+  }
+  /* Thin divider between sidebar sections */
+  .nav-section-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: var(--spacing-sm) var(--spacing-lg);
+  }
+  /* Plain section label (non-interactive) */
+  .nav-section-label {
+    padding: var(--spacing-sm) var(--spacing-lg) 2px;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    letter-spacing: 0.8px;
   }
 </style>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -58,33 +90,40 @@
   </div>
 
   <nav class="sidebar-nav">
-    <!-- Admin Dashboard (at the top for admins only) -->
+
+    <!-- ── Admin Overview ───────────────────────────────── -->
     <% if (user?.Policy?.IsAdministrator) { %>
       <div class="nav-item">
         <a href="/admin/" class="nav-link <%= currentPage === 'admin-dashboard' ? 'active' : '' %>">
           <i class="fas fa-chart-bar"></i>
-          Admin Dashboard
+          Overview
         </a>
       </div>
+      <hr class="nav-section-divider">
     <% } %>
-    
-    <!-- QuickConnect (for all users) -->
+
+    <!-- ── My Space (all users) ─────────────────────────── -->
+    <% if (user?.Policy?.IsAdministrator) { %>
+      <div class="nav-section-label">My Space</div>
+    <% } %>
     <div class="nav-item">
       <a href="/quickconnect" class="nav-link <%= currentPage === 'quickconnect' ? 'active' : '' %>">
         <i class="fas fa-mobile-alt"></i>
         QuickConnect
       </a>
     </div>
-
-    <!-- Playback Control (for all users) -->
     <div class="nav-item">
       <a href="/playback" class="nav-link <%= currentPage === 'playback' ? 'active' : '' %>">
         <i class="fas fa-play-circle"></i>
-        Playback Control
+        Playback
       </a>
     </div>
-
-    <!-- Jellyfin Client Guide (for all users) -->
+    <div class="nav-item">
+      <a href="/account" class="nav-link <%= currentPage === 'account' ? 'active' : '' %>">
+        <i class="fas fa-user-circle"></i>
+        My Account
+      </a>
+    </div>
     <div class="nav-item">
       <a href="/admin/client-guide" class="nav-link <%= currentPage === 'client-guide' ? 'active' : '' %>">
         <i class="fas fa-life-ring"></i>
@@ -92,45 +131,123 @@
       </a>
     </div>
 
-    <!-- My Membership (for all non-admin users; admins may also access it) -->
-    <div class="nav-item">
-      <a href="/membership" class="nav-link <%= currentPage === 'membership' ? 'active' : '' %>">
-        <i class="fas fa-id-card"></i>
-        My Membership
-      </a>
-    </div>
-
-    <!-- My Account (for all users) -->
-    <div class="nav-item">
-      <a href="/account" class="nav-link <%= currentPage === 'account' ? 'active' : '' %>">
-        <i class="fas fa-user"></i>
-        My Account
-      </a>
-    </div>
-
-    <!-- Admin Tools Section (only for admins) -->
+    <!-- ── Admin Sections ───────────────────────────────── -->
     <% if (user?.Policy?.IsAdministrator) { %>
-      <div style="margin: var(--spacing-lg) 0; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: var(--spacing-md);">
-        <div style="padding: 0 var(--spacing-lg); font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); font-weight: 600; letter-spacing: 0.5px;">Admin Tools</div>
+      <hr class="nav-section-divider">
+
+      <!-- Users group -->
+      <div class="nav-item">
+        <button class="nav-group-btn <%= ['admin-users','admin-invites','admin-profiles','admin-expiry'].includes(currentPage) ? 'active' : '' %>"
+                data-toggle="usersSubnav"
+                aria-expanded="false"
+                aria-label="Toggle Users section">
+          <i class="fas fa-users group-icon"></i>
+          Users
+          <i class="fas fa-chevron-right toggle-icon"></i>
+        </button>
+        <div class="nav-subnav" id="usersSubnav">
+          <div class="nav-item">
+            <a href="/admin/users" class="nav-link <%= currentPage === 'admin-users' ? 'active' : '' %>">
+              <i class="fas fa-list-ul"></i>
+              User Management
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/invites" class="nav-link <%= currentPage === 'admin-invites' ? 'active' : '' %>">
+              <i class="fas fa-envelope"></i>
+              Invites
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/signup-profiles" class="nav-link <%= currentPage === 'admin-profiles' ? 'active' : '' %>">
+              <i class="fas fa-user-tie"></i>
+              Signup Profiles
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/user-expiry" class="nav-link <%= currentPage === 'admin-expiry' ? 'active' : '' %>">
+              <i class="fas fa-hourglass-end"></i>
+              User Expiry
+            </a>
+          </div>
+        </div>
       </div>
 
+      <!-- Communications group -->
       <div class="nav-item">
-        <a href="/admin/users" class="nav-link <%= currentPage === 'admin-users' ? 'active' : '' %>">
-          <i class="fas fa-users"></i>
-          User Management
-        </a>
-      </div>
-      <div class="nav-item">
-        <div class="nav-group-header">
-          <a href="/admin/settings" class="nav-link nav-group-link <%= ['admin-settings','admin-audit-logs','admin-backups','admin-oidc'].includes(currentPage) ? 'active' : '' %>">
-            <i class="fas fa-cog"></i>
-            Settings
-          </a>
-          <button class="nav-group-toggle" id="settingsToggle" aria-label="Toggle settings submenu" aria-expanded="false">
-            <i class="fas fa-chevron-right"></i>
-          </button>
+        <button class="nav-group-btn <%= ['admin-notifications','admin-message-templates'].includes(currentPage) ? 'active' : '' %>"
+                data-toggle="commsSubnav"
+                aria-expanded="false"
+                aria-label="Toggle Communications section">
+          <i class="fas fa-bell group-icon"></i>
+          Communications
+          <i class="fas fa-chevron-right toggle-icon"></i>
+        </button>
+        <div class="nav-subnav" id="commsSubnav">
+          <div class="nav-item">
+            <a href="/admin/notifications" class="nav-link <%= currentPage === 'admin-notifications' ? 'active' : '' %>">
+              <i class="fas fa-bell"></i>
+              Notifications
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/message-templates" class="nav-link <%= currentPage === 'admin-message-templates' ? 'active' : '' %>">
+              <i class="fas fa-envelope-open-text"></i>
+              Message Templates
+            </a>
+          </div>
         </div>
-        <div class="nav-subnav" id="settingsSubnav">
+      </div>
+
+      <!-- Security group -->
+      <div class="nav-item">
+        <button class="nav-group-btn <%= ['admin-policy','admin-oidc'].includes(currentPage) ? 'active' : '' %>"
+                data-toggle="securitySubnav"
+                aria-expanded="false"
+                aria-label="Toggle Security section">
+          <i class="fas fa-shield-alt group-icon"></i>
+          Security
+          <i class="fas fa-chevron-right toggle-icon"></i>
+        </button>
+        <div class="nav-subnav" id="securitySubnav">
+          <div class="nav-item">
+            <a href="/admin/policy" class="nav-link <%= currentPage === 'admin-policy' ? 'active' : '' %>">
+              <i class="fas fa-shield-alt"></i>
+              Policy Management
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/oidc" class="nav-link <%= currentPage === 'admin-oidc' ? 'active' : '' %>">
+              <i class="fas fa-key"></i>
+              OIDC SSO
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- System group -->
+      <div class="nav-item">
+        <button class="nav-group-btn <%= ['admin-settings','admin-audit-logs','admin-backups','admin-plugins','admin-troubleshoot','admin-playback-sessions'].includes(currentPage) ? 'active' : '' %>"
+                data-toggle="systemSubnav"
+                aria-expanded="false"
+                aria-label="Toggle System section">
+          <i class="fas fa-server group-icon"></i>
+          System
+          <i class="fas fa-chevron-right toggle-icon"></i>
+        </button>
+        <div class="nav-subnav" id="systemSubnav">
+          <div class="nav-item">
+            <a href="/admin/playback-sessions" class="nav-link <%= currentPage === 'admin-playback-sessions' ? 'active' : '' %>">
+              <i class="fas fa-play-circle"></i>
+              Playback Sessions
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/settings" class="nav-link <%= currentPage === 'admin-settings' ? 'active' : '' %>">
+              <i class="fas fa-cog"></i>
+              Settings
+            </a>
+          </div>
           <div class="nav-item">
             <a href="/admin/audit-logs" class="nav-link <%= currentPage === 'admin-audit-logs' ? 'active' : '' %>">
               <i class="fas fa-file-alt"></i>
@@ -144,79 +261,26 @@
             </a>
           </div>
           <div class="nav-item">
-            <a href="/admin/oidc" class="nav-link <%= currentPage === 'admin-oidc' ? 'active' : '' %>">
-              <i class="fas fa-key"></i>
-              OIDC SSO
+            <a href="/admin/plugins" class="nav-link <%= currentPage === 'admin-plugins' ? 'active' : '' %>">
+              <i class="fas fa-puzzle-piece"></i>
+              Plugin Management
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/troubleshoot" class="nav-link <%= currentPage === 'admin-troubleshoot' ? 'active' : '' %>">
+              <i class="fas fa-tools"></i>
+              Troubleshooting
             </a>
           </div>
         </div>
       </div>
-      <div class="nav-item">
-        <a href="/admin/plugins" class="nav-link <%= currentPage === 'admin-plugins' ? 'active' : '' %>">
-          <i class="fas fa-puzzle-piece"></i>
-          Plugin Management
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/troubleshoot" class="nav-link <%= currentPage === 'admin-troubleshoot' ? 'active' : '' %>">
-          <i class="fas fa-tools"></i>
-          App Troubleshooting
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/playback-sessions" class="nav-link <%= currentPage === 'admin-playback-sessions' ? 'active' : '' %>">
-          <i class="fas fa-play-circle"></i>
-          Playback Administration
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/policy" class="nav-link <%= currentPage === 'admin-policy' ? 'active' : '' %>">
-          <i class="fas fa-shield-alt"></i>
-          Policy Management
-        </a>
-      </div>
-
-      <!-- Phase 2: User Lifecycle Management -->
-      <div style="margin: var(--spacing-lg) 0; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: var(--spacing-md);">
-        <div style="padding: 0 var(--spacing-lg); font-size: 0.75rem; text-transform: uppercase; color: rgba(255, 255, 255, 0.5); font-weight: 600; letter-spacing: 0.5px;">User Lifecycle</div>
-      </div>
-
-      <div class="nav-item">
-        <a href="/admin/invites" class="nav-link <%= currentPage === 'admin-invites' ? 'active' : '' %>">
-          <i class="fas fa-envelope"></i>
-          Invite Management
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/signup-profiles" class="nav-link <%= currentPage === 'admin-profiles' ? 'active' : '' %>">
-          <i class="fas fa-user-tie"></i>
-          Signup Profiles
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/user-expiry" class="nav-link <%= currentPage === 'admin-expiry' ? 'active' : '' %>">
-          <i class="fas fa-hourglass-end"></i>
-          User Expiry
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/notifications" class="nav-link <%= currentPage === 'admin-notifications' ? 'active' : '' %>">
-          <i class="fas fa-bell"></i>
-          Notifications
-        </a>
-      </div>
-      <div class="nav-item">
-        <a href="/admin/message-templates" class="nav-link <%= currentPage === 'admin-message-templates' ? 'active' : '' %>">
-          <i class="fas fa-envelope-open-text"></i>
-          Message Templates
-        </a>
-      </div>
     <% } %>
+
   </nav>
 
   <!-- Bottom Navigation (Logout) -->
-  <div style="margin-top: auto; padding-top: var(--spacing-lg); border-top: 1px solid rgba(255, 255, 255, 0.1);">
-    <button id="logoutBtn" class="nav-link" style="justify-content: center; width: 100%; border: none; background: none; cursor: pointer; color: rgba(255, 255, 255, 0.8); margin-bottom: var(--spacing-lg);">
+  <div style="margin-top: auto; padding-top: var(--spacing-lg); border-top: 1px solid var(--border-color);">
+    <button id="logoutBtn" class="nav-link" style="justify-content: center; width: 100%; border: none; background: none; cursor: pointer; margin-bottom: var(--spacing-lg);">
       <i class="fas fa-sign-out-alt"></i>
       <span>Logout</span>
     </button>
@@ -224,27 +288,36 @@
 </aside>
 <script>
   (function () {
-    var settingsPages = ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-oidc'];
+    var groupMap = {
+      usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry'],
+      commsSubnav:    ['admin-notifications', 'admin-message-templates'],
+      securitySubnav: ['admin-policy', 'admin-oidc'],
+      systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions']
+    };
     var currentPage = '<%= currentPage %>';
-    var toggle = document.getElementById('settingsToggle');
-    var subnav = document.getElementById('settingsSubnav');
 
-    if (!toggle || !subnav) return;
+    document.querySelectorAll('.nav-group-btn').forEach(function (btn) {
+      var subnavId = btn.getAttribute('data-toggle');
+      var subnav = document.getElementById(subnavId);
+      if (!subnav) return;
 
-    function open() {
-      subnav.classList.add('open');
-      toggle.setAttribute('aria-expanded', 'true');
-    }
+      function openGroup() {
+        subnav.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      function closeGroup() {
+        subnav.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
 
-    function close() {
-      subnav.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
+      // Auto-open if the current page belongs to this group
+      if (groupMap[subnavId] && groupMap[subnavId].includes(currentPage)) {
+        openGroup();
+      }
 
-    if (settingsPages.includes(currentPage)) open();
-
-    toggle.addEventListener('click', function () {
-      subnav.classList.contains('open') ? close() : open();
+      btn.addEventListener('click', function () {
+        subnav.classList.contains('open') ? closeGroup() : openGroup();
+      });
     });
   })();
 </script>

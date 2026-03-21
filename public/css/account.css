@@ -3,6 +3,49 @@
  * Comprehensive styling for user account management
  */
 
+/* ── Membership tab: subscription stat rows ── */
+.membership-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.membership-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.membership-stat-value {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.tier-free     { background: rgba(148,163,184,0.2); color: #475569; }
+.tier-standard { background: rgba(59,130,246,0.15); color: #1d4ed8; }
+.tier-premium  { background: rgba(139,92,246,0.15); color: #6d28d9; }
+.tier-family   { background: rgba(239,68,68,0.15);  color: #b91c1c; }
+.tier-admin    { background: rgba(245,158,11,0.15); color: #92400e; }
+.membership-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.pill-enabled  { background: rgba(16,185,129,0.12); color: #065f46; }
+.pill-disabled { background: rgba(148,163,184,0.15); color: #64748b; }
+
 /* Page Layout */
 .account-container {
   display: grid;

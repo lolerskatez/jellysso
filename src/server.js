@@ -667,14 +667,20 @@ app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
 app.get('/account', requireWebAuth, csrfProtection, async (req, res) => {
   try {
     const DatabaseManager = require('./models/DatabaseManager');
-    const renewalEnabled = (await DatabaseManager.getSetting('renewal_enabled').catch(() => null)) === 'true';
-    const renewalWindowDays = parseInt(await DatabaseManager.getSetting('renewal_window_days').catch(() => null)) || 30;
+    const PolicyManager = require('./models/PolicyManager');
+    const [renewalEnabledRaw, renewalWindowDaysRaw, policy] = await Promise.all([
+      DatabaseManager.getSetting('renewal_enabled').catch(() => null),
+      DatabaseManager.getSetting('renewal_window_days').catch(() => null),
+      PolicyManager.getUserPolicy(req.session.user.Id).catch(() => null)
+    ]);
     res.render('account', { 
       user: req.session.user, 
       csrfToken: req.csrfToken(),
       currentPage: 'account',
-      renewalEnabled,
-      renewalWindowDays
+      renewalEnabled: renewalEnabledRaw === 'true',
+      renewalWindowDays: parseInt(renewalWindowDaysRaw) || 30,
+      policy,
+      isOidc: req.session.authMethod === 'oidc'
     });
   } catch (err) {
     logger.error('Account page error:', err);
@@ -685,33 +691,9 @@ app.get('/account', requireWebAuth, csrfProtection, async (req, res) => {
   }
 });
 
-app.get('/membership', requireWebAuth, csrfProtection, async (req, res) => {
-  const PolicyManager = require('./models/PolicyManager');
-  const UserProfileManager = require('./models/UserProfileManager');
-  try {
-    const [policy, profile] = await Promise.all([
-      PolicyManager.getUserPolicy(req.session.user.Id).catch(() => null),
-      UserProfileManager.getProfile(req.session.user.Id).catch(() => null)
-    ]);
-    res.render('membership', {
-      user: req.session.user,
-      csrfToken: req.csrfToken(),
-      currentPage: 'membership',
-      policy,
-      profile,
-      isOidc: req.session.authMethod === 'oidc'
-    });
-  } catch (err) {
-    logger.error('Membership page error:', err);
-    res.render('membership', {
-      user: req.session.user,
-      csrfToken: req.csrfToken(),
-      currentPage: 'membership',
-      policy: null,
-      profile: null,
-      isOidc: req.session.authMethod === 'oidc'
-    });
-  }
+// /membership is consolidated into the My Account page
+app.get('/membership', requireWebAuth, (req, res) => {
+  res.redirect('/account#membership');
 });
 
 app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) => {

@@ -793,10 +793,10 @@ html[data-theme="dark"] .main-content {
   color: var(--text-primary);
 }
 
-/* ---- Sidebar: var(--gray-900) is remapped to light in dark mode,
-        so the gradient must be explicitly kept dark ---- */
+/* ---- Sidebar is now light-themed using CSS variables, adapts to dark mode automatically ---- */
 html[data-theme="dark"] .sidebar {
-  background: linear-gradient(180deg, #0d0d0d 0%, #161616 100%);
+  background: var(--bg-primary);
+  border-right-color: var(--border-color);
 }
 
 /* ---- Top header bar (background: white in layout.css) ---- */

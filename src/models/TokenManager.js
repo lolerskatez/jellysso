@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 class TokenManager {
   constructor() {
@@ -132,7 +133,7 @@ class TokenManager {
         tokenMetadata.isRevoked = true;
       }
     } catch (error) {
-      console.warn('Error revoking refresh token:', error.message);
+      logger.warn('Error revoking refresh token:', error.message);
     }
   }
 

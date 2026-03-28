@@ -4,6 +4,7 @@
  */
 
 const DatabaseManager = require('./DatabaseManager');
+const logger = require('../utils/logger');
 
 class PolicyManagerOptimized {
   /**
@@ -23,7 +24,7 @@ class PolicyManagerOptimized {
 
       return counts;
     } catch (error) {
-      console.error('Error getting user counts by tier:', error);
+      logger.error('Error getting user counts by tier:', error);
       return {};
     }
   }
@@ -42,7 +43,7 @@ class PolicyManagerOptimized {
         userCount: counts[tier.id] || 0
       }));
     } catch (error) {
-      console.error('Error getting tiers with counts:', error);
+      logger.error('Error getting tiers with counts:', error);
       return [];
     }
   }
@@ -66,7 +67,7 @@ class PolicyManagerOptimized {
         ORDER BY up.updatedAt DESC
       `);
     } catch (error) {
-      console.error('Error getting all policies with tiers:', error);
+      logger.error('Error getting all policies with tiers:', error);
       return [];
     }
   }
@@ -91,7 +92,7 @@ class PolicyManagerOptimized {
         GROUP BY up.userId
       `, [userId]);
     } catch (error) {
-      console.error('Error getting user policy with details:', error);
+      logger.error('Error getting user policy with details:', error);
       return null;
     }
   }
@@ -109,7 +110,7 @@ class PolicyManagerOptimized {
       );
       return result?.count || 0;
     } catch (error) {
-      console.error('Error getting users on tier:', error);
+      logger.error('Error getting users on tier:', error);
       return 0;
     }
   }
@@ -126,7 +127,7 @@ class PolicyManagerOptimized {
         [tierId]
       );
     } catch (error) {
-      console.error('Error getting all users on tier:', error);
+      logger.error('Error getting all users on tier:', error);
       return [];
     }
   }
@@ -143,7 +144,7 @@ class PolicyManagerOptimized {
       for (const { userId, tierId } of updates) {
         const tierConfig = await this.getTier(tierId);
         if (!tierConfig) {
-          console.warn(`Invalid tier: ${tierId}`);
+          logger.warn(`Invalid tier: ${tierId}`);
           continue;
         }
 
@@ -157,7 +158,7 @@ class PolicyManagerOptimized {
 
       return totalUpdated;
     } catch (error) {
-      console.error('Error batch updating user tiers:', error);
+      logger.error('Error batch updating user tiers:', error);
       return 0;
     }
   }
@@ -183,7 +184,7 @@ class PolicyManagerOptimized {
         LIMIT ?
       `, [userId, limit]);
     } catch (error) {
-      console.error('Error getting audit log with user info:', error);
+      logger.error('Error getting audit log with user info:', error);
       return [];
     }
   }
@@ -207,7 +208,7 @@ class PolicyManagerOptimized {
 
       return stats || {};
     } catch (error) {
-      console.error('Error getting policy statistics:', error);
+      logger.error('Error getting policy statistics:', error);
       return {};
     }
   }
@@ -230,7 +231,7 @@ class PolicyManagerOptimized {
         ORDER BY t.sortOrder
       `);
     } catch (error) {
-      console.error('Error getting tier distribution:', error);
+      logger.error('Error getting tier distribution:', error);
       return [];
     }
   }

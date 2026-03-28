@@ -7,6 +7,20 @@ const PolicyManager = require('./models/PolicyManager');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
+const logger = require('./utils/logger');
+
+// Resolve the public base URL for this JellySSO instance.
+// Priority: PUBLIC_URL env var → webAppPublicUrl from setup config → fallback to localhost.
+function getPublicUrl() {
+  if (process.env.PUBLIC_URL) {
+    return process.env.PUBLIC_URL.replace(/\/$/, '');
+  }
+  try {
+    const cfg = SetupManager.getConfig();
+    if (cfg.webAppPublicUrl) return cfg.webAppPublicUrl.replace(/\/$/, '');
+  } catch (_) {}
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
 
 // Scope definitions with descriptions
 const SCOPES = {
@@ -28,8 +42,8 @@ const configuration = {
       client_secret: process.env.OIDC_CLIENT_SECRET || 'companion-secret',
       grant_types: ['authorization_code', 'refresh_token', 'client_credentials'],
       redirect_uris: [
-        'http://localhost:3000/auth/callback',
-        'http://localhost:3000/oidc-auth/callback'
+        `${getPublicUrl()}/auth/callback`,
+        `${getPublicUrl()}/oidc-auth/callback`
       ],
       response_types: ['code', 'id_token', 'token'],
       scope: 'openid profile email offline_access api',
@@ -180,12 +194,12 @@ const configuration = {
             },
           };
         } catch (createError) {
-          console.error('Error creating OIDC user:', createError);
+          logger.error('Error creating OIDC user:', createError);
           throw new Error(`Failed to create OIDC user: ${createError.message}`);
         }
       }
     } catch (error) {
-      console.error('Error in findAccount:', error);
+      logger.error('Error in findAccount:', error);
       await AuditLogger.log({
         action: 'OIDC_AUTH_ERROR',
         userId: 'unknown',
@@ -205,6 +219,6 @@ const configuration = {
   },
 };
 
-const oidc = new Provider('http://localhost:3000', configuration);
+const oidc = new Provider(getPublicUrl(), configuration);
 
 module.exports = oidc;

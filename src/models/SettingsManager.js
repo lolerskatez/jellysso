@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 class SettingsManager {
   constructor() {
@@ -28,7 +29,7 @@ class SettingsManager {
       const data = fs.readFileSync(this.settingsFile, 'utf8');
       return JSON.parse(data);
     } catch (error) {
-      console.error('Error reading settings:', error);
+      logger.error('Error reading settings:', error);
       return this.getDefaultSettings();
     }
   }
@@ -44,7 +45,7 @@ class SettingsManager {
       fs.writeFileSync(this.settingsFile, JSON.stringify(newSettings, null, 2));
       return newSettings;
     } catch (error) {
-      console.error('Error updating settings:', error);
+      logger.error('Error updating settings:', error);
       throw new Error(`Failed to update settings: ${error.message}`);
     }
   }
@@ -55,7 +56,7 @@ class SettingsManager {
       fs.writeFileSync(this.settingsFile, JSON.stringify(defaultSettings, null, 2));
       return defaultSettings;
     } catch (error) {
-      console.error('Error resetting settings:', error);
+      logger.error('Error resetting settings:', error);
       throw new Error(`Failed to reset settings: ${error.message}`);
     }
   }

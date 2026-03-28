@@ -11,6 +11,7 @@ const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { adminLimiter } = require('../middleware/rate-limit');
 const AuditLogger = require('../models/AuditLogger');
+const logger = require('../utils/logger');
 
 // Apply admin-only rate limiting
 router.use(adminLimiter);
@@ -43,7 +44,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       total: labels.length
     });
   } catch (err) {
-    console.error('Error fetching labels:', err);
+    logger.error('Error fetching labels:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch labels',
@@ -69,7 +70,7 @@ router.post('/', requireAuth, requireAdmin, csrfProtection, async (req, res) => 
 
     const label = await LabelManager.createLabel(
       { name, color, description },
-      req.user.id
+      req.session.user?.Id
     );
 
     res.status(201).json({
@@ -84,7 +85,7 @@ router.post('/', requireAuth, requireAdmin, csrfProtection, async (req, res) => 
         message: err.message
       });
     }
-    console.error('Error creating label:', err);
+    logger.error('Error creating label:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to create label',
@@ -105,7 +106,7 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
       ...stats
     });
   } catch (err) {
-    console.error('Error fetching label stats:', err);
+    logger.error('Error fetching label stats:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch statistics',
@@ -135,7 +136,7 @@ router.get('/search/:term', requireAuth, requireAdmin, async (req, res) => {
       count: results.length
     });
   } catch (err) {
-    console.error('Error searching labels:', err);
+    logger.error('Error searching labels:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to search labels',
@@ -165,7 +166,7 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res) => {
       label
     });
   } catch (err) {
-    console.error('Error fetching label:', err);
+    logger.error('Error fetching label:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch label',
@@ -195,7 +196,7 @@ router.patch('/:id', requireAuth, requireAdmin, csrfProtection, async (req, res)
       });
     }
 
-    const updated = await LabelManager.updateLabel(id, updates, req.user.id);
+    const updated = await LabelManager.updateLabel(id, updates, req.session.user?.Id);
 
     res.json({
       success: true,
@@ -209,7 +210,7 @@ router.patch('/:id', requireAuth, requireAdmin, csrfProtection, async (req, res)
         message: err.message
       });
     }
-    console.error('Error updating label:', err);
+    logger.error('Error updating label:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to update label',
@@ -225,14 +226,14 @@ router.patch('/:id', requireAuth, requireAdmin, csrfProtection, async (req, res)
 router.delete('/:id', requireAuth, requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { id } = req.params;
-    await LabelManager.deleteLabel(id, req.user.id);
+    await LabelManager.deleteLabel(id, req.session.user?.Id);
 
     res.json({
       success: true,
       message: 'Label deleted successfully'
     });
   } catch (err) {
-    console.error('Error deleting label:', err);
+    logger.error('Error deleting label:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to delete label',
@@ -256,7 +257,7 @@ router.get('/:id/users', requireAuth, requireAdmin, async (req, res) => {
       count: users.length
     });
   } catch (err) {
-    console.error('Error fetching label users:', err);
+    logger.error('Error fetching label users:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch label users',
@@ -281,7 +282,7 @@ router.post('/:id/users', requireAuth, requireAdmin, csrfProtection, async (req,
       });
     }
 
-    const count = await LabelManager.assignLabelToUsers(userIds, parseInt(id), req.user.id);
+    const count = await LabelManager.assignLabelToUsers(userIds, parseInt(id), req.session.user?.Id);
 
     res.json({
       success: true,
@@ -289,7 +290,7 @@ router.post('/:id/users', requireAuth, requireAdmin, csrfProtection, async (req,
       assigned: count
     });
   } catch (err) {
-    console.error('Error assigning label to users:', err);
+    logger.error('Error assigning label to users:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to assign label',
@@ -314,7 +315,7 @@ router.delete('/:id/users', requireAuth, requireAdmin, csrfProtection, async (re
       });
     }
 
-    const count = await LabelManager.removeLabelFromUsers(userIds, parseInt(id), req.user.id);
+    const count = await LabelManager.removeLabelFromUsers(userIds, parseInt(id), req.session.user?.Id);
 
     res.json({
       success: true,
@@ -322,7 +323,7 @@ router.delete('/:id/users', requireAuth, requireAdmin, csrfProtection, async (re
       removed: count
     });
   } catch (err) {
-    console.error('Error removing label from users:', err);
+    logger.error('Error removing label from users:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to remove label',
@@ -340,7 +341,7 @@ router.get('/user/:userId', requireAuth, async (req, res) => {
     const { userId } = req.params;
 
     // Users can only see their own labels unless admin
-    if (req.user.id !== userId && !req.user.isAdmin) {
+    if (req.session.user?.Id !== userId && !req.session.user?.Policy?.IsAdministrator) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden: Cannot view other users labels'
@@ -355,7 +356,7 @@ router.get('/user/:userId', requireAuth, async (req, res) => {
       count: labels.length
     });
   } catch (err) {
-    console.error('Error fetching user labels:', err);
+    logger.error('Error fetching user labels:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user labels',
@@ -380,7 +381,7 @@ router.post('/user/:userId/assign', requireAuth, requireAdmin, csrfProtection, a
       });
     }
 
-    const count = await LabelManager.assignLabelsToUser(userId, labelIds, req.user.id);
+    const count = await LabelManager.assignLabelsToUser(userId, labelIds, req.session.user?.Id);
 
     res.json({
       success: true,
@@ -388,7 +389,7 @@ router.post('/user/:userId/assign', requireAuth, requireAdmin, csrfProtection, a
       assigned: count
     });
   } catch (err) {
-    console.error('Error assigning labels to user:', err);
+    logger.error('Error assigning labels to user:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to assign labels',
@@ -413,7 +414,7 @@ router.delete('/user/:userId/remove', requireAuth, requireAdmin, csrfProtection,
       });
     }
 
-    const count = await LabelManager.removeLabelsFromUser(userId, labelIds, req.user.id);
+    const count = await LabelManager.removeLabelsFromUser(userId, labelIds, req.session.user?.Id);
 
     res.json({
       success: true,
@@ -421,7 +422,7 @@ router.delete('/user/:userId/remove', requireAuth, requireAdmin, csrfProtection,
       removed: count
     });
   } catch (err) {
-    console.error('Error removing labels from user:', err);
+    logger.error('Error removing labels from user:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to remove labels',
@@ -438,14 +439,14 @@ router.post('/:id/users/:userId', requireAuth, requireAdmin, csrfProtection, asy
   try {
     const { id, userId } = req.params;
 
-    await LabelManager.assignLabelToUser(userId, parseInt(id), req.user.id);
+    await LabelManager.assignLabelToUser(userId, parseInt(id), req.session.user?.Id);
 
     res.json({
       success: true,
       message: 'Label assigned to user'
     });
   } catch (err) {
-    console.error('Error assigning label to user:', err);
+    logger.error('Error assigning label to user:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to assign label',
@@ -462,14 +463,14 @@ router.delete('/:id/users/:userId', requireAuth, requireAdmin, csrfProtection, a
   try {
     const { id, userId } = req.params;
 
-    await LabelManager.removeLabelFromUser(userId, parseInt(id), req.user.id);
+    await LabelManager.removeLabelFromUser(userId, parseInt(id), req.session.user?.Id);
 
     res.json({
       success: true,
       message: 'Label removed from user'
     });
   } catch (err) {
-    console.error('Error removing label from user:', err);
+    logger.error('Error removing label from user:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to remove label',

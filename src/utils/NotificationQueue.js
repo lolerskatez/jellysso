@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const DatabaseManager = require('../models/DatabaseManager');
+const logger = require('../utils/logger');
 
 /**
  * NotificationQueue - Manages notification delivery queue
@@ -67,7 +68,7 @@ class NotificationQueue {
     if (deduplicateKey) {
       const isDuplicate = await this.isDuplicate(userId, deduplicateKey);
       if (isDuplicate) {
-        console.debug(`Skipping duplicate notification: ${deduplicateKey}`);
+        logger.debug(`Skipping duplicate notification: ${deduplicateKey}`);
         return null;
       }
     }

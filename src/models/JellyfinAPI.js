@@ -1,4 +1,5 @@
 const axios = require('axios');
+const logger = require('../utils/logger');
 
 class JellyfinAPI {
   constructor(baseURL, apiKey = null) {
@@ -92,7 +93,7 @@ class JellyfinAPI {
     // Save original headers BEFORE try so catch block can restore them
     const originalHeaders = { ...this.client.defaults.headers };
     try {
-      console.log(`Attempting authentication to ${this.baseURL}/Users/AuthenticateByName for user: ${username}`);
+      logger.info(`Attempting authentication to ${this.baseURL}/Users/AuthenticateByName for user: ${username}`);
       this.client.defaults.headers = {
         'Content-Type': 'application/json',
         'X-Emby-Authorization': 'MediaBrowser Client="Jellyfin Companion", Device="Setup Wizard", DeviceId="setup-001", Version="1.0.0"'
@@ -106,7 +107,7 @@ class JellyfinAPI {
       // Restore original headers
       this.client.defaults.headers = originalHeaders;
       
-      console.log('Authentication successful');
+      logger.info('Authentication successful');
       // Set the token for future requests
       this.apiKey = response.data.AccessToken;
       this.client.defaults.headers['X-Emby-Token'] = this.apiKey;
@@ -119,7 +120,7 @@ class JellyfinAPI {
         // Ignore errors when restoring headers
       }
       
-      console.error('Authentication error details:', {
+      logger.error('Authentication error details:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
@@ -188,7 +189,7 @@ class JellyfinAPI {
       if (!payload.Password) {
         const crypto = require('crypto');
         payload.Password = crypto.randomBytes(32).toString('hex') + crypto.randomBytes(32).toString('base64');
-        console.log(`🔒 Generated secure random password for user: ${payload.Name} (prevents direct Jellyfin login)`);
+        logger.info(`🔒 Generated secure random password for user: ${payload.Name} (prevents direct Jellyfin login)`);
       }
       
       const response = await this.client.post('/Users/New', payload);
@@ -248,7 +249,7 @@ class JellyfinAPI {
         ...policyData
       };
 
-      console.log(`Updating user ${userId} policy:`, mergedPolicy);
+      logger.info(`Updating user ${userId} policy:`, mergedPolicy);
       const response = await this.client.post(`/Users/${userId}/Policy`, mergedPolicy);
       return response.data;
     } catch (error) {
@@ -268,7 +269,7 @@ class JellyfinAPI {
         ...configData
       };
 
-      console.log(`Updating user ${userId} configuration:`, mergedConfig);
+      logger.info(`Updating user ${userId} configuration:`, mergedConfig);
       const response = await this.client.post(`/Users/${userId}/Configuration`, mergedConfig);
       return response.data;
     } catch (error) {
@@ -388,8 +389,8 @@ class JellyfinAPI {
       return response.data;
     } catch (error) {
       if (error.response?.status === 401) {
-        console.error('❌ Authentication failed with status 401 on System/Configuration');
-        console.error(`   API Key (first 16 chars): ${this.apiKey?.substring(0, 16)}...`);
+        logger.error('❌ Authentication failed with status 401 on System/Configuration');
+        logger.error(`   API Key (first 16 chars): ${this.apiKey?.substring(0, 16)}...`);
         throw new Error(`Failed to get system configuration: Invalid or expired API key (401)`);
       }
       throw new Error(`Failed to get system configuration: ${error.message}`);
@@ -576,7 +577,7 @@ class JellyfinAPI {
       }
       
       // Log detailed error information for debugging
-      console.error(`getSessionDetails error: ${error.message}`, {
+      logger.error(`getSessionDetails error: ${error.message}`, {
         sessionId,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -645,7 +646,7 @@ class JellyfinAPI {
         currentSubtitleTrack
       };
     } catch (error) {
-      console.error(`getAvailableTracks error for sessionId ${sessionId}: ${error.message}`, error);
+      logger.error(`getAvailableTracks error for sessionId ${sessionId}: ${error.message}`, error);
       throw error;
     }
   }
@@ -665,7 +666,7 @@ class JellyfinAPI {
       if (error.response?.status === 404) {
         throw new Error('Session not found');
       }
-      console.error(`setAudioTrack error: ${error.message}`, { sessionId, audioTrackIndex, error });
+      logger.error(`setAudioTrack error: ${error.message}`, { sessionId, audioTrackIndex, error });
       throw this.handleApiError(error, `Failed to change audio track for sessionId ${sessionId}`);
     }
   }
@@ -685,7 +686,7 @@ class JellyfinAPI {
       if (error.response?.status === 404) {
         throw new Error('Session not found');
       }
-      console.error(`setSubtitleTrack error: ${error.message}`, { sessionId, subtitleTrackIndex, error });
+      logger.error(`setSubtitleTrack error: ${error.message}`, { sessionId, subtitleTrackIndex, error });
       throw this.handleApiError(error, `Failed to change subtitle track for sessionId ${sessionId}`);
     }
   }

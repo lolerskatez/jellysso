@@ -6,6 +6,7 @@ const UserProfileManager = require('../models/UserProfileManager');
 const DatabaseManager = require('../models/DatabaseManager');
 const AuditLogger = require('../models/AuditLogger');
 const InviteManager = require('../models/InviteManager');
+const logger = require('../utils/logger');
 const { getBaseUrl } = require('../utils/urlHelper');
 const { requireAuth } = require('../middleware/auth');
 
@@ -105,7 +106,7 @@ router.get('/account-status', requireAuth, async (req, res) => {
           }
         }
       } catch (refErr) {
-        console.warn('Referral info error:', refErr.message);
+        logger.warn('Referral info error:', refErr.message);
       }
     }
 
@@ -148,7 +149,7 @@ router.get('/account-status', requireAuth, async (req, res) => {
       accountStatus
     });
   } catch (error) {
-    console.error('Error getting account status:', error);
+    logger.error('Error getting account status:', error);
     AuditLogger.log('error', 'GET_ACCOUNT_STATUS_ERROR', {
       userId: req.session.user?.Id,
       error: error.message
@@ -175,7 +176,7 @@ router.get('/lifecycle', requireAuth, async (req, res) => {
       events: lifecycle || []
     });
   } catch (error) {
-    console.error('Error getting lifecycle events:', error);
+    logger.error('Error getting lifecycle events:', error);
     res.status(500).json({ success: false, error: 'Failed to load lifecycle events' });
   }
 });
@@ -240,7 +241,7 @@ router.post('/renewal-request', requireAuth, async (req, res) => {
     const adminEmail = config.adminEmail || config.smtpFrom;
     if (adminEmail) {
       NotificationManager.getInstance().sendEmailNotification(adminEmail, 'renewal_request', variables)
-        .catch(e => console.warn('Renewal request email failed:', e.message));
+        .catch(e => logger.warn('Renewal request email failed:', e.message));
     }
 
     // Log the request
@@ -255,7 +256,7 @@ router.post('/renewal-request', requireAuth, async (req, res) => {
 
     res.json({ success: true, message: 'Your renewal request has been sent to the server administrator.' });
   } catch (error) {
-    console.error('Renewal request error:', error);
+    logger.error('Renewal request error:', error);
     res.status(500).json({ success: false, error: 'Failed to submit renewal request' });
   }
 });

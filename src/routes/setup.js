@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const SetupManager = require('../models/SetupManager');
 const JellyfinAPI = require('../models/JellyfinAPI');
+const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 
 // Middleware to check if setup is needed
@@ -133,7 +134,7 @@ router.post('/step2', requireSetupIncomplete, async (req, res) => {
       adminUser: adminUsername
     });
   } catch (error) {
-    console.error('Admin authentication error:', error.message);
+    logger.error('Admin authentication error:', error.message);
     // Provide more specific error messages
     if (error.message.includes('Unable to connect')) {
       return res.json({ success: false, error: 'Cannot connect to Jellyfin server. Please check the server URL.' });

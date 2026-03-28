@@ -1,6 +1,7 @@
 ﻿const DatabaseManager = require('./DatabaseManager');
 const JellyfinAPI = require('./JellyfinAPI');
 const SetupManager = require('./SetupManager');
+const logger = require('../utils/logger');
 
 /**
  * PolicyManager: Enforces playback policies for users
@@ -78,38 +79,12 @@ class PolicyManager {
           maxConcurrentStreams INTEGER NOT NULL DEFAULT 1,
           accountEnabled INTEGER NOT NULL DEFAULT 1,
           expiresAt TEXT,
+          isAdmin INTEGER NOT NULL DEFAULT 0,
+          allowDownloads INTEGER NOT NULL DEFAULT 1,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
           updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
-
-      // Migration: add accountEnabled if missing
-      const upCols = await DatabaseManager.query('PRAGMA table_info(user_policies)');
-      const colNames = (upCols || []).map(c => c.name);
-      if (!colNames.includes('accountEnabled')) {
-        await DatabaseManager.query(
-          'ALTER TABLE user_policies ADD COLUMN accountEnabled INTEGER NOT NULL DEFAULT 1'
-        );
-        console.log('Migrated user_policies: added accountEnabled');
-      }
-      if (!colNames.includes('expiresAt')) {
-        await DatabaseManager.query(
-          'ALTER TABLE user_policies ADD COLUMN expiresAt TEXT'
-        );
-        console.log('Migrated user_policies: added expiresAt');
-      }
-      if (!colNames.includes('isAdmin')) {
-        await DatabaseManager.query(
-          'ALTER TABLE user_policies ADD COLUMN isAdmin INTEGER NOT NULL DEFAULT 0'
-        );
-        console.log('Migrated user_policies: added isAdmin');
-      }
-      if (!colNames.includes('allowDownloads')) {
-        await DatabaseManager.query(
-          'ALTER TABLE user_policies ADD COLUMN allowDownloads INTEGER NOT NULL DEFAULT 1'
-        );
-        console.log('Migrated user_policies: added allowDownloads');
-      }
 
       // Policy enforcement audit table
       await DatabaseManager.query(`
@@ -126,9 +101,9 @@ class PolicyManager {
         )
       `);
 
-      console.log('âœ… Policy schema initialized');
+      logger.info('âœ… Policy schema initialized');
     } catch (error) {
-      console.error('Error initializing policy schema:', error);
+      logger.error('Error initializing policy schema:', error);
     }
   }
 
@@ -151,10 +126,10 @@ class PolicyManager {
         [isAdmin, userId]
       );
 
-      console.log(`Synced admin status for user ${userId}: ${isAdmin === 1}`);
+      logger.info(`Synced admin status for user ${userId}: ${isAdmin === 1}`);
       return { success: true, synced: true };
     } catch (error) {
-      console.error('Error syncing admin status from Jellyfin:', error);
+      logger.error('Error syncing admin status from Jellyfin:', error);
       return { success: false, synced: false };
     }
   }
@@ -165,10 +140,10 @@ class PolicyManager {
    */
   static async migrateAdminUsersFromJellyfin(jellyfinApi) {
     try {
-      console.log('Starting migration of admin users from Jellyfin...');
+      logger.info('Starting migration of admin users from Jellyfin...');
       
       if (!jellyfinApi) {
-        console.warn('JellyfinAPI not available for admin user migration');
+        logger.warn('JellyfinAPI not available for admin user migration');
         return { success: false, migrateCount: 0, reason: 'API unavailable' };
       }
 
@@ -187,14 +162,14 @@ class PolicyManager {
           );
           
           migratedCount++;
-          console.log(`Migrated admin user: ${user.Name} (${user.Id})`);
+          logger.info(`Migrated admin user: ${user.Name} (${user.Id})`);
         }
       }
 
-      console.log(`✅ Admin user migration complete: ${migratedCount} users migrated`);
+      logger.info(`✅ Admin user migration complete: ${migratedCount} users migrated`);
       return { success: true, migratedCount };
     } catch (error) {
-      console.error('Error during admin user migration:', error);
+      logger.error('Error during admin user migration:', error);
       return { success: false, migratedCount: 0, error: error.message };
     }
   }
@@ -229,7 +204,7 @@ class PolicyManager {
 
       return policy;
     } catch (error) {
-      console.error('Error getting user policy:', error);
+      logger.error('Error getting user policy:', error);
       throw error;
     }
   }
@@ -269,13 +244,13 @@ class PolicyManager {
           SimultaneousStreamLimit: tierConfig.maxConcurrentStreams
         });
       } catch (jellyfinError) {
-        console.error(`Warning: Could not update Jellyfin stream limit for user ${userId}:`, jellyfinError.message);
+        logger.error(`Warning: Could not update Jellyfin stream limit for user ${userId}:`, jellyfinError.message);
         // Local DB tier was saved; Jellyfin update failure is non-fatal.
       }
 
       return { success: true, tier: tierId, maxStreams: tierConfig.maxConcurrentStreams };
     } catch (error) {
-      console.error('Error setting user tier:', error);
+      logger.error('Error setting user tier:', error);
       throw error;
     }
   }
@@ -310,7 +285,7 @@ class PolicyManager {
       return { allowed: true };
 
     } catch (error) {
-      console.error('Error checking stream permission:', error);
+      logger.error('Error checking stream permission:', error);
       // On error, allow stream (fail-open approach)
       return { allowed: true };
     }
@@ -368,7 +343,7 @@ class PolicyManager {
         [userId, policyType, action, reason, deviceId, sessionId, ipAddress]
       );
     } catch (error) {
-      console.error('Error logging policy audit:', error);
+      logger.error('Error logging policy audit:', error);
     }
   }
 
@@ -384,7 +359,7 @@ class PolicyManager {
       );
       return logs || [];
     } catch (error) {
-      console.error('Error getting audit log:', error);
+      logger.error('Error getting audit log:', error);
       return [];
     }
   }
@@ -403,7 +378,7 @@ class PolicyManager {
       );
       return policies || [];
     } catch (error) {
-      console.error('Error getting all policies:', error);
+      logger.error('Error getting all policies:', error);
       return [];
     }
   }
@@ -419,7 +394,7 @@ class PolicyManager {
       );
       return tiers || [];
     } catch (error) {
-      console.error('Error getting tiers:', error);
+      logger.error('Error getting tiers:', error);
       return [];
     }
   }
@@ -428,7 +403,7 @@ class PolicyManager {
     try {
       return await DatabaseManager.queryOne('SELECT * FROM tiers WHERE id = ?', [id]);
     } catch (error) {
-      console.error('Error getting tier:', error);
+      logger.error('Error getting tier:', error);
       return null;
     }
   }
@@ -495,7 +470,7 @@ class PolicyManager {
           );
         }
       } catch (jellyfinError) {
-        console.error('Warning: Could not propagate stream limit to Jellyfin:', jellyfinError.message);
+        logger.error('Warning: Could not propagate stream limit to Jellyfin:', jellyfinError.message);
       }
     }
 
@@ -552,10 +527,10 @@ class PolicyManager {
       });
 
       await this.logPolicyAudit(userId, 'ADMIN_STATUS', isAdmin ? 'GRANTED' : 'REVOKED');
-      console.log(`User ${userId} admin status: ${isAdmin}`);
+      logger.info(`User ${userId} admin status: ${isAdmin}`);
       return { success: true, isAdmin };
     } catch (error) {
-      console.error('Error setting admin status:', error);
+      logger.error('Error setting admin status:', error);
       throw error;
     }
   }
@@ -575,10 +550,10 @@ class PolicyManager {
       });
 
       await this.logPolicyAudit(userId, 'DOWNLOADS', allowed ? 'ENABLED' : 'DISABLED');
-      console.log(`User ${userId} downloads: ${allowed}`);
+      logger.info(`User ${userId} downloads: ${allowed}`);
       return { success: true, allowed };
     } catch (error) {
-      console.error('Error setting downloads:', error);
+      logger.error('Error setting downloads:', error);
       throw error;
     }
   }
@@ -630,7 +605,7 @@ class PolicyManager {
 
       return { allowed: true };
     } catch (error) {
-      console.error('Error checking account access:', error);
+      logger.error('Error checking account access:', error);
       return { allowed: true }; // Fail-open on unexpected error
     }
   }

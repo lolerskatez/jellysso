@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../utils/logger');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 
@@ -19,7 +20,7 @@ router.get('/', requireAuth, (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('Policy page error:', error);
+    logger.error('Policy page error:', error);
     res.status(500).render('error', { message: 'Error loading policy page', code: 500 });
   }
 });

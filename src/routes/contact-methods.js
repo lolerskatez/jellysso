@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ContactMethodManager = require('../models/ContactMethodManager');
 const AuditLogger = require('../models/AuditLogger');
+const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth } = require('../middleware/auth');
 
@@ -27,7 +28,7 @@ router.get('/', requireAuth, async (req, res) => {
       verifiedMethods
     });
   } catch (error) {
-    console.error('Error fetching contact methods:', error);
+    logger.error('Error fetching contact methods:', error);
     AuditLogger.log('error', 'GET_CONTACT_METHODS_FAILED', {
       userId: req.session.user?.Id,
       error: error.message
@@ -89,7 +90,7 @@ router.post('/', csrfProtection, requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error adding contact method:', error);
+    logger.error('Error adding contact method:', error);
     AuditLogger.log('error', 'ADD_CONTACT_METHOD_FAILED', {
       userId: req.session.user?.Id,
       error: error.message
@@ -144,7 +145,7 @@ router.post('/verify', csrfProtection, requireAuth, async (req, res) => {
       method: result.method
     });
   } catch (error) {
-    console.error('Error verifying contact method:', error);
+    logger.error('Error verifying contact method:', error);
     AuditLogger.log('warn', 'VERIFY_CONTACT_METHOD_FAILED', {
       userId: req.session.user?.Id,
       error: error.message
@@ -181,7 +182,7 @@ router.get('/verification/:id', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting verification request:', error);
+    logger.error('Error getting verification request:', error);
     res.status(404).json({ success: false, error: 'Verification request not found' });
   }
 });
@@ -221,7 +222,7 @@ router.delete('/:method', csrfProtection, requireAuth, async (req, res) => {
       message: `${method} contact method removed`
     });
   } catch (error) {
-    console.error('Error removing contact method:', error);
+    logger.error('Error removing contact method:', error);
     AuditLogger.log('error', 'REMOVE_CONTACT_METHOD_FAILED', {
       userId: req.session.user?.Id,
       method: req.params.method,
@@ -281,7 +282,7 @@ router.patch('/:method/toggle', csrfProtection, requireAuth, async (req, res) =>
       enabled
     });
   } catch (error) {
-    console.error('Error toggling contact method:', error);
+    logger.error('Error toggling contact method:', error);
     AuditLogger.log('error', 'TOGGLE_CONTACT_METHOD_FAILED', {
       userId: req.session.user?.Id,
       method: req.params.method,

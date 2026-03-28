@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    /* ── Page layout ─────────────────────────────────────────────── */
+    /* -- Page layout ----------------------------------------------- */
     .content-wrapper {
       max-width: 1400px;
       margin: 0 auto;
@@ -32,7 +32,7 @@
       font-weight: 400;
     }
 
-    /* ── Tier card grid ──────────────────────────────────────────── */
+    /* -- Tier card grid -------------------------------------------- */
     .tier-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -166,7 +166,7 @@
       cursor: not-allowed;
     }
 
-    /* ── Add-tier placeholder card ───────────────────────────────── */
+    /* -- Add-tier placeholder card --------------------------------- */
     .tier-card-add {
       background: var(--bg-secondary);
       border: 2px dashed var(--border-color);
@@ -192,7 +192,7 @@
     .tier-card-add i { font-size: 2rem; }
     .tier-card-add span { font-weight: 600; font-size: 0.9375rem; }
 
-    /* ── Status message ──────────────────────────────────────────── */
+    /* -- Status message -------------------------------------------- */
     .status-msg {
       padding: var(--spacing-md);
       border-radius: var(--border-radius-sm);
@@ -216,7 +216,7 @@
       display: block;
     }
 
-    /* ── Modal ───────────────────────────────────────────────────── */
+    /* -- Modal ----------------------------------------------------- */
     /*
      * Override layout.css .modal rules (designed for inner content box).
      * Here .modal is the full-screen backdrop.
@@ -475,7 +475,7 @@
 
     .btn-danger-solid:hover { opacity: 0.88; }
 
-    /* ── Delete confirmation modal ───────────────────────────────── */
+    /* -- Delete confirmation modal --------------------------------- */
     .delete-warning {
       background: rgba(239,68,68,0.07);
       border: 1px solid rgba(239,68,68,0.2);
@@ -486,7 +486,7 @@
       margin-bottom: var(--spacing-lg);
     }
 
-    /* ── Loading skeleton ─────────────────────────────────────────── */
+    /* -- Loading skeleton ------------------------------------------- */
     .skeleton-card {
       background: var(--bg-primary);
       border: 1px solid var(--border-color);
@@ -551,7 +551,7 @@
       </div>
     </div>
 
-    <!-- ── Create Tier Modal ──────────────────────────────────────── -->
+    <!-- -- Create Tier Modal ---------------------------------------- -->
     <div id="createModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -616,7 +616,7 @@
       </div>
     </div>
 
-    <!-- ── Edit Tier Modal ────────────────────────────────────────── -->
+    <!-- -- Edit Tier Modal ------------------------------------------ -->
     <div id="editModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -677,7 +677,7 @@
       </div>
     </div>
 
-    <!-- ── Delete Tier Modal ──────────────────────────────────────── -->
+    <!-- -- Delete Tier Modal ---------------------------------------- -->
     <div id="deleteModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -709,7 +709,7 @@
 
 <script src="/js/mobile-nav.js"></script>
 <script src="/js/admin-policy.js" onload="window._adminPolicyLoaded=true;" onerror="console.error('Failed to load admin-policy.js'); window._adminPolicyError=true;"></script>
-<script>
+<script nonce="<%= nonce %>">
   // Track if external script loaded
   console.log('After admin-policy.js script tag: _adminPolicyLoaded =', window._adminPolicyLoaded);
   

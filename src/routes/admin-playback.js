@@ -3,6 +3,7 @@ const router = express.Router();
 const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const AuditLogger = require('../models/AuditLogger');
+const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
@@ -61,7 +62,7 @@ router.get('/sessions', requireAuth, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting admin playback sessions:', error.message);
+    logger.error('Error getting admin playback sessions:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_VIEW_SESSIONS_ERROR', req.session.user?.Id, 'admin:playback:sessions', 
       { error: error.message }, 'failure', req.ip);
@@ -121,7 +122,7 @@ router.get('/sessions/stats', requireAuth, requireAdmin, async (req, res) => {
       stats
     });
   } catch (error) {
-    console.error('Error getting playback stats:', error.message);
+    logger.error('Error getting playback stats:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve playback statistics'
@@ -168,7 +169,7 @@ router.post('/:sessionId/pause', requireAuth, requireAdmin, csrfProtection, asyn
       sessionId
     });
   } catch (error) {
-    console.error('Error pausing playback:', error.message);
+    logger.error('Error pausing playback:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_PAUSE_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
       { error: error.message }, 'failure', req.ip);
@@ -219,7 +220,7 @@ router.post('/:sessionId/resume', requireAuth, requireAdmin, csrfProtection, asy
       sessionId
     });
   } catch (error) {
-    console.error('Error resuming playback:', error.message);
+    logger.error('Error resuming playback:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_RESUME_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
       { error: error.message }, 'failure', req.ip);
@@ -272,7 +273,7 @@ router.post('/:sessionId/stop', requireAuth, requireAdmin, csrfProtection, async
       sessionId
     });
   } catch (error) {
-    console.error('Error stopping playback:', error.message);
+    logger.error('Error stopping playback:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_STOP_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
       { error: error.message }, 'failure', req.ip);
@@ -336,7 +337,7 @@ router.post('/stop-all', requireAuth, requireAdmin, csrfProtection, async (req, 
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
-    console.error('Error stopping all playback:', error.message);
+    logger.error('Error stopping all playback:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_STOP_ALL_ERROR', req.session.user?.Id, 'admin:playback:stop-all', 
       { error: error.message }, 'failure', req.ip);
@@ -374,7 +375,7 @@ router.get('/user/:userId/sessions', requireAuth, requireAdmin, async (req, res)
       total: allSessions.length
     });
   } catch (error) {
-    console.error('Error getting user playback sessions:', error.message);
+    logger.error('Error getting user playback sessions:', error.message);
     res.status(500).json({
       success: false,
       message: error.message
@@ -410,7 +411,7 @@ router.get('/:sessionId/tracks', requireAuth, requireAdmin, async (req, res) => 
       tracks
     });
   } catch (error) {
-    console.error('Error getting available tracks:', error.message);
+    logger.error('Error getting available tracks:', error.message);
     res.status(500).json({
       success: false,
       message: error.message
@@ -452,7 +453,7 @@ router.post('/:sessionId/audio/:trackIndex', requireAuth, requireAdmin, csrfProt
       message: `Audio track changed to ${trackIndex} on ${session.deviceName}`
     });
   } catch (error) {
-    console.error('Error changing audio track:', error.message);
+    logger.error('Error changing audio track:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_AUDIO_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
       { error: error.message }, 'failure', req.ip);
@@ -498,7 +499,7 @@ router.post('/:sessionId/subtitles/:trackIndex', requireAuth, requireAdmin, csrf
       message: trackIndex === '-1' ? `Subtitles disabled on ${session.deviceName}` : `Subtitle track changed to ${trackIndex} on ${session.deviceName}`
     });
   } catch (error) {
-    console.error('Error changing subtitle track:', error.message);
+    logger.error('Error changing subtitle track:', error.message);
     
     await AuditLogger.log('ADMIN_PLAYBACK_SUBTITLES_ERROR', req.session.user?.Id, `admin:playback:${req.params.sessionId}`, 
       { error: error.message }, 'failure', req.ip);
@@ -544,7 +545,7 @@ router.post('/:sessionId/skip/next', requireAuth, requireAdmin, csrfProtection, 
       message: `Skipped to next on ${session.deviceName}`
     });
   } catch (error) {
-    console.error('Error skipping to next:', error.message);
+    logger.error('Error skipping to next:', error.message);
     res.status(500).json({
       success: false,
       message: error.message
@@ -586,7 +587,7 @@ router.post('/:sessionId/skip/previous', requireAuth, requireAdmin, csrfProtecti
       message: `Skipped to previous on ${session.deviceName}`
     });
   } catch (error) {
-    console.error('Error skipping to previous:', error.message);
+    logger.error('Error skipping to previous:', error.message);
     res.status(500).json({
       success: false,
       message: error.message

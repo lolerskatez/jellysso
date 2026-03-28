@@ -6,6 +6,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const DatabaseManager = require('./DatabaseManager');
+const logger = require('../utils/logger');
 
 class PerformanceMonitor {
   constructor() {
@@ -75,7 +76,7 @@ class PerformanceMonitor {
       const stats = await fs.stat(dbPath);
       dbSize = (stats.size / 1024 / 1024).toFixed(2) + ' MB';
     } catch (err) {
-      console.error('Error getting DB size:', err);
+      logger.error('Error getting DB size:', err);
     }
     
     // Calculate hourly rate

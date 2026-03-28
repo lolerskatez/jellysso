@@ -4,6 +4,7 @@ const AuditLogger = require('../models/AuditLogger');
 const SessionStore = require('../models/SessionStore');
 const CacheManager = require('../models/CacheManager');
 const PluginManager = require('../models/PluginManager');
+const logger = require('../utils/logger');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // ===== SESSION MANAGEMENT =====
@@ -215,7 +216,7 @@ router.post('/api/plugins/reload', requireAuth, requireAdmin, async (req, res) =
       try {
         await PluginManager.unloadPlugin(plugin.name);
       } catch (error) {
-        console.warn(`Failed to unload ${plugin.name}:`, error.message);
+        logger.warn(`Failed to unload ${plugin.name}:`, error.message);
       }
     }
 

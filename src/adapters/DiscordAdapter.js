@@ -19,7 +19,6 @@ class DiscordAdapter {
   constructor() {
     this.client = null;
     this.isConnected = false;
-    this.verificationCodes = {}; // In-memory, should be in DB for production
     this.retryCount = 0;
     this.maxRetries = 5;
   }
@@ -119,24 +118,24 @@ class DiscordAdapter {
       }
 
       // Check if code exists and is valid
-      const verification = this.verificationCodes[code];
+      const verification = await DatabaseManager.queryOne(
+        `SELECT * FROM discord_verification_codes
+         WHERE code = ? AND expires_at > datetime('now')`,
+        [code]
+      );
       if (!verification) {
-        await message.reply('❌ Verification code not found or expired');
-        return;
-      }
-
-      // Check if code is expired (10 minutes)
-      if (Date.now() - verification.createdAt > 600000) {
-        delete this.verificationCodes[code];
-        await message.reply('❌ Verification code expired');
+        await message.reply('\u274c Verification code not found or expired');
         return;
       }
 
       // Link user Discord ID to JellySSO user
-      await this.linkUserDiscordAccount(verification.userId, message.author.id);
+      await this.linkUserDiscordAccount(verification.user_id, message.author.id);
       
       // Cleanup code
-      delete this.verificationCodes[code];
+      await DatabaseManager.query(
+        'DELETE FROM discord_verification_codes WHERE code = ?',
+        [code]
+      );
 
       // Confirm to user
       await message.reply('✅ Your Discord account has been linked successfully!');
@@ -151,52 +150,43 @@ class DiscordAdapter {
    * Link Discord user ID to JellySSO user
    */
   async linkUserDiscordAccount(userId, discordUserId) {
-    return new Promise((resolve, reject) => {
-      const db = DatabaseManager.db;
-      
-      db.run(
-        `UPDATE user_notification_preferences 
-         SET discord_user_id = ?, discord_verified = 1
-         WHERE user_id = ?`,
-        [discordUserId, userId],
-        function(err) {
-          if (err) return reject(err);
-          
-          // If no rows affected, insert new preference record
-          if (this.changes === 0) {
-            db.run(
-              `INSERT INTO user_notification_preferences 
-               (id, user_id, discord_user_id, discord_verified, discord_enabled)
-               VALUES (?, ?, ?, 1, 1)`,
-              [`prefs_${userId}_${Date.now()}`, userId, discordUserId],
-              (insertErr) => {
-                if (insertErr) return reject(insertErr);
-                resolve(true);
-              }
-            );
-          } else {
-            resolve(true);
-          }
-        }
+    const affected = await DatabaseManager.query(
+      `UPDATE user_notification_preferences 
+       SET discord_user_id = ?, discord_verified = 1
+       WHERE user_id = ?`,
+      [discordUserId, userId]
+    );
+    
+    // If no rows affected, insert new preference record
+    if (!affected || affected.changes === 0) {
+      await DatabaseManager.query(
+        `INSERT INTO user_notification_preferences 
+         (id, user_id, discord_user_id, discord_verified, discord_enabled)
+         VALUES (?, ?, ?, 1, 1)`,
+        [`prefs_${userId}_${Date.now()}`, userId, discordUserId]
       );
-    });
+    }
+    return true;
   }
 
   /**
    * Generate verification code for user
    */
-  generateVerificationCode(userId) {
+  async generateVerificationCode(userId) {
     const code = crypto.randomBytes(6).toString('hex').toUpperCase().substring(0, 12);
-    
-    this.verificationCodes[code] = {
-      userId,
-      createdAt: Date.now()
-    };
+    const expiresAt = new Date(Date.now() + 600000).toISOString(); // 10 minutes
 
-    // Auto-cleanup after 10 minutes
-    setTimeout(() => {
-      delete this.verificationCodes[code];
-    }, 600000);
+    // Remove any existing code for this user
+    await DatabaseManager.query(
+      'DELETE FROM discord_verification_codes WHERE user_id = ?',
+      [userId]
+    );
+    // Insert new code
+    await DatabaseManager.query(
+      `INSERT INTO discord_verification_codes (code, user_id, expires_at)
+       VALUES (?, ?, ?)`,
+      [code, userId, expiresAt]
+    );
 
     return code;
   }

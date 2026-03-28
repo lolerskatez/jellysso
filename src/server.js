@@ -49,14 +49,14 @@ function ensureSecrets() {
   if (!secrets.JWT_SECRET || secrets.JWT_SECRET === 'default-jwt-secret') {
     secrets.JWT_SECRET = crypto.randomBytes(32).toString('hex');
     needsUpdate = true;
-    console.log('✅ Generated new JWT_SECRET');
+    logger.info('✅ Generated new JWT_SECRET');
   }
   
   // Generate SESSION_SECRET if missing or default
   if (!secrets.SESSION_SECRET || secrets.SESSION_SECRET === 'default-secret') {
     secrets.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
     needsUpdate = true;
-    console.log('✅ Generated new SESSION_SECRET');
+    logger.info('✅ Generated new SESSION_SECRET');
   }
   
   // Write back to .env if any secrets were generated
@@ -67,7 +67,7 @@ function ensureSecrets() {
       (envLines.length > 0 && !Object.keys(secrets).includes('NODE_ENV') ? '\nNODE_ENV=development' : '');
     
     fs.writeFileSync(envPath, newEnvContent);
-    console.log('💾 Saved secrets to .env');
+    logger.info('💾 Saved secrets to .env');
     
     // Reload dotenv to use the new values
     require('dotenv').config({ override: true });
@@ -116,9 +116,11 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       // Styles: allow unsafe-inline for dynamic JS style assignments
       styleSrc: ["'self'", "'unsafe-inline'"],
-      // Scripts: allow unsafe-inline for inline scripts and event handlers
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com'],
-      // Script attributes (event handlers): allow unsafe-inline
+      // Scripts: nonce-based allowlist — no unsafe-inline for script blocks
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, 'https://static.cloudflareinsights.com'],
+      // NOTE: scriptSrcAttr (inline event handlers) still uses unsafe-inline.
+      // Removing it requires replacing all 130+ onclick/onchange attributes in views
+      // with addEventListener calls — tracked as future technical debt.
       scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'data:'],
@@ -154,8 +156,8 @@ app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting —
 // Fail fast in production if SESSION_SECRET is missing
 const sessionSecret = process.env.SESSION_SECRET;
 if (isProduction && (!sessionSecret || sessionSecret === 'default-secret')) {
-  console.error('❌ Unable to generate SESSION_SECRET in production.');
-  console.error('   Please set SESSION_SECRET manually in .env with: openssl rand -hex 32');
+  logger.error('❌ Unable to generate SESSION_SECRET in production.');
+  logger.error('   Please set SESSION_SECRET manually in .env with: openssl rand -hex 32');
   process.exit(1);
 }
 
@@ -176,12 +178,10 @@ app.use(session({
   store: sessionStore,
   secret: sessionSecret || 'default-secret',
   resave: false,
-  saveUninitialized: true, // Must be true so CSRF token is generated before login
+  saveUninitialized: false,
   proxy: true, // Trust the reverse proxy
   cookie: {
-    // Set secure: false because cloudflared doesn't always forward X-Forwarded-Proto: https
-    // TLS is still terminated at cloudflared, so the user's connection is secure
-    secure: false,
+    secure: isProduction, // true in production (behind cloudflared/nginx with HTTPS)
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'
@@ -316,104 +316,53 @@ app.use((req, res, next) => {
 });
 
 // CSRF protection — reads csrf_protection toggle from DB; applies immediately when toggled.
-// Skipped for: setup routes, logout, admin routes, and temporarily login for reverse proxy debugging
+// Uses the Double Submit Cookie pattern (csrf-csrf) — no session dependency.
+// Skipped for: setup routes, public signup, logout, and GET/HEAD/OPTIONS requests
+// (which are safe methods per RFC 7231 and don't mutate state).
+// NOTE: Admin routes are now INCLUDED — the previous blanket /api/admin/* bypass
+// has been removed to protect all state-changing admin endpoints.
 app.use(async (req, res, next) => {
-  // Log session info on login attempts for debugging
-  if (req.path === '/api/auth/login' && req.method === 'POST') {
-    console.log('🔐 Login attempt debug:', {
-      sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
-      hasSession: !!req.session,
-      hasCsrfSecret: !!(req.session?.csrfSecret),
-      'x-csrf-token': req.get('x-csrf-token') ? 'provided' : 'missing',
-      'x-forwarded-proto': req.get('X-Forwarded-Proto') || 'not set',
-      cookieHeader: req.get('Cookie') ? 'present' : 'missing'
-    });
-  }
+  // Safe HTTP methods never need CSRF protection
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
 
+  // Always skip CSRF for these paths
   if (req.path.startsWith('/setup') ||
       (req.path === '/api/auth/logout' && req.method === 'POST') ||
-      (req.path === '/api/auth/signup' && req.method === 'POST') ||
-      req.path.startsWith('/admin/') ||
-      req.path.startsWith('/admin/api/') ||
-      req.path.startsWith('/api/admin/')) {
+      (req.path === '/api/auth/signup' && req.method === 'POST')) {
     return next();
   }
+
   try {
     const enabled = await securityConfig.isCsrfEnabled();
     if (!enabled) return next();
-  } catch (_) { /* default to enforcing on error */ }
-  
-  // Wrap CSRF middleware to catch errors (especially important for reverse proxies)
+  } catch (_) { /* enforce on error */ }
+
   csrfProtection(req, res, (err) => {
-    if (err && err.code === 'EBADCSRFTOKEN') {
-      // Detailed logging for debugging reverse proxy CSRF issues
-      console.log('❌ CSRF Token Validation Failed:', {
-        path: req.path,
-        method: req.method,
-        'x-csrf-token': req.get('x-csrf-token') ? req.get('x-csrf-token').substring(0, 20) + '...' : 'MISSING',
-        'x-forwarded-proto': req.get('X-Forwarded-Proto') || 'not set',
-        'x-forwarded-host': req.get('X-Forwarded-Host') || 'not set',
-        hasSession: !!req.session,
-        sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
-        hasCsrfSecret: req.session?.csrfSecret ? 'yes' : 'NO - THIS IS THE PROBLEM',
-        reqSecure: req.secure,
-        reqProtocol: req.protocol,
-        cookies: Object.keys(req.cookies || {})
-      });
-      
+    if (err) {
       logger.debug('CSRF token validation failed', {
         path: req.path,
         method: req.method,
         origin: req.get('Origin'),
-        referer: req.get('Referer'),
-        'x-csrf-token-header': req.get('x-csrf-token') ? 'present' : 'missing',
-        'x-forwarded-proto': req.get('X-Forwarded-Proto'),
-        'x-forwarded-host': req.get('X-Forwarded-Host'),
-        'x-forwarded-for': req.get('X-Forwarded-For'),
-        hasSession: !!req.session,
-        hasSessionId: !!req.sessionID,
-        secure: req.secure,
-        protocol: req.protocol,
-        hostname: req.hostname
+        referer: req.get('Referer')
       });
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'CSRF token validation failed',
-        message: 'Invalid security token. Please try again.',
-        debug: {
-          hasSession: !!req.session,
-          tokenProvided: !!req.get('x-csrf-token'),
-          sessionCookie: req.session ? 'exists' : 'missing',
-          hasCsrfSecret: !!(req.session?.csrfSecret)
-        }
+        message: 'Invalid security token. Please try again.'
       });
     }
-    if (err) return next(err);
     next();
   });
 });
 
-// CSRF token endpoint - allows clients to fetch a fresh CSRF token
-// Useful for SPA/API clients that need to make authenticated requests
+// CSRF token endpoint - allows SPA/API clients to fetch a fresh CSRF token
 app.get('/api/csrf-token', (req, res) => {
-  try {
-    const token = req.csrfToken ? req.csrfToken() : null;
-    if (!token) {
-      return res.status(500).json({ 
-        error: 'Failed to generate CSRF token',
-        message: 'Session may not be initialized properly'
-      });
-    }
-    res.json({ 
-      csrf_token: token,
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    logger.error('CSRF token generation failed:', err);
-    res.status(500).json({ 
-      error: 'Failed to generate CSRF token',
-      message: err.message 
-    });
-  }
+  // The token is already embedded in res.locals.csrfToken by the setCsrfToken middleware.
+  // Re-reading it here ensures the response is always current.
+  const token = res.locals.csrfToken || '';
+  res.json({
+    csrf_token: token,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Routes
@@ -488,7 +437,7 @@ app.get('/api/server-info', requireWebAuth, async (req, res) => {
       serverName: serverInfo.ServerName || 'Jellyfin Server'
     });
   } catch (error) {
-    console.error('Server info error:', error);
+    logger.error('Server info error:', error);
     res.json({
       online: false,
       version: 'Unknown',
@@ -524,7 +473,7 @@ app.get('/api/dashboard', requireWebAuth, async (req, res) => {
       publishedUrl
     });
   } catch (error) {
-    console.error('Dashboard API error:', error);
+    logger.error('Dashboard API error:', error);
     res.status(500).json({
       systemStatus: 'offline',
       lastStatusCheck: new Date().toLocaleString(),
@@ -548,7 +497,7 @@ app.get('/login', async (req, res) => {
   
   // Debug logging for session/CSRF on login page
   const csrfToken = req.csrfToken();
-  console.log('📄 Login page rendered:', {
+  logger.info('📄 Login page rendered:', {
     sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
     hasCsrfSecret: !!(req.session?.csrfSecret),
     csrfTokenGenerated: csrfToken ? csrfToken.substring(0, 20) + '...' : 'FAILED',
@@ -577,7 +526,7 @@ app.get('/login', async (req, res) => {
       oidcProviderName = oidcConfig.providerName || 'SSO Login';
     }
   } catch (err) {
-    console.error('OIDC config error:', err);
+    logger.error('OIDC config error:', err);
   }
   
   res.render('login', { csrfToken, errorMessage, oidcEnabled, oidcProviderName });
@@ -738,7 +687,7 @@ app.use(errorHandler);
   try {
     // Initialize policy system
     await PolicyManager.initializeSchema();
-    console.log('✅ Policy system initialized');
+    logger.info('✅ Policy system initialized');
 
     // Migrate existing admin users from Jellyfin if setup is complete
     const SetupManager = require('./models/SetupManager');
@@ -749,16 +698,16 @@ app.use(errorHandler);
         const jellyfinApi = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
         const migrationResult = await PolicyManager.migrateAdminUsersFromJellyfin(jellyfinApi);
         if (migrationResult.success) {
-          console.log(`✅ Admin user migration: ${migrationResult.migratedCount} users synced`);
+          logger.info(`✅ Admin user migration: ${migrationResult.migratedCount} users synced`);
         }
       } catch (err) {
-        console.warn('⚠️  Could not migrate admin users from Jellyfin:', err.message);
+        logger.warn('⚠️  Could not migrate admin users from Jellyfin:', err.message);
       }
     }
 
     // Initialize OTP system
     await OTPManager.initializeSchema();
-    console.log('✅ OTP system initialized');
+    logger.info('✅ OTP system initialized');
 
     // Initialize Phase 2 invite system managers
     const InviteManager = require('./models/InviteManager');
@@ -766,38 +715,38 @@ app.use(errorHandler);
     const UserExpiryManager = require('./models/UserExpiryManager');
     
     InviteManager.getInstance();
-    console.log('✅ Invite system initialized');
+    logger.info('✅ Invite system initialized');
     
     SignupProfileManager.getInstance();
-    console.log('✅ Signup profiles ready');
+    logger.info('✅ Signup profiles ready');
     
     UserExpiryManager.getInstance();
-    console.log('✅ User expiry daemon started');
+    logger.info('✅ User expiry daemon started');
 
     await PluginManager.initialize();
-    console.log('✅ Plugin system ready');
+    logger.info('✅ Plugin system ready');
   } catch (error) {
-    console.error('Initialization failed:', error);
+    logger.error('Initialization failed:', error);
   }
 })();
 
 app.listen(PORT, () => {
-  console.log(`JellySSO running on port ${PORT}`);
+  logger.info(`JellySSO running on port ${PORT}`);
   
   // Log current configuration
   const config = SetupManager.getConfig();
-  console.log('📋 Current Configuration:');
-  console.log(`   Setup Complete: ${config.isSetupComplete}`);
-  console.log(`   Jellyfin URL: ${config.jellyfinUrl}`);
-  console.log(`   Has API Key: ${!!config.apiKey}`);
+  logger.info('📋 Current Configuration:');
+  logger.info(`   Setup Complete: ${config.isSetupComplete}`);
+  logger.info(`   Jellyfin URL: ${config.jellyfinUrl}`);
+  logger.info(`   Has API Key: ${!!config.apiKey}`);
   if (config.apiKey) {
-    console.log(`   API Key (first 16 chars): ${config.apiKey.substring(0, 16)}...`);
+    logger.info(`   API Key (first 16 chars): ${config.apiKey.substring(0, 16)}...`);
   }
-  console.log(`   Config File: ${path.join(__dirname, '../src/config/setup.json')}`);
+  logger.info(`   Config File: ${path.join(__dirname, '../src/config/setup.json')}`);
   
   if (!isProduction) {
-    console.log(`🌐 Local access: http://localhost:${PORT}`);
-    console.log(`⚠️  Running in HTTP mode (development)`);
+    logger.info(`🌐 Local access: http://localhost:${PORT}`);
+    logger.info(`⚠️  Running in HTTP mode (development)`);
   }
 });
 

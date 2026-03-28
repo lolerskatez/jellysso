@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const MessageTemplateManager = require('../models/MessageTemplateManager');
 const AuditLogger = require('../models/AuditLogger');
+const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
@@ -15,7 +16,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     const templates = await templateMgr.getAllTemplates();
     res.json({ success: true, templates });
   } catch (error) {
-    console.error('Templates list error:', error);
+    logger.error('Templates list error:', error);
     res.status(500).json({ success: false, error: 'Failed to load templates' });
   }
 });
@@ -60,7 +61,7 @@ router.put('/:key', csrfProtection, requireAuth, requireAdmin, async (req, res) 
 
     res.json({ success: true, message: 'Template saved' });
   } catch (error) {
-    console.error('Template update error:', error);
+    logger.error('Template update error:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to save template' });
   }
 });

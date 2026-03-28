@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const logger = require('../utils/logger');
 
 // On non-Windows, restrict config file permissions to owner-only
 function lockFilePermissions(filePath) {
@@ -12,6 +13,9 @@ function lockFilePermissions(filePath) {
 class SetupManager {
   constructor() {
     this.setupFile = path.join(__dirname, '../config/setup.json');
+    this._configCache = null;
+    this._cacheTTL = 5000; // 5-second TTL — fast enough for live reads, avoids disk I/O on every request
+    this._cacheExpiresAt = 0;
     this.ensureSetupFile();
   }
 
@@ -36,11 +40,17 @@ class SetupManager {
   }
 
   getConfig() {
+    const now = Date.now();
+    if (this._configCache && now < this._cacheExpiresAt) {
+      return this._configCache;
+    }
     try {
       const data = fs.readFileSync(this.setupFile, 'utf8');
-      return JSON.parse(data);
+      this._configCache = JSON.parse(data);
+      this._cacheExpiresAt = now + this._cacheTTL;
+      return this._configCache;
     } catch (error) {
-      console.error('Error reading setup config:', error);
+      logger.error('Error reading setup config:', error);
       return { isSetupComplete: false };
     }
   }
@@ -50,6 +60,9 @@ class SetupManager {
     const newConfig = { ...currentConfig, ...updates };
     fs.writeFileSync(this.setupFile, JSON.stringify(newConfig, null, 2));
     lockFilePermissions(this.setupFile);
+    // Invalidate cache immediately after write
+    this._configCache = newConfig;
+    this._cacheExpiresAt = Date.now() + this._cacheTTL;
     return newConfig;
   }
 
@@ -64,7 +77,7 @@ class SetupManager {
     // Only generate if explicitly not provided (backwards compatibility)
     let apiKey = config.apiKey || currentConfig.apiKey;
     if (!apiKey) {
-      console.warn('⚠️  No API key provided. Generating a random one (this will NOT work with Jellyfin)');
+      logger.warn('⚠️  No API key provided. Generating a random one (this will NOT work with Jellyfin)');
       const crypto = require('crypto');
       apiKey = crypto.randomBytes(32).toString('hex');
     }

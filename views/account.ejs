@@ -447,7 +447,7 @@
     </main>
   </div>
   <% if (renewalEnabled) { %>
-  <script>
+  <script nonce="<%= nonce %>">
     // Show renewal section when account is expiring within the configured window
     const _renewalWindowDays = <%= renewalWindowDays %>;
     (function checkRenewalVisibility() {

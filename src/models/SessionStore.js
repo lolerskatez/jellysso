@@ -1,5 +1,6 @@
 const DatabaseManager = require('./DatabaseManager');
 const session = require('express-session');
+const logger = require('../utils/logger');
 
 /**
  * Database-backed session store for Express
@@ -35,17 +36,7 @@ class SessionStore extends session.Store {
         )
       `, (err) => {
         if (err) {
-          console.error('Error creating sessions table:', err.message);
-        }
-      });
-
-      // Migrate existing table if needed (add updatedAt column)
-      DatabaseManager.db.run(`
-        ALTER TABLE sessions ADD COLUMN updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      `, (err) => {
-        // Ignore error if column already exists
-        if (err && !err.message.includes('duplicate column')) {
-          console.error('Session table migration error:', err.message);
+          logger.error('Error creating sessions table:', err.message);
         }
       });
 
@@ -54,7 +45,7 @@ class SessionStore extends session.Store {
         CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)
       `, (err) => {
         if (err) {
-          console.error('Error creating index on sessions table:', err.message);
+          logger.error('Error creating index on sessions table:', err.message);
         }
       });
     });
@@ -131,10 +122,10 @@ class SessionStore extends session.Store {
       
       DatabaseManager.db.run(query, function(err) {
         if (err) {
-          console.error('Session cleanup error:', err);
+          logger.error('Session cleanup error:', err);
           reject(err);
         } else {
-          console.log(`Session cleanup: removed ${this.changes} expired sessions`);
+          logger.info(`Session cleanup: removed ${this.changes} expired sessions`);
           resolve(this.changes);
         }
       });
@@ -149,11 +140,11 @@ class SessionStore extends session.Store {
       try {
         await this.cleanup();
       } catch (error) {
-        console.error('Session cleanup failed:', error);
+        logger.error('Session cleanup failed:', error);
       }
     }, this.options.cleanupInterval);
 
-    console.log(`✅ Session cleanup scheduled every ${this.options.cleanupInterval / 60000} minutes`);
+    logger.info(`✅ Session cleanup scheduled every ${this.options.cleanupInterval / 60000} minutes`);
   }
 
   /**

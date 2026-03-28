@@ -9,6 +9,7 @@
 const DatabaseManager = require('./DatabaseManager');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 class MaintenanceScheduler {
   constructor() {
@@ -19,7 +20,7 @@ class MaintenanceScheduler {
    * Start all maintenance tasks
    */
   async start() {
-    console.log('🔧 Starting database maintenance scheduler...');
+    logger.info('🔧 Starting database maintenance scheduler...');
 
     const dailyHour   = parseInt(await DatabaseManager.getSetting('maintenance_daily_hour'))   || 2;
     const weeklyDay   = parseInt(await DatabaseManager.getSetting('maintenance_weekly_day'))   || 0;
@@ -36,13 +37,13 @@ class MaintenanceScheduler {
     // Monthly backup
     this.scheduleMonthly('Monthly Database Backup', this.backupDatabase.bind(this), monthlyDay, monthlyHour);
     
-    console.log('✅ Maintenance scheduler started');
+    logger.info('✅ Maintenance scheduler started');
   }
 
   async restart() {
     this.stop();
     await this.start();
-    console.log('🔄 Maintenance scheduler restarted with updated settings');
+    logger.info('🔄 Maintenance scheduler restarted with updated settings');
   }
 
   /**
@@ -60,18 +61,18 @@ class MaintenanceScheduler {
     const delay = nextRun.getTime() - now.getTime();
     
     const timeout = setTimeout(async () => {
-      console.log(`⏰ Running task: ${name}`);
+      logger.info(`⏰ Running task: ${name}`);
       try {
         await task();
       } catch (error) {
-        console.error(`❌ Task ${name} failed:`, error);
+        logger.error(`❌ Task ${name} failed:`, error);
       }
       // Reschedule for next day
       setInterval(task, 24 * 60 * 60 * 1000);
     }, delay);
     
     this.tasks.push({ name, timeout });
-    console.log(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
+    logger.info(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
   }
 
   /**
@@ -88,18 +89,18 @@ class MaintenanceScheduler {
     const delay = nextRun.getTime() - now.getTime();
     
     const timeout = setTimeout(async () => {
-      console.log(`⏰ Running task: ${name}`);
+      logger.info(`⏰ Running task: ${name}`);
       try {
         await task();
       } catch (error) {
-        console.error(`❌ Task ${name} failed:`, error);
+        logger.error(`❌ Task ${name} failed:`, error);
       }
       // Reschedule for next week
       setInterval(task, 7 * 24 * 60 * 60 * 1000);
     }, delay);
     
     this.tasks.push({ name, timeout });
-    console.log(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
+    logger.info(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
   }
 
   /**
@@ -118,18 +119,18 @@ class MaintenanceScheduler {
     const delay = nextRun.getTime() - now.getTime();
     
     const timeout = setTimeout(async () => {
-      console.log(`⏰ Running task: ${name}`);
+      logger.info(`⏰ Running task: ${name}`);
       try {
         await task();
       } catch (error) {
-        console.error(`❌ Task ${name} failed:`, error);
+        logger.error(`❌ Task ${name} failed:`, error);
       }
       // Reschedule for next month
       setInterval(task, 30 * 24 * 60 * 60 * 1000);
     }, delay);
     
     this.tasks.push({ name, timeout });
-    console.log(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
+    logger.info(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
   }
 
   /**
@@ -140,7 +141,7 @@ class MaintenanceScheduler {
       const daysToKeep = parseInt(await DatabaseManager.getSetting('cleanup_threshold')) || 90;
       const deleted = await DatabaseManager.cleanupAuditLogs(daysToKeep);
       
-      console.log(`🧹 Audit cleanup completed: deleted ${deleted} old entries`);
+      logger.info(`🧹 Audit cleanup completed: deleted ${deleted} old entries`);
       
       // Log the maintenance action
       await DatabaseManager.insertAuditLog(
@@ -152,7 +153,7 @@ class MaintenanceScheduler {
         { daysToKeep, deleted }
       );
     } catch (error) {
-      console.error('Error during audit cleanup:', error);
+      logger.error('Error during audit cleanup:', error);
       throw error;
     }
   }
@@ -168,13 +169,13 @@ class MaintenanceScheduler {
           DatabaseManager.db.run('VACUUM', (err) => {
             if (err) reject(err);
             else {
-              console.log('✨ Database VACUUM completed');
+              logger.info('✨ Database VACUUM completed');
               
               // ANALYZE - update query optimizer statistics
               DatabaseManager.db.run('ANALYZE', (err) => {
                 if (err) reject(err);
                 else {
-                  console.log('📊 Database ANALYZE completed');
+                  logger.info('📊 Database ANALYZE completed');
                   resolve();
                 }
               });
@@ -193,7 +194,7 @@ class MaintenanceScheduler {
         { action: 'VACUUM and ANALYZE' }
       );
     } catch (error) {
-      console.error('Error during database optimization:', error);
+      logger.error('Error during database optimization:', error);
       throw error;
     }
   }
@@ -227,7 +228,7 @@ class MaintenanceScheduler {
       const stats = fs.statSync(backupPath);
       const sizeKB = Math.round(stats.size / 1024);
       
-      console.log(`💾 Database backup completed: ${backupPath} (${sizeKB}KB)`);
+      logger.info(`💾 Database backup completed: ${backupPath} (${sizeKB}KB)`);
       
       // Clean up old backups using configured retention count
       const backupRetention = parseInt(await DatabaseManager.getSetting('backup_retention')) || 12;
@@ -245,7 +246,7 @@ class MaintenanceScheduler {
       
       return backupPath;
     } catch (error) {
-      console.error('Error during database backup:', error);
+      logger.error('Error during database backup:', error);
       throw error;
     }
   }
@@ -264,10 +265,10 @@ class MaintenanceScheduler {
       toDelete.forEach(file => {
         const filePath = path.join(backupDir, file);
         fs.unlinkSync(filePath);
-        console.log(`🗑️  Deleted old backup: ${file}`);
+        logger.info(`🗑️  Deleted old backup: ${file}`);
       });
     } catch (error) {
-      console.error('Error cleaning up old backups:', error);
+      logger.error('Error cleaning up old backups:', error);
     }
   }
 
@@ -277,7 +278,7 @@ class MaintenanceScheduler {
   stop() {
     this.tasks.forEach(task => clearTimeout(task.timeout));
     this.tasks = [];
-    console.log('🛑 Maintenance scheduler stopped');
+    logger.info('🛑 Maintenance scheduler stopped');
   }
 
   /**

@@ -63,7 +63,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
         username: userMap[log.userId] || log.userId || 'System'
       }));
     } catch (enrichError) {
-      console.warn('Could not enrich dashboard logs with usernames:', enrichError.message);
+      appLogger.warn('Could not enrich dashboard logs with usernames:', enrichError.message);
       enrichedLogs = recentLogs.map(log => ({
         ...log,
         username: log.userId || 'System'
@@ -89,7 +89,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
         }
       }
     } catch (e) {
-      console.warn('Could not get backup info:', e.message);
+      appLogger.warn('Could not get backup info:', e.message);
     }
     
     res.render('dashboard', {
@@ -103,7 +103,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
       dbFile: 'src/config/companion.db'
     });
   } catch (error) {
-    console.error('Dashboard error:', error);
+    appLogger.error('Dashboard error:', error);
     res.status(500).render('error', { message: 'Dashboard error', code: 500 });
   }
 });
@@ -126,7 +126,7 @@ router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
       const users = await jellyfin.getUsers();
       userCount = users.length;
     } catch (e) {
-      console.warn('Could not get user count from Jellyfin:', e.message);
+      appLogger.warn('Could not get user count from Jellyfin:', e.message);
     }
 
     // DB file size
@@ -137,7 +137,7 @@ router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
       const kb = Math.round(stat.size / 1024);
       dbSize = kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB';
     } catch (e) {
-      console.warn('Could not get DB size:', e.message);
+      appLogger.warn('Could not get DB size:', e.message);
     }
 
     const total = auditStats.total || 0;
@@ -155,7 +155,7 @@ router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
       dbSize
     });
   } catch (error) {
-    console.error('Stats API error:', error);
+    appLogger.error('Stats API error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -203,7 +203,7 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
         username: userMap[log.userId] || log.userId || 'System'
       }));
     } catch (enrichError) {
-      console.warn('Could not enrich audit logs with usernames:', enrichError.message);
+      appLogger.warn('Could not enrich audit logs with usernames:', enrichError.message);
       // Fallback: use userId as username
       enrichedLogs = paginatedLogs.map(log => ({
         ...log,
@@ -224,7 +224,7 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
       pages: Math.ceil(totalLogs / parseInt(limit))
     });
   } catch (error) {
-    console.error('Audit logs error:', error);
+    appLogger.error('Audit logs error:', error);
     res.status(500).render('error', { message: 'Error loading audit logs', code: 500 });
   }
 });
@@ -238,7 +238,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('Users page error:', error);
+    appLogger.error('Users page error:', error);
     res.status(500).render('error', { message: 'Error loading users', code: 500 });
   }
 });
@@ -271,7 +271,7 @@ router.post('/api/users/create', requireAuth, requireAdmin, async (req, res) => 
     // Sync new user to Jellyseerr (fire-and-forget)
     const JellyseerrManager = require('../models/JellyseerrManager');
     JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
-      console.warn('Jellyseerr sync failed on admin user create:', e.message)
+      appLogger.warn('Jellyseerr sync failed on admin user create:', e.message)
     );
 
     // Log the action
@@ -289,7 +289,7 @@ router.post('/api/users/create', requireAuth, requireAdmin, async (req, res) => 
       user: newUser
     });
   } catch (error) {
-    console.error('Create user error:', error);
+    appLogger.error('Create user error:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to create user' });
   }
 });
@@ -334,7 +334,7 @@ router.put('/api/users/:userId', requireAuth, requireAdmin, async (req, res) => 
       message: 'User updated successfully'
     });
   } catch (error) {
-    console.error('Update user error:', error);
+    appLogger.error('Update user error:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to update user' });
   }
 });
@@ -367,7 +367,7 @@ router.get('/api/users/:userId', requireAuth, requireAdmin, async (req, res) => 
     
     res.json({ success: true, user: mergedUser });
   } catch (error) {
-    console.error('Get user error:', error);
+    appLogger.error('Get user error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -397,7 +397,7 @@ router.delete('/users/:userId', requireAuth, requireAdmin, async (req, res) => {
     // Remove from Jellyseerr (fire-and-forget)
     const JellyseerrManager = require('../models/JellyseerrManager');
     JellyseerrManager.getInstance().removeUser(userId).catch(e =>
-      console.warn('Jellyseerr remove failed on user delete:', e.message)
+      appLogger.warn('Jellyseerr remove failed on user delete:', e.message)
     );
     
     // Log the action
@@ -411,7 +411,7 @@ router.delete('/users/:userId', requireAuth, requireAdmin, async (req, res) => {
     
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Delete user error:', {
+    appLogger.error('Delete user error:', {
       userId: req.params.userId,
       message: error.message,
       status: error.response?.status,
@@ -454,7 +454,7 @@ router.delete('/api/users/:userId', requireAuth, requireAdmin, async (req, res) 
 
     // Remove from Jellyseerr (fire-and-forget)
     JellyseerrManager.getInstance().removeUser(userId).catch(e =>
-      console.warn('Jellyseerr remove failed on user delete (alt path):', e.message)
+      appLogger.warn('Jellyseerr remove failed on user delete (alt path):', e.message)
     );
     
     // Log the action
@@ -468,7 +468,7 @@ router.delete('/api/users/:userId', requireAuth, requireAdmin, async (req, res) 
     
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Delete user error:', {
+    appLogger.error('Delete user error:', {
       userId: req.params.userId,
       message: error.message,
       status: error.response?.status,
@@ -495,7 +495,7 @@ router.get('/api/users/:userId/profile', requireAuth, requireAdmin, async (req, 
     const profile = await UserProfileManager.getProfile(userId);
     res.json({ success: true, profile: profile || {} });
   } catch (error) {
-    console.error('Get user profile error:', error);
+    appLogger.error('Get user profile error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -529,7 +529,7 @@ router.put('/api/users/:userId/profile', requireAuth, requireAdmin, async (req, 
       result
     });
   } catch (error) {
-    console.error('Update user profile error:', error);
+    appLogger.error('Update user profile error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -564,7 +564,7 @@ router.post('/api/users/:userId/generate-password', requireAuth, requireAdmin, a
 
     res.json({ success: true, password, createdAt, username: targetUser.Name });
   } catch (error) {
-    console.error('Admin generate-password error:', error.message);
+    appLogger.error('Admin generate-password error:', error.message);
     res.status(500).json({ success: false, message: error.message || 'Failed to generate password' });
   }
 });
@@ -641,7 +641,7 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Settings error:', error);
+    appLogger.error('Settings error:', error);
     res.status(500).render('error', { message: 'Error loading settings', code: 500 });
   }
 });
@@ -680,7 +680,7 @@ router.get('/api/audit-logs', requireAuth, requireAdmin, async (req, res) => {
         username: userMap[log.userId] || log.userId || 'System'
       }));
     } catch (enrichError) {
-      console.warn('Could not enrich audit logs API with usernames:', enrichError.message);
+      appLogger.warn('Could not enrich audit logs API with usernames:', enrichError.message);
       // Fallback: use userId as-is
       enrichedLogs = logs.map(log => ({
         ...log,
@@ -749,7 +749,7 @@ router.get('/api/statistics', requireAuth, requireAdmin, async (req, res) => {
       const users = await jellyfin.getUsers();
       totalUsers = users.length;
     } catch (e) {
-      console.warn('Could not get Jellyfin users count:', e.message);
+      appLogger.warn('Could not get Jellyfin users count:', e.message);
     }
 
     // Timeline data (group by hour for 24h, by day for longer periods)
@@ -800,7 +800,7 @@ router.get('/api/statistics', requireAuth, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Statistics error:', error);
+    appLogger.error('Statistics error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -898,7 +898,7 @@ router.post('/api/maintenance/settings', requireAuth, requireAdmin, async (req, 
       message: 'Maintenance schedule updated successfully'
     });
   } catch (error) {
-    console.error('Error updating maintenance settings:', error);
+    appLogger.error('Error updating maintenance settings:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -943,7 +943,7 @@ router.post('/api/maintenance/run', requireAuth, requireAdmin, async (req, res) 
       tasks: result
     });
   } catch (error) {
-    console.error('Error running maintenance:', error);
+    appLogger.error('Error running maintenance:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1002,7 +1002,7 @@ router.get('/backups', requireAuth, requireAdmin, async (req, res) => {
         latestBackupDate = latestDate.toLocaleString();
       }
     } catch (err) {
-      console.log('Backups directory not found');
+      appLogger.info('Backups directory not found');
       await fs.mkdir(backupsDir, { recursive: true });
     }
     
@@ -1019,7 +1019,7 @@ router.get('/backups', requireAuth, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Backups page error:', error);
+    appLogger.error('Backups page error:', error);
     res.status(500).render('error', { message: 'Backups page error', code: 500 });
   }
 });
@@ -1054,13 +1054,13 @@ router.get('/api/backups', requireAuth, requireAdmin, async (req, res) => {
       // Sort by date descending
       backups.sort((a, b) => b.date - a.date);
     } catch (err) {
-      console.log('Backups directory not found');
+      appLogger.info('Backups directory not found');
       await fs.mkdir(backupsDir, { recursive: true });
     }
     
     res.json(backups);
   } catch (error) {
-    console.error('Error loading backups:', error);
+    appLogger.error('Error loading backups:', error);
     res.status(500).json({ error: 'Failed to load backups' });
   }
 });
@@ -1141,7 +1141,7 @@ router.post('/api/backups/restore', requireAuth, requireAdmin, async (req, res) 
     try {
       await fs.copyFile(dbPath, safetyBackup);
     } catch (err) {
-      console.log('Current DB backup for safety:', err);
+      appLogger.info('Current DB backup for safety:', err);
     }
     
     // Restore from backup
@@ -1249,7 +1249,7 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
     try {
       await fs.unlink(req.file.path);
     } catch (err) {
-      console.warn('Warning: Could not clean up temp file:', err.message);
+      appLogger.warn('Warning: Could not clean up temp file:', err.message);
     }
 
     // Get file stats
@@ -1266,7 +1266,7 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
         ip: req.ip
       });
     } catch (logError) {
-      console.error('Error logging backup import:', logError);
+      appLogger.error('Error logging backup import:', logError);
       // Don't fail the import just because logging failed
     }
 
@@ -1276,13 +1276,13 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
       backupName: importedName
     });
   } catch (error) {
-    console.error('Import backup error:', error);
+    appLogger.error('Import backup error:', error);
     // Clean up file if it exists
     if (req.file && fsSyncApi.existsSync(req.file.path)) {
       try {
         fsSyncApi.unlinkSync(req.file.path);
       } catch (cleanupError) {
-        console.error('Error cleaning up uploaded file:', cleanupError);
+        appLogger.error('Error cleaning up uploaded file:', cleanupError);
       }
     }
     res.status(500).json({ success: false, message: error.message });
@@ -1297,7 +1297,7 @@ router.get('/system', requireAuth, requireAdmin, async (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('System page error:', error);
+    appLogger.error('System page error:', error);
     res.status(500).render('error', { message: 'System page error', code: 500 });
   }
 });
@@ -1318,7 +1318,7 @@ router.get('/oidc', requireAuth, requireAdmin, async (req, res) => {
       baseUrl: baseUrl
     });
   } catch (error) {
-    console.error('OIDC page error:', error);
+    appLogger.error('OIDC page error:', error);
     res.status(500).render('error', { message: 'OIDC page error', code: 500 });
   }
 });
@@ -1344,7 +1344,7 @@ router.get('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) => 
       } : null
     });
   } catch (error) {
-    console.error('Error getting OIDC settings:', error);
+    appLogger.error('Error getting OIDC settings:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1387,7 +1387,7 @@ router.post('/api/oidc/settings', requireAuth, requireAdmin, async (req, res) =>
 
     res.json({ success: true, message: 'OIDC settings saved' });
   } catch (error) {
-    console.error('Error saving OIDC settings:', error);
+    appLogger.error('Error saving OIDC settings:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1431,7 +1431,7 @@ router.post('/api/oidc/test', requireAuth, requireAdmin, async (req, res) => {
       tokenEndpoint: config.token_endpoint
     });
   } catch (error) {
-    console.error('OIDC test error:', error);
+    appLogger.error('OIDC test error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1449,7 +1449,7 @@ router.post('/api/jellyseerr/test', requireAuth, requireAdmin, async (req, res) 
     const result = await JellyseerrManager.getInstance().testConnection();
     res.json(result);
   } catch (error) {
-    console.error('Jellyseerr test error:', error);
+    appLogger.error('Jellyseerr test error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1520,7 +1520,7 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting settings:', error);
+    appLogger.error('Error getting settings:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1647,7 +1647,7 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         await DatabaseManager.setSetting('audit_log_retention', days);
       }
       // Restart scheduler so new times take effect immediately
-      require('../models/MaintenanceScheduler').restart().catch(e => console.warn('Scheduler restart:', e.message));
+      require('../models/MaintenanceScheduler').restart().catch(e => appLogger.warn('Scheduler restart:', e.message));
     }
 
     await AuditLogger.log({
@@ -1661,7 +1661,7 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
 
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (error) {
-    console.error('Error saving settings:', error);
+    appLogger.error('Error saving settings:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1681,7 +1681,7 @@ router.get('/plugins', requireAuth, requireAdmin, async (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('Error rendering plugin page:', error);
+    appLogger.error('Error rendering plugin page:', error);
     res.status(500).render('error', { message: 'Error loading plugin page', code: 500 });
   }
 });
@@ -1702,7 +1702,7 @@ router.get('/api/plugins/status', requireAuth, requireAdmin, async (req, res) =>
       lastChecked: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error checking plugin status:', error);
+    appLogger.error('Error checking plugin status:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1725,7 +1725,7 @@ router.get('/api/plugins/config', requireAuth, requireAdmin, async (req, res) =>
       }
     });
   } catch (error) {
-    console.error('Error getting plugin config:', error);
+    appLogger.error('Error getting plugin config:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1769,7 +1769,7 @@ router.post('/api/plugins/config', requireAuth, requireAdmin, async (req, res) =
     
     res.json({ success: true, message: 'Configuration updated successfully' });
   } catch (error) {
-    console.error('Error saving plugin config:', error);
+    appLogger.error('Error saving plugin config:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1813,7 +1813,7 @@ router.post('/api/plugins/test-connection', requireAuth, requireAdmin, async (re
       throw new Error(`Server responded with status ${response.status}: ${response.statusText}`);
     }
   } catch (error) {
-    console.error('Error testing plugin connection:', error);
+    appLogger.error('Error testing plugin connection:', error);
     
     await AuditLogger.log({
       action: 'PLUGIN_TEST_CONNECTION',
@@ -1853,7 +1853,7 @@ router.get('/api/plugins/logs', requireAuth, requireAdmin, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error getting plugin logs:', error);
+    appLogger.error('Error getting plugin logs:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1874,7 +1874,7 @@ router.delete('/api/plugins/logs', requireAuth, requireAdmin, async (req, res) =
     
     res.json({ success: true, message: 'Plugin logs cleared' });
   } catch (error) {
-    console.error('Error clearing plugin logs:', error);
+    appLogger.error('Error clearing plugin logs:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1884,17 +1884,17 @@ router.get('/api/plugin/download', requireAuth, requireAdmin, async (req, res) =
   try {
     const pluginPath = path.join(__dirname, '..', '..', 'jellyfin-plugin', 'build', 'Jellyfin.Plugin.SSOCompanion.dll');
     
-    console.log('Attempting to download plugin from:', pluginPath);
+    appLogger.info('Attempting to download plugin from:', pluginPath);
     
     // Check if file exists
     await fs.access(pluginPath);
     
-    console.log('Plugin file found, initiating download');
+    appLogger.info('Plugin file found, initiating download');
     res.download(pluginPath, 'Jellyfin.Plugin.SSOCompanion.dll');
   } catch (error) {
-    console.error('Error downloading plugin:', error);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
+    appLogger.error('Error downloading plugin:', error);
+    appLogger.error('Error code:', error.code);
+    appLogger.error('Error message:', error.message);
     res.status(404).json({ 
       success: false, 
       error: 'Plugin DLL not found. Please build the plugin first.',
@@ -2057,7 +2057,7 @@ router.get('/policy', requireAuth, requireAdmin, async (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('Policy management page error:', error);
+    appLogger.error('Policy management page error:', error);
     res.status(500).render('error', { message: 'Error loading policy page', code: 500 });
   }
 });
@@ -2070,7 +2070,7 @@ router.get('/invites', requireAuth, requireAdmin, (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('Invite management page error:', error);
+    appLogger.error('Invite management page error:', error);
     res.status(500).render('error', { message: 'Error loading invite page', code: 500 });
   }
 });
@@ -2083,7 +2083,7 @@ router.get('/signup-profiles', requireAuth, requireAdmin, (req, res) => {
       csrfToken: res.locals.csrfToken
     });
   } catch (error) {
-    console.error('Signup profiles page error:', error);
+    appLogger.error('Signup profiles page error:', error);
     res.status(500).render('error', { message: 'Error loading profiles page', code: 500 });
   }
 });
@@ -2096,7 +2096,7 @@ router.get('/user-expiry', csrfProtection, requireAuth, requireAdmin, (req, res)
       csrfToken: req.csrfToken()
     });
   } catch (error) {
-    console.error('User expiry management page error:', error);
+    appLogger.error('User expiry management page error:', error);
     res.status(500).render('error', { message: 'Error loading expiry page', code: 500 });
   }
 });
@@ -2109,7 +2109,7 @@ router.get('/notifications', csrfProtection, requireAuth, requireAdmin, (req, re
       csrfToken: req.csrfToken()
     });
   } catch (error) {
-    console.error('Notification management page error:', error);
+    appLogger.error('Notification management page error:', error);
     res.status(500).render('error', { message: 'Error loading notifications page', code: 500 });
   }
 });
@@ -2122,7 +2122,7 @@ router.get('/message-templates', csrfProtection, requireAuth, requireAdmin, (req
       csrfToken: req.csrfToken()
     });
   } catch (error) {
-    console.error('Message templates page error:', error);
+    appLogger.error('Message templates page error:', error);
     res.status(500).render('error', { message: 'Error loading message templates page', code: 500 });
   }
 });

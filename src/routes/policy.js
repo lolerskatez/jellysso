@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const PolicyManager = require('../models/PolicyManager');
 const AuditLogger = require('../models/AuditLogger');
+const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
@@ -30,7 +31,7 @@ router.get('/user/policy', requireAuth, async (req, res) => {
       availableTiers: PolicyManager.TIERS
     });
   } catch (error) {
-    console.error('Error getting user policy:', error.message);
+    logger.error('Error getting user policy:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve policy settings'
@@ -58,7 +59,7 @@ router.get('/user/audit-log', requireAuth, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error getting audit log:', error.message);
+    logger.error('Error getting audit log:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve audit log'
@@ -97,7 +98,7 @@ router.post('/user/device/whitelist', requireAuth, csrfProtection, async (req, r
       message: `Device whitelisted: ${deviceName || deviceId}`
     });
   } catch (error) {
-    console.error('Error whitelisting device:', error.message);
+    logger.error('Error whitelisting device:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to whitelist device'
@@ -122,7 +123,7 @@ router.delete('/user/device/whitelist/:deviceId', requireAuth, async (req, res) 
       message: 'Device removed from whitelist'
     });
   } catch (error) {
-    console.error('Error removing device:', error.message);
+    logger.error('Error removing device:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to remove device'
@@ -150,7 +151,7 @@ router.get('/admin/tiers', requireAuth, requireAdmin, async (req, res) => {
     );
     res.json({ success: true, tiers: annotated });
   } catch (error) {
-    console.error('Error getting tiers:', error.message);
+    logger.error('Error getting tiers:', error.message);
     res.status(500).json({ success: false, message: 'Failed to retrieve tiers' });
   }
 });
@@ -169,7 +170,7 @@ router.post('/admin/tiers', requireAuth, requireAdmin, csrfProtection, async (re
 
     res.status(201).json({ success: true, tier });
   } catch (error) {
-    console.error('Error creating tier:', error.message);
+    logger.error('Error creating tier:', error.message);
     res.status(400).json({ success: false, message: error.message });
   }
 });
@@ -188,7 +189,7 @@ router.put('/admin/tiers/:id', requireAuth, requireAdmin, csrfProtection, async 
 
     res.json({ success: true, tier });
   } catch (error) {
-    console.error('Error updating tier:', error.message);
+    logger.error('Error updating tier:', error.message);
     res.status(400).json({ success: false, message: error.message });
   }
 });
@@ -206,7 +207,7 @@ router.delete('/admin/tiers/:id', requireAuth, requireAdmin, csrfProtection, asy
 
     res.json(result);
   } catch (error) {
-    console.error('Error deleting tier:', error.message);
+    logger.error('Error deleting tier:', error.message);
     res.status(400).json({ success: false, message: error.message });
   }
 });
@@ -242,7 +243,7 @@ router.post('/admin/user/:userId/account-status', requireAuth, requireAdmin, csr
       const jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, SetupManager.getConfig().apiKey);
       await jellyfin.updateUserPolicy(userId, { IsDisabled: !enabled });
     } catch (jellyfinErr) {
-      console.error('Warning: Could not mirror account status to Jellyfin:', jellyfinErr.message);
+      logger.error('Warning: Could not mirror account status to Jellyfin:', jellyfinErr.message);
     }
 
     await AuditLogger.log('ADMIN_ACCOUNT_STATUS_CHANGED', req.session.user.Id, `admin:user:${userId}`,
@@ -250,7 +251,7 @@ router.post('/admin/user/:userId/account-status', requireAuth, requireAdmin, csr
 
     res.json({ success: true, ...result, expiresAt: expiresAt !== undefined ? expiresAt : undefined });
   } catch (error) {
-    console.error('Error updating account status:', error.message);
+    logger.error('Error updating account status:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -315,7 +316,7 @@ router.get('/admin/policies', requireAuth, requireAdmin, async (req, res) => {
     await AuditLogger.log('ADMIN_VIEW_ALL_POLICIES', req.session.user.Id, 'admin:policy',
       { policyCount: policies.length }, 'success', req.ip);
   } catch (error) {
-    console.error('Error getting policies:', error.message);
+    logger.error('Error getting policies:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve policies'
@@ -350,7 +351,7 @@ router.post('/admin/user/:userId/tier', requireAuth, requireAdmin, csrfProtectio
       ...result
     });
   } catch (error) {
-    console.error('Error setting user tier:', error.message);
+    logger.error('Error setting user tier:', error.message);
     res.status(500).json({
       success: false,
       message: error.message
@@ -384,7 +385,7 @@ router.post('/admin/user/:userId/admin-status', requireAuth, requireAdmin, csrfP
       ...result
     });
   } catch (error) {
-    console.error('Error updating admin status:', error.message);
+    logger.error('Error updating admin status:', error.message);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update admin status'
@@ -412,7 +413,7 @@ router.post('/admin/user/:userId/downloads', requireAuth, requireAdmin, csrfProt
       ...result
     });
   } catch (error) {
-    console.error('Error updating download permission:', error.message);
+    logger.error('Error updating download permission:', error.message);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update download permission'
@@ -439,7 +440,7 @@ router.get('/admin/user/:userId/audit-log', requireAuth, requireAdmin, async (re
       }))
     });
   } catch (error) {
-    console.error('Error getting user audit log:', error.message);
+    logger.error('Error getting user audit log:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve audit log'

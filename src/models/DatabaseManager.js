@@ -2,6 +2,8 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const logger = require('../utils/logger');
+const { runMigrations } = require('./MigrationManager');
 
 // On non-Windows, restrict DB file to owner-only after creation
 function lockDbPermissions(filePath) {
@@ -40,13 +42,13 @@ class DatabaseManager {
 
     this.db = new sqlite3.Database(this.dbPath, (err) => {
       if (err) {
-        console.error('Error opening database:', err);
+        logger.error('Error opening database:', err);
       } else {
-        console.log('Connected to SQLite database');
+        logger.info('Connected to SQLite database');
         lockDbPermissions(this.dbPath);
         // Enable WAL mode for better crash safety and concurrent read performance
         this.db.run('PRAGMA journal_mode=WAL', (walErr) => {
-          if (walErr) console.warn('Could not enable WAL mode:', walErr.message);
+          if (walErr) logger.warn('Could not enable WAL mode:', walErr.message);
         });
         // Enforce foreign key constraints
         this.db.run('PRAGMA foreign_keys=ON');
@@ -68,7 +70,7 @@ class DatabaseManager {
           updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
-        if (err) console.error('Error creating settings table:', err.message);
+        if (err) logger.error('Error creating settings table:', err.message);
       });
 
       // Audit logs table
@@ -84,18 +86,18 @@ class DatabaseManager {
           details TEXT
         )
       `, (err) => {
-        if (err) console.error('Error creating audit_logs table:', err.message);
+        if (err) logger.error('Error creating audit_logs table:', err.message);
       });
 
       // Create indexes for audit_logs
       this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)', (err) => {
-        if (err) console.error('Error creating index idx_audit_action:', err.message);
+        if (err) logger.error('Error creating index idx_audit_action:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_userId ON audit_logs(userId)', (err) => {
-        if (err) console.error('Error creating index idx_audit_userId:', err.message);
+        if (err) logger.error('Error creating index idx_audit_userId:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)', (err) => {
-        if (err) console.error('Error creating index idx_audit_timestamp:', err.message);
+        if (err) logger.error('Error creating index idx_audit_timestamp:', err.message);
       });
 
       // Sessions table (optional, for session store)
@@ -103,14 +105,16 @@ class DatabaseManager {
         CREATE TABLE IF NOT EXISTS sessions (
           sid TEXT PRIMARY KEY,
           sess TEXT NOT NULL,
-          expires DATETIME NOT NULL
+          expires DATETIME NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
-        if (err) console.error('Error creating sessions table:', err.message);
+        if (err) logger.error('Error creating sessions table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_session_expires ON sessions(expires)', (err) => {
-        if (err) console.error('Error creating index idx_session_expires:', err.message);
+        if (err) logger.error('Error creating index idx_session_expires:', err.message);
       });
 
       // Import history table
@@ -123,11 +127,11 @@ class DatabaseManager {
           date DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
-        if (err) console.error('Error creating import_history table:', err.message);
+        if (err) logger.error('Error creating import_history table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_import_date ON import_history(date)', (err) => {
-        if (err) console.error('Error creating index idx_import_date:', err.message);
+        if (err) logger.error('Error creating index idx_import_date:', err.message);
       });
 
       // Extended user profiles table - links to Jellyfin user IDs
@@ -143,14 +147,14 @@ class DatabaseManager {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
-        if (err) console.error('Error creating user_profiles table:', err.message);
+        if (err) logger.error('Error creating user_profiles table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_jellyfin_id ON user_profiles(jellyfin_user_id)', (err) => {
-        if (err) console.error('Error creating index idx_user_profiles_jellyfin_id:', err.message);
+        if (err) logger.error('Error creating index idx_user_profiles_jellyfin_id:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email)', (err) => {
-        if (err) console.error('Error creating index idx_user_profiles_email:', err.message);
+        if (err) logger.error('Error creating index idx_user_profiles_email:', err.message);
       });
 
       // Message Templates table
@@ -170,14 +174,14 @@ class DatabaseManager {
           FOREIGN KEY (created_by) REFERENCES users(id)
         )
       `, (err) => {
-        if (err) console.error('Error creating message_templates table:', err.message);
+        if (err) logger.error('Error creating message_templates table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_message_templates_key ON message_templates(key)', (err) => {
-        if (err) console.error('Error creating index idx_message_templates_key:', err.message);
+        if (err) logger.error('Error creating index idx_message_templates_key:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_message_templates_active ON message_templates(is_active)', (err) => {
-        if (err) console.error('Error creating index idx_message_templates_active:', err.message);
+        if (err) logger.error('Error creating index idx_message_templates_active:', err.message);
       });
 
       // User Notification Preferences table
@@ -202,11 +206,11 @@ class DatabaseManager {
           FOREIGN KEY (user_id) REFERENCES users(id)
         )
       `, (err) => {
-        if (err) console.error('Error creating user_notification_preferences table:', err.message);
+        if (err) logger.error('Error creating user_notification_preferences table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_prefs_user ON user_notification_preferences(user_id)', (err) => {
-        if (err) console.error('Error creating index idx_notif_prefs_user:', err.message);
+        if (err) logger.error('Error creating index idx_notif_prefs_user:', err.message);
       });
 
       // Integration Configs table
@@ -222,11 +226,11 @@ class DatabaseManager {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
-        if (err) console.error('Error creating integration_configs table:', err.message);
+        if (err) logger.error('Error creating integration_configs table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_integration_service ON integration_configs(service_name)', (err) => {
-        if (err) console.error('Error creating index idx_integration_service:', err.message);
+        if (err) logger.error('Error creating index idx_integration_service:', err.message);
       });
 
       // Notification Queue table
@@ -247,17 +251,17 @@ class DatabaseManager {
           FOREIGN KEY (user_id) REFERENCES users(id)
         )
       `, (err) => {
-        if (err) console.error('Error creating notification_queue table:', err.message);
+        if (err) logger.error('Error creating notification_queue table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_queue_status ON notification_queue(status)', (err) => {
-        if (err) console.error('Error creating index idx_notif_queue_status:', err.message);
+        if (err) logger.error('Error creating index idx_notif_queue_status:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_queue_user ON notification_queue(user_id)', (err) => {
-        if (err) console.error('Error creating index idx_notif_queue_user:', err.message);
+        if (err) logger.error('Error creating index idx_notif_queue_user:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_queue_created ON notification_queue(created_at)', (err) => {
-        if (err) console.error('Error creating index idx_notif_queue_created:', err.message);
+        if (err) logger.error('Error creating index idx_notif_queue_created:', err.message);
       });
 
       // Notification Logs table
@@ -274,14 +278,14 @@ class DatabaseManager {
           FOREIGN KEY (user_id) REFERENCES users(id)
         )
       `, (err) => {
-        if (err) console.error('Error creating notification_logs table:', err.message);
+        if (err) logger.error('Error creating notification_logs table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_user ON notification_logs(user_id)', (err) => {
-        if (err) console.error('Error creating index idx_notif_logs_user:', err.message);
+        if (err) logger.error('Error creating index idx_notif_logs_user:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_channel ON notification_logs(channel)', (err) => {
-        if (err) console.error('Error creating index idx_notif_logs_channel:', err.message);
+        if (err) logger.error('Error creating index idx_notif_logs_channel:', err.message);
       });
       
       // Users table - for account expiry and admin state (linked to Jellyfin accounts)
@@ -296,21 +300,21 @@ class DatabaseManager {
           updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
-        if (err) console.error('Error creating users table:', err.message);
+        if (err) logger.error('Error creating users table:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_users_expires ON users(expiresAt)', (err) => {
-        if (err) console.error('Error creating index idx_users_expires:', err.message);
+        if (err) logger.error('Error creating index idx_users_expires:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)', (err) => {
-        if (err) console.error('Error creating index idx_users_email:', err.message);
+        if (err) logger.error('Error creating index idx_users_email:', err.message);
       });
       this.db.run('CREATE INDEX IF NOT EXISTS idx_users_enabled ON users(enabled)', (err) => {
-        if (err) console.error('Error creating index idx_users_enabled:', err.message);
+        if (err) logger.error('Error creating index idx_users_enabled:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_notif_logs_created ON notification_logs(created_at)', (err) => {
-        if (err) console.error('Error creating index idx_notif_logs_created:', err.message);
+        if (err) logger.error('Error creating index idx_notif_logs_created:', err.message);
 
         // contact_verifications — used by ContactMethodManager
         this.db.run(`
@@ -327,18 +331,49 @@ class DatabaseManager {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
           )`, (cvErr) => {
-          if (cvErr) console.error('Error creating contact_verifications table:', cvErr.message);
+          if (cvErr) logger.error('Error creating contact_verifications table:', cvErr.message);
           this.db.run('CREATE INDEX IF NOT EXISTS idx_contact_verif_user ON contact_verifications(user_id)', (idxErr) => {
-            if (idxErr) console.error('Error creating index idx_contact_verif_user:', idxErr.message);
+            if (idxErr) logger.error('Error creating index idx_contact_verif_user:', idxErr.message);
           });
           this.db.run('CREATE INDEX IF NOT EXISTS idx_contact_verif_expires ON contact_verifications(expires_at)', (idxErr) => {
-            if (idxErr) console.error('Error creating index idx_contact_verif_expires:', idxErr.message);
+            if (idxErr) logger.error('Error creating index idx_contact_verif_expires:', idxErr.message);
           });
 
-          // Mark database as ready after all tables are created
-          this.isReady = true;
-          this.readyCallbacks.forEach(cb => cb());
-          this.readyCallbacks = [];
+          // quickconnect_sessions — persists QC session state across restarts
+          this.db.run(`
+            CREATE TABLE IF NOT EXISTS quickconnect_sessions (
+              code TEXT PRIMARY KEY,
+              secret TEXT,
+              device_name TEXT,
+              device_type TEXT,
+              user_id TEXT,
+              initiated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              expires_at DATETIME NOT NULL
+            )`, (qcErr) => {
+            if (qcErr) logger.error('Error creating quickconnect_sessions table:', qcErr.message);
+            this.db.run('CREATE INDEX IF NOT EXISTS idx_qc_expires ON quickconnect_sessions(expires_at)');
+          });
+
+          // discord_verification_codes — persists Discord DM verification codes across restarts
+          this.db.run(`
+            CREATE TABLE IF NOT EXISTS discord_verification_codes (
+              code TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              expires_at DATETIME NOT NULL
+            )`, (dvErr) => {
+            if (dvErr) logger.error('Error creating discord_verification_codes table:', dvErr.message);
+            this.db.run('CREATE INDEX IF NOT EXISTS idx_dvc_expires ON discord_verification_codes(expires_at)');
+          });
+
+          // Run schema migrations then mark database as ready
+          runMigrations(this.db)
+            .catch((err) => logger.error('[DatabaseManager] Migration error:', err))
+            .finally(() => {
+              this.isReady = true;
+              this.readyCallbacks.forEach(cb => cb());
+              this.readyCallbacks = [];
+            });
         });
       });
     });

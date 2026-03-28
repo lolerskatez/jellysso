@@ -288,7 +288,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="<%= nonce %>">
     const inviteCode = new URLSearchParams(window.location.search).get('invite');
 
     if (!inviteCode) {

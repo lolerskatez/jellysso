@@ -1,4 +1,5 @@
 const DatabaseManager = require('./DatabaseManager');
+const logger = require('../utils/logger');
 
 class AuditLogger {
   constructor() {
@@ -73,7 +74,7 @@ class AuditLogger {
       );
       return true;
     } catch (error) {
-      console.error('Error writing audit log:', error);
+      logger.error('Error writing audit log:', error);
       return false;
     }
   }
@@ -163,7 +164,7 @@ class AuditLogger {
     try {
       return await DatabaseManager.getAuditLogs(options);
     } catch (error) {
-      console.error('Error reading audit logs:', error);
+      logger.error('Error reading audit logs:', error);
       return [];
     }
   }
@@ -176,7 +177,7 @@ class AuditLogger {
       const deletedCount = await DatabaseManager.cleanupAuditLogs(daysToKeep);
       return deletedCount;
     } catch (error) {
-      console.error('Error cleaning up audit logs:', error);
+      logger.error('Error cleaning up audit logs:', error);
       return 0;
     }
   }

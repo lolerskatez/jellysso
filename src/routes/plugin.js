@@ -5,6 +5,7 @@ const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
 const path = require('path');
 const fs = require('fs');
+const logger = require('../utils/logger');
 
 // Plugin management page
 router.get('/', (req, res) => {
@@ -19,7 +20,7 @@ router.get('/', (req, res) => {
       webAppUrl: config.webAppPublicUrl
     });
   } catch (error) {
-    console.error('Error in plugin route:', error);
+    logger.error('Error in plugin route:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const DatabaseManager = require('./DatabaseManager');
 const AuditLogger = require('./AuditLogger');
+const logger = require('../utils/logger');
 
 /**
  * SignupProfileManager - Manages reusable signup profiles for invites
@@ -45,7 +46,7 @@ class SignupProfileManager {
         )
       `, (err) => {
         if (err && !err.message.includes('already exists')) {
-          console.error('Error creating signup_profiles table:', err);
+          logger.error('Error creating signup_profiles table:', err);
         }
       });
 
@@ -54,7 +55,7 @@ class SignupProfileManager {
         'CREATE INDEX IF NOT EXISTS idx_signup_profiles_active ON signup_profiles(isActive)',
         (err) => {
           if (err && !err.message.includes('already exists')) {
-            console.error('Error creating index:', err);
+            logger.error('Error creating index:', err);
           }
         }
       );
@@ -71,11 +72,11 @@ class SignupProfileManager {
         )
       `, (err) => {
         if (err && !err.message.includes('already exists')) {
-          console.error('Error creating profile_usage table:', err);
+          logger.error('Error creating profile_usage table:', err);
         }
       });
     } catch (error) {
-      console.error('SignupProfileManager initialization error:', error);
+      logger.error('SignupProfileManager initialization error:', error);
     }
   }
 
@@ -128,7 +129,7 @@ class SignupProfileManager {
         }
       );
     } catch (error) {
-      console.error('Error creating default profiles:', error);
+      logger.error('Error creating default profiles:', error);
     }
   }
 
@@ -503,7 +504,7 @@ class SignupProfileManager {
           [id, profileId, userId],
           (err) => {
             if (err) {
-              console.error('Error tracking profile usage:', err);
+              logger.error('Error tracking profile usage:', err);
               return reject(err);
             }
             resolve(true);

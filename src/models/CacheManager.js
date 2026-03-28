@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Advanced Caching Strategy
  * Caches frequently accessed data with TTL and invalidation
@@ -249,7 +250,7 @@ class CacheManager {
       try {
         cb(...args);
       } catch (error) {
-        console.error(`Cache event error (${event}):`, error);
+        logger.error(`Cache event error (${event}):`, error);
       }
     });
   }

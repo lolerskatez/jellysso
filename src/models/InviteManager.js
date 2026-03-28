@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const DatabaseManager = require('./DatabaseManager');
 const AuditLogger = require('./AuditLogger');
+const logger = require('../utils/logger');
 
 /**
  * InviteManager - Manages user invite creation, validation, and acceptance
@@ -41,6 +42,8 @@ class InviteManager {
           status TEXT DEFAULT 'pending',
           usageCount INTEGER DEFAULT 0,
           lastUsedAt DATETIME,
+          maxUses INTEGER DEFAULT 1,
+          userExpiryDays INTEGER,
           metadata JSON,
           FOREIGN KEY (signupProfileId) REFERENCES signup_profiles(id),
           FOREIGN KEY (createdBy) REFERENCES users(id),
@@ -48,16 +51,8 @@ class InviteManager {
         )
       `, (err) => {
         if (err && !err.message.includes('already exists')) {
-          console.error('Error creating invites table:', err);
+          logger.error('Error creating invites table:', err);
         }
-      });
-
-      // Migrations: add maxUses and userExpiryDays if they don't exist
-      this.db.run('ALTER TABLE invites ADD COLUMN maxUses INTEGER DEFAULT 1', (err) => {
-        // Ignore "duplicate column" errors — means migration already ran
-      });
-      this.db.run('ALTER TABLE invites ADD COLUMN userExpiryDays INTEGER', (err) => {
-        // Ignore "duplicate column" errors — means migration already ran
       });
 
       // Index for faster lookups
@@ -65,7 +60,7 @@ class InviteManager {
         'CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code)',
         (err) => {
           if (err && !err.message.includes('already exists')) {
-            console.error('Error creating invites index:', err);
+            logger.error('Error creating invites index:', err);
           }
         }
       );
@@ -74,7 +69,7 @@ class InviteManager {
         'CREATE INDEX IF NOT EXISTS idx_invites_status_expires ON invites(status, expiresAt)',
         (err) => {
           if (err && !err.message.includes('already exists')) {
-            console.error('Error creating invites status index:', err);
+            logger.error('Error creating invites status index:', err);
           }
         }
       );
@@ -93,11 +88,11 @@ class InviteManager {
         )
       `, (err) => {
         if (err && !err.message.includes('already exists')) {
-          console.error('Error creating invite_tracking table:', err);
+          logger.error('Error creating invite_tracking table:', err);
         }
       });
     } catch (error) {
-      console.error('InviteManager initialization error:', error);
+      logger.error('InviteManager initialization error:', error);
     }
   }
 
@@ -488,7 +483,7 @@ class InviteManager {
           [trackingId, code, eventType, JSON.stringify(metadata)],
           (err) => {
             if (err) {
-              console.error('Error tracking invite usage:', err);
+              logger.error('Error tracking invite usage:', err);
               return reject(err);
             }
             resolve(true);

@@ -207,7 +207,7 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error('Session destroy error:', err);
+      logger.error('Session destroy error:', err);
       return res.status(500).json({ success: false, message: 'Logout failed' });
     }
     // Clear the session cookie
@@ -262,7 +262,7 @@ router.get('/validate-sso', (req, res) => {
       res.status(401).json({ valid: false, error: 'Token expired or invalid' });
     }
   } catch (error) {
-    console.error('Token validation error:', error);
+    logger.error('Token validation error:', error);
     res.status(401).json({ valid: false, error: 'Token validation failed' });
   }
 });
@@ -315,7 +315,7 @@ router.post('/refresh-token', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Token refresh error:', error.message);
+    logger.error('Token refresh error:', error.message);
     await AuditLogger.log({
       action: 'TOKEN_REFRESH_ERROR',
       userId: 'unknown',
@@ -442,7 +442,7 @@ router.get('/oidc/login', async (req, res) => {
 
     res.redirect(authUrl.toString());
   } catch (error) {
-    console.error('OIDC login error:', error);
+    logger.error('OIDC login error:', error);
     await AuditLogger.log({
       action: 'OIDC_LOGIN_ERROR',
       userId: 'anonymous',
@@ -462,7 +462,7 @@ router.get('/oidc/callback', async (req, res) => {
 
     // Handle IdP errors
     if (error) {
-      console.error('OIDC IdP error:', error, error_description);
+      logger.error('OIDC IdP error:', error, error_description);
       await AuditLogger.log({
         action: 'OIDC_CALLBACK_ERROR',
         userId: 'anonymous',
@@ -540,7 +540,7 @@ router.get('/oidc/callback', async (req, res) => {
         userInfoPayload = { ...payload, ...userinfoResponse.data };
       }
     } catch (err) {
-      console.warn(`Failed to fetch userinfo endpoint: ${err.message}. Will use ID token claims only.`);
+      logger.warn(`Failed to fetch userinfo endpoint: ${err.message}. Will use ID token claims only.`);
     }
 
     // Clean up session state
@@ -552,7 +552,7 @@ router.get('/oidc/callback', async (req, res) => {
     
     // Verify API key is configured
     if (!jellyfinConfig.apiKey) {
-      console.warn('⚠️  Warning: Jellyfin API key is not configured. User auto-creation and group mapping may not work.');
+      logger.warn('⚠️  Warning: Jellyfin API key is not configured. User auto-creation and group mapping may not work.');
       // Continue anyway - local auth should still work
     }
     
@@ -563,7 +563,7 @@ router.get('/oidc/callback', async (req, res) => {
       const users = await jellyfinApi.getUsers();
       jellyfinUser = users.find(u => u.Name.toLowerCase() === username.toLowerCase());
     } catch (err) {
-      console.error('Error fetching Jellyfin users:', err);
+      logger.error('Error fetching Jellyfin users:', err);
       // Don't fail - the user authenticated via OIDC, we'll try to sync later
     }
 
@@ -573,7 +573,7 @@ router.get('/oidc/callback', async (req, res) => {
       try {
         jellyfinUser = await jellyfinApi.createUser(username);
         userWasCreated = true;
-        console.log(`Created new Jellyfin user via SSO: ${username}`);
+        logger.info(`Created new Jellyfin user via SSO: ${username}`);
 
         // Newly created users never had a real password — randomize immediately so
         // they can only ever log in through SSO.
@@ -583,10 +583,10 @@ router.get('/oidc/callback', async (req, res) => {
           EnableLocalPassword: false,
           AuthenticationProviderId: 'SSO'
         });
-        console.log(`🔒 New SSO user locked to SSO-only login: ${username}`);
+        logger.info(`🔒 New SSO user locked to SSO-only login: ${username}`);
       } catch (err) {
-        console.error('Error creating Jellyfin user:', err);
-        console.log(`Continuing with OIDC session for user ${username} without Jellyfin user creation`);
+        logger.error('Error creating Jellyfin user:', err);
+        logger.info(`Continuing with OIDC session for user ${username} without Jellyfin user creation`);
       }
     }
 
@@ -605,10 +605,10 @@ router.get('/oidc/callback', async (req, res) => {
           });
           lockedUsers.push(jellyfinUser.Id);
           await DatabaseManager.setSetting('sso_locked_users', lockedUsers, 'json');
-          console.log(`🔒 Existing SSO user configured for SSO-only login (first time): ${username}`);
+          logger.info(`🔒 Existing SSO user configured for SSO-only login (first time): ${username}`);
         }
       } catch (configErr) {
-        console.warn(`⚠️  Could not configure SSO-only login for ${username}:`, configErr.message);
+        logger.warn(`⚠️  Could not configure SSO-only login for ${username}:`, configErr.message);
         // Not critical — continue with login
       }
     }
@@ -616,7 +616,7 @@ router.get('/oidc/callback', async (req, res) => {
     // If user doesn't exist in Jellyfin and auto-create is disabled, continue anyway
     // The user is authenticated via OIDC
     if (!jellyfinUser) {
-      console.log(`User '${username}' not found in Jellyfin. Auto-creation is ${oidcConfig.autoCreateUsers ? 'enabled' : 'disabled'}. Continuing with OIDC authentication.`);
+      logger.info(`User '${username}' not found in Jellyfin. Auto-creation is ${oidcConfig.autoCreateUsers ? 'enabled' : 'disabled'}. Continuing with OIDC authentication.`);
     }
 
     // Extract groups from OIDC claims first (regardless of Jellyfin availability)
@@ -659,15 +659,15 @@ router.get('/oidc/callback', async (req, res) => {
         
         // Update policy if admin status needs to change
         const needsUpdate = isAdminFromGroups !== currentPolicy.IsAdministrator;
-        console.log(`Current admin status: ${currentPolicy.IsAdministrator}, needs update: ${needsUpdate}`);
+        logger.info(`Current admin status: ${currentPolicy.IsAdministrator}, needs update: ${needsUpdate}`);
         
         if (needsUpdate) {
           const updateResult = await jellyfinApi.updateUserPolicy(jellyfinUser.Id, { IsAdministrator: isAdminFromGroups });
-          console.log(`Policy update result:`, updateResult);
+          logger.info(`Policy update result:`, updateResult);
           if (isAdminFromGroups) {
-            console.log(`User ${username} granted admin privileges via group mapping: ${adminGroups.join(', ')}`);
+            logger.info(`User ${username} granted admin privileges via group mapping: ${adminGroups.join(', ')}`);
           } else {
-            console.log(`User ${username} admin privileges revoked (not in admin groups: ${adminGroups.join(', ')})`);
+            logger.info(`User ${username} admin privileges revoked (not in admin groups: ${adminGroups.join(', ')})`);
           }
         }
         
@@ -689,18 +689,18 @@ router.get('/oidc/callback', async (req, res) => {
           ip: req.ip
         });
       } catch (err) {
-        console.error(`Error applying group mapping to user ${username}:`, err);
+        logger.error(`Error applying group mapping to user ${username}:`, err);
         // Don't fail the login, just log the error
       }
     } else {
-      console.log(`Skipping Jellyfin user update: jellyfinUser=${!!jellyfinUser}, apiKey=${!!jellyfinConfig.apiKey}`);
+      logger.info(`Skipping Jellyfin user update: jellyfinUser=${!!jellyfinUser}, apiKey=${!!jellyfinConfig.apiKey}`);
     }
 
     // Set session with user info
     // If jellyfinUser is not available, create a minimal session object from OIDC claims
     let sessionUser = jellyfinUser;
     if (!sessionUser) {
-      console.log(`Creating minimal session user from OIDC claims for ${username} (admin: ${isAdminFromGroups})`);
+      logger.info(`Creating minimal session user from OIDC claims for ${username} (admin: ${isAdminFromGroups})`);
       sessionUser = {
         Name: username,
         Id: `oidc_${username}`,
@@ -721,7 +721,7 @@ router.get('/oidc/callback', async (req, res) => {
     if (jellyfinUser && jellyfinUser.Id) {
       const PolicyManager = require('../models/PolicyManager');
       await PolicyManager.syncAdminStatusFromJellyfin(jellyfinUser.Id, jellyfinUser).catch(err => 
-        console.warn('Could not sync admin status:', err.message)
+        logger.warn('Could not sync admin status:', err.message)
       );
     }
 
@@ -739,7 +739,7 @@ router.get('/oidc/callback', async (req, res) => {
 
     res.redirect('/');
   } catch (error) {
-    console.error('OIDC callback error:', error);
+    logger.error('OIDC callback error:', error);
     await AuditLogger.log({
       action: 'OIDC_CALLBACK_ERROR',
       userId: 'anonymous',

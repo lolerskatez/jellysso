@@ -355,7 +355,7 @@
     .form-control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,102,204,.1);}
   </style>
 
-  <script>
+  <script nonce="<%= nonce %>">
     async function loadStats() {
       try {
         const response = await fetch('/api/users/expiry/stats');

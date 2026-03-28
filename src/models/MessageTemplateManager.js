@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const DatabaseManager = require('./DatabaseManager');
+const logger = require('../utils/logger');
 
 /**
  * MessageTemplateManager - Manages customizable message templates for notifications
@@ -225,7 +226,7 @@ This user has requested a renewal of their account. Please log in to the admin p
               [id, template.key, template.title, template.subject, template.body, template.format, JSON.stringify(template.variables)],
               (insertErr) => {
                 if (insertErr) {
-                  console.error(`Error creating default template ${template.key}:`, insertErr.message);
+                  logger.error(`Error creating default template ${template.key}:`, insertErr.message);
                 }
               }
             );
@@ -351,7 +352,7 @@ This user has requested a renewal of their account. Please log in to the admin p
       return text.replace(/\{\{([^}]+)\}\}/g, (match, varName) => {
         const value = variables[varName.trim()];
         if (value === undefined || value === null) {
-          console.warn(`Template variable not provided: ${varName}`);
+          logger.warn(`Template variable not provided: ${varName}`);
           return match; // Leave unchanged if not provided
         }
         return String(value);

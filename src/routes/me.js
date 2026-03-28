@@ -10,6 +10,7 @@ const AuditLogger = require('../models/AuditLogger');
 const NotificationManager = require('../models/NotificationManager');
 const SessionActivityManager = require('../models/SessionActivityManager');
 const DatabaseManager = require('../models/DatabaseManager');
+const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth } = require('../middleware/auth');
 
@@ -99,7 +100,7 @@ router.put('/profile', requireAuth, csrfProtection, async (req, res) => {
 
     res.json({ success: true, usernameChanged });
   } catch (err) {
-    console.error('Profile update error:', err.message);
+    logger.error('Profile update error:', err.message);
     await AuditLogger.log('PROFILE_UPDATE_ERROR', req.session.user?.Id, 'user:profile',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: err.message || 'Failed to update profile.' });
@@ -151,7 +152,7 @@ router.post('/password', requireAuth, csrfProtection, async (req, res) => {
 
     res.json({ success: true, message: 'Password updated successfully.' });
   } catch (err) {
-    console.error('Password change error:', err.message);
+    logger.error('Password change error:', err.message);
     await AuditLogger.log('PASSWORD_CHANGE_ERROR', req.session.user?.Id, 'user:password',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: err.message || 'Failed to update password.' });
@@ -171,7 +172,7 @@ router.get('/otp', requireAuth, async (req, res) => {
     if (!record) return res.json({ hasPassword: false });
     res.json({ hasPassword: true, createdAt: record.createdAt });
   } catch (err) {
-    console.error('Generated password status error:', err.message);
+    logger.error('Generated password status error:', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -198,7 +199,7 @@ router.post('/otp', requireAuth, csrfProtection, async (req, res) => {
 
     res.json({ success: true, password, createdAt });
   } catch (err) {
-    console.error('Generated password error:', err.message);
+    logger.error('Generated password error:', err.message);
     await AuditLogger.log('GENERATED_PASSWORD_ERROR', req.session.user?.Id, 'user:password',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: err.message || 'Failed to generate password.' });
@@ -255,7 +256,7 @@ router.put('/email', requireAuth, csrfProtection, async (req, res) => {
 
     res.json({ success: true, message: 'Email updated successfully.' });
   } catch (err) {
-    console.error('Email change error:', err.message);
+    logger.error('Email change error:', err.message);
     await AuditLogger.log('EMAIL_CHANGE_ERROR', req.session.user?.Id, 'user:email',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: err.message || 'Failed to update email.' });
@@ -280,7 +281,7 @@ router.get('/notifications/preferences', requireAuth, async (req, res) => {
       availableChannels
     });
   } catch (err) {
-    console.error('Error fetching notification preferences:', err.message);
+    logger.error('Error fetching notification preferences:', err.message);
     res.status(500).json({ success: false, message: 'Failed to fetch notification preferences.' });
   }
 });
@@ -318,7 +319,7 @@ router.put('/notifications/preferences', requireAuth, csrfProtection, async (req
 
     res.json({ success: true, message: 'Notification preferences updated.' });
   } catch (err) {
-    console.error('Error updating notification preferences:', err.message);
+    logger.error('Error updating notification preferences:', err.message);
     await AuditLogger.log('NOTIFICATION_PREFERENCES_ERROR', req.session.user?.Id, 'user:notifications',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: 'Failed to update preferences.' });
@@ -357,7 +358,7 @@ router.get('/sessions', requireAuth, async (req, res) => {
       total: sessions.length
     });
   } catch (err) {
-    console.error('Error fetching sessions:', err.message);
+    logger.error('Error fetching sessions:', err.message);
     res.status(500).json({ success: false, message: 'Failed to fetch sessions.' });
   }
 });
@@ -384,7 +385,7 @@ router.post('/sessions/:sessionId/terminate', requireAuth, csrfProtection, async
 
     res.json({ success: true, message: 'Session terminated.' });
   } catch (err) {
-    console.error('Error terminating session:', err.message);
+    logger.error('Error terminating session:', err.message);
     await AuditLogger.log('SESSION_TERMINATION_ERROR', req.session.user?.Id, 'user:sessions',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: 'Failed to terminate session.' });
@@ -419,7 +420,7 @@ router.get('/login-history', requireAuth, async (req, res) => {
       loginHistory: formattedHistory
     });
   } catch (err) {
-    console.error('Error fetching login history:', err.message);
+    logger.error('Error fetching login history:', err.message);
     res.status(500).json({ success: false, message: 'Failed to fetch login history.' });
   }
 });
@@ -489,7 +490,7 @@ router.post('/export', requireAuth, csrfProtection, async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="jellysso-data-export-${userId}-${Date.now()}.json"`);
     res.json(exportData);
   } catch (err) {
-    console.error('Error exporting user data:', err.message);
+    logger.error('Error exporting user data:', err.message);
     await AuditLogger.log('GDPR_EXPORT_ERROR', req.session.user?.Id, 'user:export',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: 'Failed to export user data.' });

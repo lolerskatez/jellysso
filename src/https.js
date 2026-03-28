@@ -1,6 +1,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./utils/logger');
 
 // For development HTTPS
 if (process.env.NODE_ENV !== 'production') {
@@ -8,6 +9,6 @@ if (process.env.NODE_ENV !== 'production') {
   const cert = fs.readFileSync(path.join(__dirname, '../certs/cert.pem'));
   
   https.createServer({ key, cert }, app).listen(3443, () => {
-    console.log('HTTPS server running on port 3443');
+    logger.info('HTTPS server running on port 3443');
   });
 }

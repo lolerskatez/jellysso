@@ -24,7 +24,7 @@ const publicLimiter = rateLimit({
  */
 router.get('/', publicLimiter, async (req, res) => {
   try {
-    const isAdmin = req.user && req.user.isAdmin;
+    const isAdmin = req.session.user?.Policy?.IsAdministrator;
     const profiles = await profileManager.listProfiles(activeOnly = !isAdmin);
 
     res.json({
@@ -51,7 +51,7 @@ router.get('/:id', publicLimiter, async (req, res) => {
     }
 
     // Hide isActive from public if not admin
-    if (!req.user || !req.user.isAdmin) {
+    if (!req.session.user?.Policy?.IsAdministrator) {
       if (!profile.isActive) {
         return res.status(404).json({ success: false, error: 'Profile not found' });
       }
@@ -79,11 +79,11 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
 
     const profile = await profileManager.createProfile(name, {
       ...config,
-      createdBy: req.user.id
+      createdBy: req.session.user?.Id
     });
 
     auditLogger.log('info', 'PROFILE_CREATED', {
-      userId: req.user.id,
+      userId: req.session.user?.Id,
       profileId: profile.id,
       profileName: name
     });
@@ -94,7 +94,7 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
     });
   } catch (error) {
     auditLogger.log('error', 'PROFILE_CREATE_ERROR', {
-      userId: req.user?.id,
+      userId: req.session.user?.Id,
       error: error.message
     });
     res.status(400).json({ success: false, error: error.message });
@@ -111,7 +111,7 @@ router.put('/:id', csrfProtection, requireAuth, requireAdmin, async (req, res) =
     const updated = await profileManager.updateProfile(id, req.body);
 
     auditLogger.log('info', 'PROFILE_UPDATED', {
-      userId: req.user.id,
+      userId: req.session.user?.Id,
       profileId: id
     });
 
@@ -121,7 +121,7 @@ router.put('/:id', csrfProtection, requireAuth, requireAdmin, async (req, res) =
     });
   } catch (error) {
     auditLogger.log('error', 'PROFILE_UPDATE_ERROR', {
-      userId: req.user?.id,
+      userId: req.session.user?.Id,
       profileId: req.params.id,
       error: error.message
     });
@@ -139,7 +139,7 @@ router.delete('/:id', csrfProtection, requireAuth, requireAdmin, async (req, res
     await profileManager.deleteProfile(id);
 
     auditLogger.log('info', 'PROFILE_DELETED', {
-      userId: req.user.id,
+      userId: req.session.user?.Id,
       profileId: id
     });
 
@@ -164,7 +164,7 @@ router.post('/:id/duplicate', csrfProtection, requireAuth, requireAdmin, async (
     const profile = await profileManager.duplicateProfile(id, newName);
 
     auditLogger.log('info', 'PROFILE_DUPLICATED', {
-      userId: req.user.id,
+      userId: req.session.user?.Id,
       originalProfileId: id,
       newProfileId: profile.id
     });

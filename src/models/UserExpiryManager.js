@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const DatabaseManager = require('./DatabaseManager');
 const AuditLogger = require('./AuditLogger');
 const NotificationManager = require('./NotificationManager');
+const logger = require('../utils/logger');
 
 /**
  * UserExpiryManager - Manages user account expiry and lifecycle
@@ -46,7 +47,7 @@ class UserExpiryManager {
         )
       `, (err) => {
         if (err && !err.message.includes('already exists')) {
-          console.error('Error creating lifecycle events table:', err);
+          logger.error('Error creating lifecycle events table:', err);
         }
       });
 
@@ -55,12 +56,12 @@ class UserExpiryManager {
         'CREATE INDEX IF NOT EXISTS idx_lifecycle_user_event ON user_lifecycle_events(userId, eventType)',
         (err) => {
           if (err && !err.message.includes('already exists')) {
-            console.error('Error creating lifecycle index:', err);
+            logger.error('Error creating lifecycle index:', err);
           }
         }
       );
     } catch (error) {
-      console.error('UserExpiryManager initialization error:', error);
+      logger.error('UserExpiryManager initialization error:', error);
     }
   }
 
@@ -460,7 +461,7 @@ class UserExpiryManager {
         [id, userId, eventType, JSON.stringify(metadata)]
       );
     } catch (error) {
-      console.error('Error logging lifecycle event:', error);
+      logger.error('Error logging lifecycle event:', error);
     }
   }
 
@@ -559,7 +560,7 @@ class UserExpiryManager {
         }, msUntilMidnight);
       }, 24 * 60 * 60 * 1000);
     } catch (error) {
-      console.error('Error starting expiry check daemon:', error);
+      logger.error('Error starting expiry check daemon:', error);
     }
   }
 

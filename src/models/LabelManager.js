@@ -6,6 +6,7 @@
 
 const DatabaseManager = require('./DatabaseManager');
 const AuditLogger = require('./AuditLogger');
+const logger = require('../utils/logger');
 
 class LabelManager {
   constructor() {
@@ -34,7 +35,7 @@ class LabelManager {
           isActive INTEGER DEFAULT 1
         )
       `, (err) => {
-        if (err) console.error('Error creating labels table:', err.message);
+        if (err) logger.error('Error creating labels table:', err.message);
       });
 
       // User labels junction table - maps users to labels (many-to-many)
@@ -49,20 +50,20 @@ class LabelManager {
           FOREIGN KEY(labelId) REFERENCES labels(id) ON DELETE CASCADE
         )
       `, (err) => {
-        if (err) console.error('Error creating user_labels table:', err.message);
+        if (err) logger.error('Error creating user_labels table:', err.message);
       });
 
       // Create indexes for performance
       this.db.run('CREATE INDEX IF NOT EXISTS idx_labels_name ON labels(name)', (err) => {
-        if (err) console.error('Error creating idx_labels_name:', err.message);
+        if (err) logger.error('Error creating idx_labels_name:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_user_labels_userId ON user_labels(userId)', (err) => {
-        if (err) console.error('Error creating idx_user_labels_userId:', err.message);
+        if (err) logger.error('Error creating idx_user_labels_userId:', err.message);
       });
 
       this.db.run('CREATE INDEX IF NOT EXISTS idx_user_labels_labelId ON user_labels(labelId)', (err) => {
-        if (err) console.error('Error creating idx_user_labels_labelId:', err.message);
+        if (err) logger.error('Error creating idx_user_labels_labelId:', err.message);
       });
 
       this.initialized = true;
@@ -230,7 +231,7 @@ class LabelManager {
           this.db.run(`
             DELETE FROM user_labels WHERE labelId = ?
           `, [labelId], (delErr) => {
-            if (delErr) console.error('Error removing user label associations:', delErr);
+            if (delErr) logger.error('Error removing user label associations:', delErr);
 
             AuditLogger.log({
               action: 'label_deleted',

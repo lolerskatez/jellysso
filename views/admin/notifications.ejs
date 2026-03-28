@@ -542,7 +542,7 @@
     </main>
   </div><!-- /.app-container -->
 
-  <script>
+  <script nonce="<%= nonce %>">
     const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
     let queuePage = 1;
     let logsPage = 1;

@@ -4,6 +4,7 @@
  */
 
 const CONSTANTS = require('../config/constants');
+const logger = require('../utils/logger');
 
 // Common passwords to reject
 const COMMON_PASSWORDS = new Set([
@@ -122,7 +123,7 @@ async function isInHistory(newPassword, passwordHistory, compareHash) {
         return true;
       }
     } catch (error) {
-      console.error('Error comparing password history:', error);
+      logger.error('Error comparing password history:', error);
     }
   }
 

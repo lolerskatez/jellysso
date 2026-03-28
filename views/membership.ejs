@@ -547,7 +547,7 @@
   </main>
 </div><!-- /app-container -->
 
-<script>
+<script nonce="<%= nonce %>">
   const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
   const IS_OIDC = <%= isOidc ? 'true' : 'false' %>;
   const USER_ID = '<%= user.Id %>';

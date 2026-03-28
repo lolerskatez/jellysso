@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const EventEmitter = require('events');
+const logger = require('../utils/logger');
 
 /**
  * Enhanced Plugin System
@@ -41,10 +42,10 @@ class PluginManager extends EventEmitter {
 
       this.initialized = true;
       this.emit('initialized');
-      console.log('✅ Plugin system initialized');
+      logger.info('✅ Plugin system initialized');
       return true;
     } catch (error) {
-      console.error('Plugin system initialization failed:', error);
+      logger.error('Plugin system initialization failed:', error);
       throw error;
     }
   }
@@ -68,13 +69,13 @@ class PluginManager extends EventEmitter {
             await this.loadPlugin(dir, config);
           }
         } catch (error) {
-          console.warn(`Failed to load plugin ${dir}:`, error.message);
+          logger.warn(`Failed to load plugin ${dir}:`, error.message);
         }
       }
 
-      console.log(`📦 Discovered ${this.plugins.size} plugins`);
+      logger.info(`📦 Discovered ${this.plugins.size} plugins`);
     } catch (error) {
-      console.error('Plugin discovery failed:', error);
+      logger.error('Plugin discovery failed:', error);
     }
   }
 
@@ -113,10 +114,10 @@ class PluginManager extends EventEmitter {
       });
 
       this.emit('plugin:loaded', { name: pluginName, config });
-      console.log(`✨ Plugin loaded: ${pluginName} v${config.version}`);
+      logger.info(`✨ Plugin loaded: ${pluginName} v${config.version}`);
       return true;
     } catch (error) {
-      console.error(`Failed to load plugin ${pluginName}:`, error);
+      logger.error(`Failed to load plugin ${pluginName}:`, error);
       this.emit('plugin:error', { name: pluginName, error });
       throw error;
     }
@@ -142,10 +143,10 @@ class PluginManager extends EventEmitter {
 
       this.plugins.delete(pluginName);
       this.emit('plugin:unloaded', { name: pluginName });
-      console.log(`🗑️  Plugin unloaded: ${pluginName}`);
+      logger.info(`🗑️  Plugin unloaded: ${pluginName}`);
       return true;
     } catch (error) {
-      console.error(`Failed to unload plugin ${pluginName}:`, error);
+      logger.error(`Failed to unload plugin ${pluginName}:`, error);
       throw error;
     }
   }
@@ -185,7 +186,7 @@ class PluginManager extends EventEmitter {
       try {
         result = await listener.callback(result);
       } catch (error) {
-        console.error(`Hook error in ${hookName}:`, error);
+        logger.error(`Hook error in ${hookName}:`, error);
         this.emit('hook:error', { hook: hookName, error });
       }
     }

@@ -160,7 +160,7 @@
           <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
               <h3 class="modal-title">Plugin Installation Guide</h3>
-              <button class="modal-close" onclick="closeInstructionsModal()">&times;</button>
+              <button class="modal-close" id="instructionsModalClose">&times;</button>
             </div>
             <div class="modal-body">
               <h4>Installation Steps:</h4>
@@ -196,5 +196,8 @@
   </div>
 
   <script src="/js/plugin.js"></script>
+  <script nonce="<%= nonce %>">
+    document.getElementById('instructionsModalClose')?.addEventListener('click', () => closeInstructionsModal());
+  </script>
 </body>
 </html>

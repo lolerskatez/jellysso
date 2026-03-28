@@ -85,7 +85,7 @@ class SessionStore extends session.Store {
     callback = callback || function() {};
 
     if (!DatabaseManager.db || !DatabaseManager.isReady) {
-      return callback();
+      return callback(null);
     }
 
     const expiresAt = new Date(Date.now() + this.options.expirationTime);
@@ -106,7 +106,7 @@ class SessionStore extends session.Store {
     callback = callback || function() {};
 
     if (!DatabaseManager.db || !DatabaseManager.isReady) {
-      return callback();
+      return callback(null);
     }
 
     const query = 'DELETE FROM sessions WHERE sid = ?';
@@ -116,10 +116,12 @@ class SessionStore extends session.Store {
   /**
    * Clean up expired sessions
    */
-  async cleanup() {
-    return new Promise((resolve, reject) => {
+  cleanup(callback) {
+    const p = new Promise((resolve, reject) => {
+      if (!DatabaseManager.db || !DatabaseManager.isReady) {
+        return resolve(0);
+      }
       const query = 'DELETE FROM sessions WHERE expires < datetime("now")';
-      
       DatabaseManager.db.run(query, function(err) {
         if (err) {
           logger.error('Session cleanup error:', err);
@@ -130,6 +132,10 @@ class SessionStore extends session.Store {
         }
       });
     });
+    if (typeof callback === 'function') {
+      p.then(count => callback(null, count)).catch(err => callback(err));
+    }
+    return p;
   }
 
   /**

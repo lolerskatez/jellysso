@@ -32,9 +32,14 @@ describe('SessionStore - Database Session Persistence', () => {
 
   let store;
 
-  beforeAll(() => {
+  beforeAll((done) => {
     const SessionStore = require('../src/models/SessionStore');
-    store = new SessionStore();
+    const DatabaseManager = require('../src/models/DatabaseManager');
+    DatabaseManager.onReady(() => {
+      store = new SessionStore();
+      // initializeTable() fires async db.run for CREATE TABLE — give it time
+      setTimeout(done, 300);
+    });
   });
 
   it('should persist session data to database', (done) => {
@@ -65,10 +70,10 @@ describe('SessionStore - Database Session Persistence', () => {
       store.destroy(testSid, (err) => {
         assert.strictEqual(err, null);
         
-        // Verify deletion
+        // Verify deletion - session is gone (null per express-session spec)
         store.get(testSid, (err, sess) => {
           assert.strictEqual(err, null);
-          assert.strictEqual(sess, undefined);
+          assert.ok(sess === null || sess === undefined);
           done();
         });
       });
@@ -365,9 +370,9 @@ describe('Data Integrity and Error Handling', () => {
 
   it('should handle invalid session IDs gracefully', (done) => {
     store.get('invalid-sid-12345', (err, sess) => {
-      // Should not error, just return no session
+      // Should not error, just return null (no session found)
       assert.strictEqual(err, null);
-      assert.strictEqual(sess, undefined);
+      assert.ok(sess === null || sess === undefined);
       done();
     });
   });
@@ -384,7 +389,6 @@ describe('Data Integrity and Error Handling', () => {
     const stats = cache.getStats();
     // Cache should not exceed maxSize significantly (LRU eviction may not be perfect on first set)
     assert.strictEqual(stats.size <= 55, true, `Cache size ${stats.size} should be near maxSize`);
-  });
   });
 
   it('should handle concurrent cache operations', () => {

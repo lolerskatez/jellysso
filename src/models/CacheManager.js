@@ -168,7 +168,7 @@ class CacheManager {
    */
   evictLRU() {
     let lruKey = null;
-    let lruTime = Date.now();
+    let lruTime = Infinity;
 
     for (const [key, entry] of this.cache) {
       const accessTime = entry.lastAccessed || entry.createdAt;
@@ -176,6 +176,11 @@ class CacheManager {
         lruTime = accessTime;
         lruKey = key;
       }
+    }
+
+    // Fallback: evict the first entry if all timestamps are equal
+    if (!lruKey && this.cache.size > 0) {
+      lruKey = this.cache.keys().next().value;
     }
 
     if (lruKey) {

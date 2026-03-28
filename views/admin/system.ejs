@@ -192,9 +192,9 @@
             <div id="errorAlert" class="alert alert-error"></div>
 
             <div class="tabs">
-                <button class="active" onclick="switchTab('sessions')"><i class="fas fa-network-wired"></i> Sessions</button>
-                <button onclick="switchTab('cache')"><i class="fas fa-database"></i> Cache</button>
-                <button onclick="switchTab('plugins')"><i class="fas fa-cube"></i> Plugins</button>
+                <button class="active" data-tab="sessions"><i class="fas fa-network-wired"></i> Sessions</button>
+                <button data-tab="cache"><i class="fas fa-database"></i> Cache</button>
+                <button data-tab="plugins"><i class="fas fa-cube"></i> Plugins</button>
             </div>
 
             <!-- Sessions Tab -->
@@ -218,10 +218,10 @@
                         </div>
                     </div>
 
-                    <button class="btn" onclick="refreshSessionStats()">
+                    <button class="btn" id="btnRefreshSessions">
                         <i class="fas fa-sync"></i> Refresh Stats
                     </button>
-                    <button class="btn btn-danger" onclick="cleanupSessions()">
+                    <button class="btn btn-danger" id="btnCleanupSessions">
                         <i class="fas fa-trash"></i> Cleanup Expired
                     </button>
 
@@ -262,13 +262,13 @@
                         </div>
                     </div>
 
-                    <button class="btn" onclick="refreshCacheStats()">
+                    <button class="btn" id="btnRefreshCache">
                         <i class="fas fa-sync"></i> Refresh Stats
                     </button>
-                    <button class="btn btn-danger" onclick="clearCache()">
+                    <button class="btn btn-danger" id="btnClearCache">
                         <i class="fas fa-trash"></i> Clear Cache
                     </button>
-                    <button class="btn btn-danger" onclick="resetCacheStats()">
+                    <button class="btn btn-danger" id="btnResetCacheStats">
                         <i class="fas fa-redo"></i> Reset Statistics
                     </button>
 
@@ -305,10 +305,10 @@
                         </div>
                     </div>
 
-                    <button class="btn" onclick="refreshPluginStats()">
+                    <button class="btn" id="btnRefreshPlugins">
                         <i class="fas fa-sync"></i> Refresh Plugins
                     </button>
-                    <button class="btn" onclick="reloadPlugins()">
+                    <button class="btn" id="btnReloadPlugins">
                         <i class="fas fa-redo"></i> Reload All
                     </button>
 
@@ -343,11 +343,11 @@
     </div>
 
     <script nonce="<%= nonce %>">
-        function switchTab(tab) {
+        function switchTab(tab, btn) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            event.target.classList.add('active');
+            btn.classList.add('active');
 
             // Load tab data
             if (tab === 'sessions') refreshSessionStats();
@@ -461,7 +461,7 @@
                                 <td>${p.version}</td>
                                 <td><span style="background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 3px;">${p.status}</span></td>
                                 <td>${new Date(p.loadedAt).toLocaleString()}</td>
-                                <td><button class="btn" style="padding: 5px 10px; font-size: 12px;" onclick="unloadPlugin('${p.name}')">Unload</button></td>
+                                <td><button class="btn" style="padding: 5px 10px; font-size: 12px;" data-unload-plugin="${p.name}">Unload</button></td>
                             </tr>
                         `).join('');
                     }
@@ -506,6 +506,27 @@
         // Load initial data
         document.addEventListener('DOMContentLoaded', () => {
             refreshSessionStats();
+
+            // Tab delegation
+            document.querySelector('.tabs').addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-tab]');
+                if (btn) switchTab(btn.dataset.tab, btn);
+            });
+
+            // Static buttons
+            document.getElementById('btnRefreshSessions').addEventListener('click', refreshSessionStats);
+            document.getElementById('btnCleanupSessions').addEventListener('click', cleanupSessions);
+            document.getElementById('btnRefreshCache').addEventListener('click', refreshCacheStats);
+            document.getElementById('btnClearCache').addEventListener('click', clearCache);
+            document.getElementById('btnResetCacheStats').addEventListener('click', resetCacheStats);
+            document.getElementById('btnRefreshPlugins').addEventListener('click', refreshPluginStats);
+            document.getElementById('btnReloadPlugins').addEventListener('click', reloadPlugins);
+
+            // Dynamic plugin unload buttons (delegated)
+            document.querySelector('#pluginsList tbody').addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-unload-plugin]');
+                if (btn) unloadPlugin(btn.dataset.unloadPlugin);
+            });
         });
     </script>
       </div>

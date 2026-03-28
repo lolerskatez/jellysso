@@ -162,7 +162,7 @@
               <span style="margin-left: var(--spacing-sm);">👑 Administrator</span>
               <% } %>
             </span>
-            <button class="btn btn-sm btn-secondary" onclick="logout()">
+            <button class="btn btn-sm btn-secondary" id="logoutBtn">
               <i class="fas fa-sign-out-alt"></i> Logout
             </button>
           </div>
@@ -224,7 +224,7 @@
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header">
         <h3 class="modal-title">Create New User</h3>
-        <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+        <button type="button" class="modal-close" id="createUserModalClose">&times;</button>
       </div>
       <form id="createUserForm">
         <div class="modal-body">
@@ -270,5 +270,9 @@
   </div>
 
   <script src="/js/users.js"></script>
+  <script nonce="<%= nonce %>">
+    document.getElementById('logoutBtn')?.addEventListener('click', logout);
+    document.getElementById('createUserModalClose')?.addEventListener('click', closeModal);
+  </script>
 </body>
 </html>

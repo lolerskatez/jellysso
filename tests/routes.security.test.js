@@ -1,6 +1,8 @@
 const request = require('supertest');
-const SetupManager = require('../src/models/SetupManager');
 const DatabaseManager = require('../src/models/DatabaseManager');
+
+// Integration tests require a live server — allow extra time
+jest.setTimeout(30000);
 
 /**
  * Routes Security Tests
@@ -17,7 +19,7 @@ describe('Security & CSRF Protection', () => {
   });
 
   afterAll(async () => {
-    await DatabaseManager.close();
+    // Do NOT close the DatabaseManager singleton here — other suites may still need it
   });
 
   describe('CSRF Token Generation', () => {

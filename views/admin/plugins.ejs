@@ -501,7 +501,7 @@
               <span class="uri-label">Companion Base URL</span>
               <div class="uri-value">
                 <span id="companionBaseUrl"><%= baseUrl %></span>
-                <button type="button" onclick="copyToClipboard('companionBaseUrl')" title="Copy to clipboard">
+                <button type="button" data-copy-target="companionBaseUrl" title="Copy to clipboard">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -514,7 +514,7 @@
                 <button type="button" id="toggleSecretBtn" title="Show/Hide Secret">
                   <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" onclick="copyToClipboard('sharedSecretValue')" title="Copy to clipboard">
+                <button type="button" data-copy-target="sharedSecretValue" title="Copy to clipboard">
                   <i class="fas fa-copy"></i>
                 </button>
                 <button type="button" id="generateSecretBtn" class="btn-sm btn-secondary" style="margin-left: var(--spacing-sm);">
@@ -528,7 +528,7 @@
               <span class="uri-label">Validation Endpoint</span>
               <div class="uri-value">
                 <span id="validationEndpoint"><%= baseUrl %>/api/auth/validate-sso</span>
-                <button type="button" onclick="copyToClipboard('validationEndpoint')" title="Copy to clipboard">
+                <button type="button" data-copy-target="validationEndpoint" title="Copy to clipboard">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -680,5 +680,10 @@
 
   <script src="/js/mobile-nav.js"></script>
   <script src="/js/admin-plugins.js?v=3"></script>
+  <script nonce="<%= nonce %>">
+    document.querySelectorAll('[data-copy-target]').forEach(btn => {
+      btn.addEventListener('click', () => copyToClipboard(btn.dataset.copyTarget));
+    });
+  </script>
 </body>
 </html>

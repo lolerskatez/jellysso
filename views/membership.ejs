@@ -384,7 +384,7 @@
               </div>
               <% } %>
 
-              <form id="profileForm" onsubmit="saveProfile(event)">
+              <form id="profileForm">
                 <div class="section-divider">Display Name</div>
                 <div class="form-row">
                   <div class="form-group">
@@ -445,7 +445,7 @@
             </div>
             <div class="card-body">
               <div id="passwordAlert" class="alert"></div>
-              <form id="passwordForm" onsubmit="changePassword(event)" autocomplete="off">
+              <form id="passwordForm" autocomplete="off">
                 <div class="form-group">
                   <label for="currentPassword">Current Password</label>
                   <input type="password" id="currentPassword" name="currentPassword"
@@ -455,7 +455,7 @@
                   <label for="newPassword">New Password</label>
                   <input type="password" id="newPassword" name="newPassword"
                     placeholder="At least 8 characters" autocomplete="new-password"
-                    oninput="checkPasswordStrength(this.value)" required>
+                    id="newPassword" required>
                   <div class="password-strength">
                     <div class="password-strength-bar" id="strengthBar"></div>
                   </div>
@@ -470,7 +470,7 @@
                   <button type="submit" class="btn btn-primary">
                     <i class="fas fa-key"></i> Update Password
                   </button>
-                  <button type="button" class="btn btn-secondary" onclick="resetPasswordForm()">
+                  <button type="button" class="btn btn-secondary" id="cancelPasswordBtn">
                     <i class="fas fa-times"></i> Cancel
                   </button>
                 </div>
@@ -498,7 +498,7 @@
 
               <!-- State A: no password generated yet -->
               <div id="otpStateNone">
-                <button class="btn btn-primary" id="generateOtpBtn" onclick="generateOTP()">
+                <button class="btn btn-primary" id="generateOtpBtn">
                   <i class="fas fa-plus-circle"></i> Generate Password
                 </button>
               </div>
@@ -514,10 +514,10 @@
                   <div class="otp-code" id="otpCodeText"></div>
                 </div>
                 <div class="otp-copy-row">
-                  <button class="btn btn-secondary" onclick="copyOTP()">
+                  <button class="btn btn-secondary" id="copyOtpBtn">
                     <i class="fas fa-copy"></i> Copy Password
                   </button>
-                  <button class="btn btn-primary" onclick="dismissOTP()">
+                  <button class="btn btn-primary" id="dismissOtpBtn">
                     <i class="fas fa-check"></i> Done, I've saved it
                   </button>
                 </div>
@@ -531,7 +531,7 @@
                   <div class="otp-meta">Generated&nbsp;<strong id="otpCreatedText"></strong></div>
                 </div>
                 <div style="margin-top:var(--spacing-md)">
-                  <button class="btn btn-secondary" onclick="generateOTP()">
+                  <button class="btn btn-secondary" id="regenerateOtpBtn">
                     <i class="fas fa-sync-alt"></i> Regenerate Password
                   </button>
                 </div>
@@ -749,6 +749,16 @@
       }
     })();
   }
+
+  // Wire up event listeners
+  document.getElementById('profileForm')?.addEventListener('submit', saveProfile);
+  document.getElementById('passwordForm')?.addEventListener('submit', changePassword);
+  document.getElementById('newPassword')?.addEventListener('input', (e) => checkPasswordStrength(e.target.value));
+  document.getElementById('cancelPasswordBtn')?.addEventListener('click', resetPasswordForm);
+  document.getElementById('generateOtpBtn')?.addEventListener('click', generateOTP);
+  document.getElementById('copyOtpBtn')?.addEventListener('click', copyOTP);
+  document.getElementById('dismissOtpBtn')?.addEventListener('click', dismissOTP);
+  document.getElementById('regenerateOtpBtn')?.addEventListener('click', generateOTP);
 </script>
 </body>
 </html>

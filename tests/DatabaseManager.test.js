@@ -12,7 +12,8 @@ describe('DatabaseManager', () => {
   });
 
   afterAll(async () => {
-    await DatabaseManager.close();
+    // Do not close the DatabaseManager singleton — it is shared across test suites
+    // and closing it here causes SQLITE_MISUSE errors in subsequently-run suites.
   });
 
   describe('Settings Operations', () => {

@@ -20,14 +20,14 @@ class TokenManager {
       email: user.Email || `${user.Name}@jellyfin.local`,
       isAdmin: user.Policy?.IsAdministrator || false,
       groups: user.Policy?.IsAdministrator ? ['admin', 'users'] : ['users'],
+      jti: crypto.randomUUID(), // Unique token ID for revocation support
       ...customClaims
     };
 
     return jwt.sign(payload, this.jwtSecret, {
       expiresIn: this.tokenExpiry,
       issuer: 'jellysso',
-      audience: 'jellysso-app',
-      jti: crypto.randomUUID() // Unique token ID for revocation support
+      audience: 'jellysso-app'
     });
   }
 

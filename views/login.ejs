@@ -292,7 +292,7 @@
   <div id="announcementsBanner" style="position: fixed; top: 0; left: 0; right: 0; background: #f0f9ff; border-bottom: 2px solid #0066cc; padding: var(--spacing-md) var(--spacing-lg); display: none; z-index: 1000; max-height: 200px; overflow-y: auto;">
     <div style="max-width: 600px; margin: 0 auto;">
       <div id="announcementsContainer"></div>
-      <button onclick="closeAnnouncements()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #0066cc; font-size: 1.5rem; cursor: pointer;">✕</button>
+      <button id="closeAnnouncementsBtn" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #0066cc; font-size: 1.5rem; cursor: pointer;">✕</button>
     </div>
   </div>
 
@@ -391,7 +391,7 @@
       
       <div id="forgotPasswordAlert" style="display: none; padding: var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);"></div>
       
-      <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+      <form id="forgotPasswordForm">
         <div class="form-group">
           <label class="form-label" for="forgotUsername">Username</label>
           <input 
@@ -408,7 +408,7 @@
           <button type="submit" class="login-btn" style="flex: 1;">
             Send Reset Link
           </button>
-          <button type="button" onclick="closeForgotPassword()" class="login-btn" style="background: var(--bg-light); color: var(--text-primary); flex: 1;">
+          <button type="button" id="closeForgotPasswordBtn" class="login-btn" style="background: var(--bg-light); color: var(--text-primary); flex: 1;">
             Cancel
           </button>
         </div>
@@ -478,6 +478,11 @@
       document.getElementById('announcementsBanner').style.display = 'none';
       document.body.classList.remove('has-announcements');
     }
+
+    // Wire up handlers
+    document.getElementById('closeAnnouncementsBtn')?.addEventListener('click', closeAnnouncements);
+    document.getElementById('forgotPasswordForm')?.addEventListener('submit', handleForgotPassword);
+    document.getElementById('closeForgotPasswordBtn')?.addEventListener('click', closeForgotPassword);
 
     async function loadAnnouncements() {
       try {

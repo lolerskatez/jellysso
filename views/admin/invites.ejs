@@ -221,7 +221,7 @@
       <div id="alertContainer"></div>
 
           <div class="header-right">
-          <button class="btn-primary" onclick="openCreateModal()" style="margin: 0; padding: 8px 16px;">
+          <button class="btn-primary" id="openCreateInviteBtn" style="margin: 0; padding: 8px 16px;">
             <i class="fas fa-plus"></i> Create Invite
           </button>
         </div>
@@ -281,7 +281,7 @@
     <div class="modal-content">
       <h2 style="margin-top: 0;">Create Invite(s)</h2>
       
-      <form id="createForm" onsubmit="handleCreateInvite(event)">
+      <form id="createForm">
         <div class="form-group">
           <label class="form-label">Signup Profile</label>
           <select id="profileSelect" class="form-control" required>
@@ -317,7 +317,7 @@
 
         <div style="display: flex; gap: var(--spacing-md);">
           <button type="submit" class="btn-primary" style="flex: 1;">Create</button>
-          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" onclick="closeModal()">Cancel</button>
+          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" id="cancelCreateInviteBtn">Cancel</button>
         </div>
       </form>
     </div>
@@ -386,7 +386,7 @@
 
         row.innerHTML = `
           <td>
-            <span class="code-badge" onclick="copyToClipboard('${invite.code}')" title="Click to copy">
+            <span class="code-badge" data-copy="${invite.code}" title="Click to copy">
               ${invite.code}
             </span>
           </td>
@@ -402,7 +402,7 @@
           <td>${expiresDate}</td>
           <td>
             ${invite.status === 'pending' ? `
-              <button class="btn-small btn-danger" onclick="revokeInvite('${invite.code}')">Revoke</button>
+              <button class="btn-small btn-danger" data-revoke="${invite.code}">Revoke</button>
             ` : '-'}
           </td>
         `;
@@ -512,6 +512,19 @@
 
     // Load on page load
     window.addEventListener('DOMContentLoaded', loadData);
+
+    // Wire up static handlers
+    document.getElementById('openCreateInviteBtn')?.addEventListener('click', openCreateModal);
+    document.getElementById('createForm')?.addEventListener('submit', handleCreateInvite);
+    document.getElementById('cancelCreateInviteBtn')?.addEventListener('click', closeModal);
+
+    // Event delegation for dynamically generated rows
+    document.getElementById('invitesTableBody')?.addEventListener('click', (e) => {
+      const copyEl = e.target.closest('[data-copy]');
+      if (copyEl) { copyToClipboard(copyEl.dataset.copy); return; }
+      const revokeEl = e.target.closest('[data-revoke]');
+      if (revokeEl) { revokeInvite(revokeEl.dataset.revoke); return; }
+    });
 
     // Close modal on ESC key
     document.addEventListener('keydown', (e) => {

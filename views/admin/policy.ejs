@@ -521,7 +521,7 @@
         </h1>
       </div>
       <div class="header-right">
-        <button class="btn btn-primary btn-sm" onclick="openCreateModal()">
+        <button class="btn btn-primary btn-sm" id="btnOpenCreateModal">
           <i class="fas fa-plus"></i> Add Tier
         </button>
       </div>
@@ -556,22 +556,20 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Create New Tier</h2>
-          <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+          <button class="modal-close" id="closeCreateModalBtn">&times;</button>
         </div>
 
-        <form onsubmit="submitCreateTier(event)">
+        <form id="createTierForm">
           <div class="form-group">
             <label>Tier ID <span style="color:var(--danger)">*</span></label>
             <input type="text" id="createId" placeholder="e.g. trial" required
-                   pattern="[a-z0-9_-]+" title="Lowercase letters, numbers, hyphens and underscores only"
-                   oninput="syncCreatePreview()" />
+                   pattern="[a-z0-9_-]+" title="Lowercase letters, numbers, hyphens and underscores only" />
             <small>Unique slug used internally. Lowercase, alphanumeric, hyphens and underscores only.</small>
           </div>
 
           <div class="form-group">
             <label>Display Name <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="createDisplayName" placeholder="e.g. Trial" required
-                   oninput="syncCreatePreview()" />
+            <input type="text" id="createDisplayName" placeholder="e.g. Trial" required />
           </div>
 
           <div class="form-group">
@@ -583,7 +581,7 @@
           <div class="form-group">
             <label>Badge Colour</label>
             <div class="color-row">
-              <input type="color" id="createColor" value="#95a5a6" oninput="syncCreatePreview()" />
+              <input type="color" id="createColor" value="#95a5a6" />
               <span class="color-preview-badge" id="createColorPreview" style="background:#95a5a6">TIER</span>
             </div>
           </div>
@@ -607,7 +605,7 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+            <button type="button" class="btn-secondary" id="cancelCreateBtn">Cancel</button>
             <button type="submit" class="btn-primary">
               <i class="fas fa-plus"></i> Create Tier
             </button>
@@ -621,10 +619,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Edit Tier</h2>
-          <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+          <button class="modal-close" id="closeEditModalBtn">&times;</button>
         </div>
 
-        <form onsubmit="submitEditTier(event)">
+        <form id="editTierForm">
           <div class="form-group">
             <label>Tier ID</label>
             <input type="text" id="editId" readonly />
@@ -632,7 +630,7 @@
 
           <div class="form-group">
             <label>Display Name <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="editDisplayName" required oninput="syncEditPreview()" />
+            <input type="text" id="editDisplayName" required />
           </div>
 
           <div class="form-group">
@@ -644,7 +642,7 @@
           <div class="form-group">
             <label>Badge Colour</label>
             <div class="color-row">
-              <input type="color" id="editColor" oninput="syncEditPreview()" />
+              <input type="color" id="editColor" />
               <span class="color-preview-badge" id="editColorPreview">TIER</span>
             </div>
           </div>
@@ -668,7 +666,7 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+            <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
             <button type="submit" class="btn-primary">
               <i class="fas fa-save"></i> Save Changes
             </button>
@@ -682,7 +680,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Delete Tier</h2>
-          <button class="modal-close" onclick="closeModal('deleteModal')">&times;</button>
+          <button class="modal-close" id="closeDeleteModalBtn">&times;</button>
         </div>
 
         <div class="delete-warning">
@@ -696,8 +694,8 @@
         </p>
 
         <div class="modal-actions">
-          <button type="button" class="btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
-          <button type="button" class="btn-danger-solid" id="confirmDeleteBtn" onclick="confirmDeleteTier()">
+          <button type="button" class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
+          <button type="button" class="btn-danger-solid" id="confirmDeleteBtn">
             <i class="fas fa-trash"></i> Delete Tier
           </button>
         </div>
@@ -708,11 +706,8 @@
 </div>
 
 <script src="/js/mobile-nav.js"></script>
-<script src="/js/admin-policy.js" onload="window._adminPolicyLoaded=true;" onerror="console.error('Failed to load admin-policy.js'); window._adminPolicyError=true;"></script>
+<script src="/js/admin-policy.js"></script>
 <script nonce="<%= nonce %>">
-  // Track if external script loaded
-  console.log('After admin-policy.js script tag: _adminPolicyLoaded =', window._adminPolicyLoaded);
-  
   // Ensure functions are available before page initialization
   (function() {
     // Define fallbacks explicitly in global scope
@@ -725,15 +720,8 @@
     window.syncCreatePreview = window.syncCreatePreview || function() { };
     window.syncEditPreview = window.syncEditPreview || function() { };
     
-    console.log('After fallback setup:', {
-      loadTiers: typeof window.loadTiers,
-      openCreateModal: typeof window.openCreateModal,
-      _adminPolicyLoaded: window._adminPolicyLoaded
-    });
-    
     // On DOM ready, run the app
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOMContentLoaded event fired. _adminPolicyLoaded =', window._adminPolicyLoaded);
       if (typeof window.loadTiers === 'function') {
         try {
           window.loadTiers();
@@ -741,6 +729,45 @@
           console.error('Error calling loadTiers:', err.message);
         }
       }
+
+      // Wire up static modal buttons
+      const btnOpenCreate = document.getElementById('btnOpenCreateModal');
+      if (btnOpenCreate) btnOpenCreate.addEventListener('click', () => window.openCreateModal());
+
+      const closeCreate = document.getElementById('closeCreateModalBtn');
+      if (closeCreate) closeCreate.addEventListener('click', () => window.closeModal('createModal'));
+      const cancelCreate = document.getElementById('cancelCreateBtn');
+      if (cancelCreate) cancelCreate.addEventListener('click', () => window.closeModal('createModal'));
+
+      const createForm = document.getElementById('createTierForm');
+      if (createForm) createForm.addEventListener('submit', (e) => { e.preventDefault(); window.submitCreateTier && window.submitCreateTier(e); });
+
+      const createId = document.getElementById('createId');
+      if (createId) createId.addEventListener('input', () => window.syncCreatePreview());
+      const createDisplayName = document.getElementById('createDisplayName');
+      if (createDisplayName) createDisplayName.addEventListener('input', () => window.syncCreatePreview());
+      const createColor = document.getElementById('createColor');
+      if (createColor) createColor.addEventListener('input', () => window.syncCreatePreview());
+
+      const closeEdit = document.getElementById('closeEditModalBtn');
+      if (closeEdit) closeEdit.addEventListener('click', () => window.closeModal('editModal'));
+      const cancelEdit = document.getElementById('cancelEditBtn');
+      if (cancelEdit) cancelEdit.addEventListener('click', () => window.closeModal('editModal'));
+
+      const editForm = document.getElementById('editTierForm');
+      if (editForm) editForm.addEventListener('submit', (e) => { e.preventDefault(); window.submitEditTier && window.submitEditTier(e); });
+
+      const editDisplayName = document.getElementById('editDisplayName');
+      if (editDisplayName) editDisplayName.addEventListener('input', () => window.syncEditPreview());
+      const editColor = document.getElementById('editColor');
+      if (editColor) editColor.addEventListener('input', () => window.syncEditPreview());
+
+      const closeDelete = document.getElementById('closeDeleteModalBtn');
+      if (closeDelete) closeDelete.addEventListener('click', () => window.closeModal('deleteModal'));
+      const cancelDelete = document.getElementById('cancelDeleteBtn');
+      if (cancelDelete) cancelDelete.addEventListener('click', () => window.closeModal('deleteModal'));
+      const confirmDelete = document.getElementById('confirmDeleteBtn');
+      if (confirmDelete) confirmDelete.addEventListener('click', () => window.confirmDeleteTier());
     });
   })();
 </script>

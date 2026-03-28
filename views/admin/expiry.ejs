@@ -231,22 +231,22 @@
     </div>
 
     <div class="actions-bar">
-      <button class="btn-primary" onclick="triggerWarnings()">
+      <button class="btn-primary" id="btnTriggerWarnings">
         <i class="fas fa-bell"></i> Send Expiry Warnings
       </button>
-      <button class="btn-primary" onclick="triggerDisable()">
+      <button class="btn-primary" id="btnTriggerDisable">
         <i class="fas fa-ban"></i> Disable Expired Users
       </button>
     </div>
 
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('expiring')">
+      <button class="tab active" data-tab="expiring">
         <i class="fas fa-clock"></i> Expiring Soon
       </button>
-      <button class="tab" onclick="switchTab('expired')">
+      <button class="tab" data-tab="expired">
         <i class="fas fa-times-circle"></i> Already Expired
       </button>
-      <button class="tab" onclick="switchTab('settings')">
+      <button class="tab" data-tab="settings">
         <i class="fas fa-cog"></i> Settings
       </button>
     </div>
@@ -322,7 +322,7 @@
             <input type="number" id="expiryGraceDays" class="form-control" min="0" max="365" style="max-width:120px;">
           </div>
 
-          <button class="btn-primary" onclick="saveExpirySettings()"><i class="fas fa-save"></i> Save Settings</button>
+          <button class="btn-primary" id="btnSaveExpirySettings"><i class="fas fa-save"></i> Save Settings</button>
         </div>
 
         <!-- Self-Service Renewal -->
@@ -333,7 +333,7 @@
 
           <div style="margin-bottom:var(--spacing-lg);display:flex;align-items:center;gap:12px;">
             <div class="toggle-switch" id="renewalEnabledToggle" style="cursor:pointer;"></div>
-            <label style="font-weight:600;cursor:pointer;" onclick="document.getElementById('renewalEnabledToggle').click()">Enable self-service renewal requests</label>
+            <label for="renewalEnabledToggle" style="font-weight:600;cursor:pointer;">Enable self-service renewal requests</label>
           </div>
 
           <div style="margin-bottom:var(--spacing-lg);">
@@ -342,7 +342,7 @@
             <small style="color:var(--text-secondary);">Users can request renewal when this many days or fewer remain.</small>
           </div>
 
-          <button class="btn-primary" onclick="saveRenewalSettings()"><i class="fas fa-save"></i> Save Renewal Settings</button>
+          <button class="btn-primary" id="btnSaveRenewalSettings"><i class="fas fa-save"></i> Save Renewal Settings</button>
         </div>
       </div>
     </div>
@@ -427,7 +427,7 @@
           <td>${expiresDate.toLocaleDateString()}</td>
           <td><span class="days-remaining ${daysRemaining <= 3 ? 'critical' : ''}">${daysRemaining} days</span></td>
           <td>
-            <button class="btn-small btn-action" onclick="clearExpiry('${user.id}')">Clear Expiry</button>
+            <button class="btn-small btn-action" data-clear-expiry="${user.id}">Clear Expiry</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -455,17 +455,17 @@
           <td>${expiredDate.toLocaleDateString()}</td>
           <td>${daysAgo} days ago</td>
           <td>
-            <button class="btn-small btn-action" onclick="clearExpiry('${user.id}')">Re-activate</button>
+            <button class="btn-small btn-action" data-clear-expiry="${user.id}">Re-activate</button>
           </td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, btn) {
       // Update active tab
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      event.target.classList.add('active');
+      btn.classList.add('active');
 
       // Update content
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -589,8 +589,7 @@
       }
     }
 
-    async function triggerWarnings() {
-      const btn = event.target;
+    async function triggerWarnings(btn) {
       btn.disabled = true;
       btn.textContent = 'Sending...';
 
@@ -619,8 +618,7 @@
       }
     }
 
-    async function triggerDisable() {
-      const btn = event.target;
+    async function triggerDisable(btn) {
       btn.disabled = true;
       btn.textContent = 'Disabling...';
 
@@ -664,6 +662,24 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadStats();
       loadExpiringUsers();
+
+      // Tab delegation
+      document.querySelector('.tabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-tab]');
+        if (btn) switchTab(btn.dataset.tab, btn);
+      });
+
+      // Static buttons
+      document.getElementById('btnTriggerWarnings').addEventListener('click', function() { triggerWarnings(this); });
+      document.getElementById('btnTriggerDisable').addEventListener('click', function() { triggerDisable(this); });
+      document.getElementById('btnSaveExpirySettings').addEventListener('click', saveExpirySettings);
+      document.getElementById('btnSaveRenewalSettings').addEventListener('click', saveRenewalSettings);
+
+      // Dynamic clear expiry buttons (delegated)
+      document.querySelector('.page-content').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-clear-expiry]');
+        if (btn) clearExpiry(btn.dataset.clearExpiry);
+      });
     });
   </script>
 

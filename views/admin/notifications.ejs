@@ -359,7 +359,7 @@
           <h1 class="header-title">Notification Management</h1>
         </div>
         <div class="header-right">
-          <button class="btn-secondary" onclick="refreshAll()">
+          <button class="btn-secondary" id="btnRefreshAll">
             <i class="fas fa-sync-alt"></i> Refresh
           </button>
         </div>
@@ -399,13 +399,13 @@
 
         <!-- Main tabs -->
         <div class="tabs">
-          <button class="tab active" id="tabQueue" onclick="switchTab('queue', this)">
+          <button class="tab active" id="tabQueue" data-tab="queue">
             <i class="fas fa-list"></i> Queue
           </button>
-          <button class="tab" id="tabLogs" onclick="switchTab('logs', this)">
+          <button class="tab" id="tabLogs" data-tab="logs">
             <i class="fas fa-history"></i> Delivery Logs
           </button>
-          <button class="tab" id="tabSend" onclick="switchTab('send', this)">
+          <button class="tab" id="tabSend" data-tab="send">
             <i class="fas fa-paper-plane"></i> Send Manual
           </button>
         </div>
@@ -414,7 +414,7 @@
         <div id="queueTab" class="tab-content active">
           <div class="actions-bar">
             <div class="filter-bar">
-              <select id="queueStatusFilter" onchange="loadQueue()">
+              <select id="queueStatusFilter">
                 <option value="">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="sent">Sent</option>
@@ -423,7 +423,7 @@
               </select>
             </div>
             <div style="margin-left: auto; display: flex; gap: var(--spacing-md);">
-              <button class="btn-danger" onclick="clearQueue()">
+              <button class="btn-danger" id="btnClearQueue">
                 <i class="fas fa-trash"></i> Clear Completed
               </button>
             </div>
@@ -457,21 +457,21 @@
         <div id="logsTab" class="tab-content">
           <div class="actions-bar">
             <div class="filter-bar">
-              <select id="logsChannelFilter" onchange="loadLogs()">
+              <select id="logsChannelFilter">
                 <option value="">All Channels</option>
                 <option value="email">Email</option>
                 <option value="discord">Discord</option>
                 <option value="telegram">Telegram</option>
                 <option value="matrix">Matrix</option>
               </select>
-              <select id="logsStatusFilter" onchange="loadLogs()">
+              <select id="logsStatusFilter">
                 <option value="">All Statuses</option>
                 <option value="sent">Sent</option>
                 <option value="failed">Failed</option>
               </select>
             </div>
             <div style="margin-left: auto;">
-              <button class="btn-danger" onclick="clearLogs()">
+              <button class="btn-danger" id="btnClearLogs">
                 <i class="fas fa-trash"></i> Clear All Logs
               </button>
             </div>
@@ -532,7 +532,7 @@
               <textarea id="sendVariables" placeholder='{"username": "john", "expiryDate": "2025-01-01"}'></textarea>
             </div>
 
-            <button class="btn-primary" onclick="sendManualNotification()">
+            <button class="btn-primary" id="btnSendManual">
               <i class="fas fa-paper-plane"></i> Send Notification
             </button>
           </div>
@@ -654,7 +654,7 @@
             <td>${formatDate(e.created_at)}</td>
             <td>
               ${e.status === 'pending'
-                ? `<button class="btn-small btn-cancel" onclick="cancelQueueEntry('${e.id}')">Cancel</button>`
+                ? `<button class="btn-small btn-cancel" data-cancel-id="${e.id}">Cancel</button>`
                 : '-'}
             </td>
           </tr>`).join('');
@@ -858,13 +858,13 @@
       if (totalPages <= 1) { el.innerHTML = ''; return; }
 
       let html = `<span style="color:var(--text-secondary);font-size:0.85rem;">${total} total</span>`;
-      html += `<button class="page-btn" onclick="(${onPage.toString()})(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
+      html += `<button class="page-btn" data-pagination="${containerId}" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
       const start = Math.max(1, currentPage - 2);
       const end   = Math.min(totalPages, currentPage + 2);
       for (let i = start; i <= end; i++) {
-        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="(${onPage.toString()})(${i})">${i}</button>`;
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-pagination="${containerId}" data-page="${i}">${i}</button>`;
       }
-      html += `<button class="page-btn" onclick="(${onPage.toString()})(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>`;
+      html += `<button class="page-btn" data-pagination="${containerId}" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>`;
       el.innerHTML = html;
     }
 
@@ -881,6 +881,40 @@
       loadStats();
       loadChannelStatus();
       loadQueue();
+
+      // Static button listeners
+      document.getElementById('btnRefreshAll').addEventListener('click', refreshAll);
+      document.getElementById('btnClearQueue').addEventListener('click', clearQueue);
+      document.getElementById('btnClearLogs').addEventListener('click', clearLogs);
+      document.getElementById('btnSendManual').addEventListener('click', sendManualNotification);
+
+      // Tab buttons (delegated on .tabs container)
+      document.querySelector('.tabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-tab]');
+        if (btn) switchTab(btn.dataset.tab, btn);
+      });
+
+      // Filter selects
+      document.getElementById('queueStatusFilter').addEventListener('change', () => { queuePage = 1; loadQueue(); });
+      document.getElementById('logsChannelFilter').addEventListener('change', () => { logsPage = 1; loadLogs(); });
+      document.getElementById('logsStatusFilter').addEventListener('change', () => { logsPage = 1; loadLogs(); });
+
+      // Dynamic queue cancel buttons (delegated on tbody)
+      document.getElementById('queueTableBody').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-cancel-id]');
+        if (btn) cancelQueueEntry(btn.dataset.cancelId);
+      });
+
+      // Pagination buttons (delegated on page-content since pagination divs are dynamic)
+      document.querySelector('.page-content').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-pagination]');
+        if (!btn || btn.disabled) return;
+        const containerId = btn.dataset.pagination;
+        const page = parseInt(btn.dataset.page, 10);
+        if (!page) return;
+        if (containerId === 'queuePagination') { queuePage = page; loadQueue(); }
+        if (containerId === 'logsPagination')  { logsPage  = page; loadLogs(); }
+      });
     });
   </script>
 

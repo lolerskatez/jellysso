@@ -205,8 +205,15 @@ describe('Admin Features - Analytics Calculations', () => {
       { user: 'guest', reason: 'wrong_password', count: 3 }
     ];
 
-    const topReasons = failedLogins
-      .sort((a, b) => b.count - a.count);
+    // Aggregate counts by reason
+    const reasonTotals = failedLogins.reduce((acc, entry) => {
+      acc[entry.reason] = (acc[entry.reason] || 0) + entry.count;
+      return acc;
+    }, {});
+
+    const topReasons = Object.entries(reasonTotals)
+      .sort(([, a], [, b]) => b - a)
+      .map(([reason, count]) => ({ reason, count }));
 
     assert.strictEqual(topReasons[0].reason, 'wrong_password');
     assert.strictEqual(topReasons[0].count, 8);

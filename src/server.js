@@ -116,12 +116,9 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       // Styles: allow unsafe-inline for dynamic JS style assignments
       styleSrc: ["'self'", "'unsafe-inline'"],
-      // Scripts: nonce-based allowlist — no unsafe-inline for script blocks
+      // Scripts: nonce-based allowlist — no unsafe-inline for script blocks or inline event handlers
       scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, 'https://static.cloudflareinsights.com'],
-      // NOTE: scriptSrcAttr (inline event handlers) still uses unsafe-inline.
-      // Removing it requires replacing all 130+ onclick/onchange attributes in views
-      // with addEventListener calls — tracked as future technical debt.
-      scriptSrcAttr: ["'unsafe-inline'"],
+      scriptSrcAttr: ["'none'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", 'https://cloudflareinsights.com'],
@@ -758,3 +755,5 @@ DatabaseManager.getSetting('rate_limit').then(val => {
   const max = parseInt(val) || 60;
   securityConfig.reconfigureLimiter(max);
 }).catch(() => { /* use default */ });
+
+module.exports = app;

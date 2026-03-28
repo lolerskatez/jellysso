@@ -600,7 +600,7 @@
               </div>
 
               <div style="margin-top:8px;">
-                <button type="button" class="btn btn-secondary" id="testJellyseerrBtn" onclick="testJellyseerrConnection()">
+                <button type="button" class="btn btn-secondary" id="testJellyseerrBtn">
                   <i class="fas fa-plug"></i> Test Connection
                 </button>
                 <span id="jellyseerrTestResult" style="margin-left:12px;font-size:0.875rem;"></span>
@@ -882,6 +882,7 @@
         btn.disabled = false;
       }
     }
+    document.getElementById('testJellyseerrBtn')?.addEventListener('click', testJellyseerrConnection);
   </script>
 </body>
 </html>

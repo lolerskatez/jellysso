@@ -473,6 +473,37 @@
       loadSessions();
       // Refresh sessions every 5 seconds
       sessionRefreshInterval = setInterval(loadSessions, 5000);
+
+      // Delegated session control listeners on sessions-container
+      const sessionsContainer = document.getElementById('sessions-container');
+
+      sessionsContainer.addEventListener('click', (e) => {
+        // Progress bar seek
+        const seekBar = e.target.closest('[data-seek-session]');
+        if (seekBar) {
+          if (typeof seekSession === 'function') seekSession(seekBar.dataset.seekSession, e);
+          return;
+        }
+
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const sessionId = btn.dataset.sessionId;
+        if (action === 'pause')  { pauseSession(sessionId); return; }
+        if (action === 'resume') { resumeSession(sessionId); return; }
+        if (action === 'stop')   { stopSession(sessionId); return; }
+        if (action === 'next')   { skipNext(sessionId); return; }
+        if (action === 'prev')   { skipPrevious(sessionId); return; }
+        if (action === 'tracks') { toggleTracks(sessionId); return; }
+      });
+
+      sessionsContainer.addEventListener('change', (e) => {
+        const sel = e.target.closest('[data-track-type]');
+        if (!sel) return;
+        const sessionId = sel.dataset.sessionId;
+        if (sel.dataset.trackType === 'audio')    changeAudioTrack(sessionId, sel.value);
+        if (sel.dataset.trackType === 'subtitle') changeSubtitleTrack(sessionId, sel.value);
+      });
     });
 
     async function loadSessions() {
@@ -591,7 +622,7 @@
 
           ${session.playbackState ? `
             <div class="session-progress">
-              <div class="progress-bar" onclick="seekSession('${session.sessionId}', event)">
+              <div class="progress-bar" data-seek-session="${session.sessionId}">
                 <div class="progress-fill" style="width: ${progressPercent}%"></div>
               </div>
               <div class="progress-time">
@@ -604,13 +635,13 @@
           <div class="track-controls" id="tracks-${session.sessionId}" style="display: none;">
             <div class="track-control">
               <label for="audio-${session.sessionId}">Audio Track</label>
-              <select id="audio-${session.sessionId}" onchange="changeAudioTrack('${session.sessionId}', this.value)">
+              <select id="audio-${session.sessionId}" data-track-type="audio" data-session-id="${session.sessionId}">
                 <option value="">Loading...</option>
               </select>
             </div>
             <div class="track-control">
               <label for="subtitle-${session.sessionId}">Subtitles</label>
-              <select id="subtitle-${session.sessionId}" onchange="changeSubtitleTrack('${session.sessionId}', this.value)">
+              <select id="subtitle-${session.sessionId}" data-track-type="subtitle" data-session-id="${session.sessionId}">
                 <option value="">Loading...</option>
               </select>
             </div>
@@ -618,29 +649,29 @@
 
           <div class="session-controls">
             ${session.playbackState?.isPlaying ? `
-              <button class="control-btn secondary" onclick="pauseSession('${session.sessionId}')">
+              <button class="control-btn secondary" data-action="pause" data-session-id="${session.sessionId}">
                 <i class="fas fa-pause"></i>
                 Pause
               </button>
             ` : `
-              <button class="control-btn primary" onclick="resumeSession('${session.sessionId}')">
+              <button class="control-btn primary" data-action="resume" data-session-id="${session.sessionId}">
                 <i class="fas fa-play"></i>
                 Play
               </button>
             `}
-            <button class="control-btn secondary" onclick="skipPrevious('${session.sessionId}')" title="Skip to previous">
+            <button class="control-btn secondary" data-action="prev" data-session-id="${session.sessionId}" title="Skip to previous">
               <i class="fas fa-step-backward"></i>
               Prev
             </button>
-            <button class="control-btn secondary" onclick="skipNext('${session.sessionId}')" title="Skip to next">
+            <button class="control-btn secondary" data-action="next" data-session-id="${session.sessionId}" title="Skip to next">
               <i class="fas fa-step-forward"></i>
               Next
             </button>
-            <button class="control-btn secondary" onclick="toggleTracks('${session.sessionId}')" title="Show track options">
+            <button class="control-btn secondary" data-action="tracks" data-session-id="${session.sessionId}" title="Show track options">
               <i class="fas fa-closed-captioning"></i>
               Tracks
             </button>
-            <button class="control-btn danger" onclick="stopSession('${session.sessionId}')">
+            <button class="control-btn danger" data-action="stop" data-session-id="${session.sessionId}">
               <i class="fas fa-stop"></i>
               Stop
             </button>

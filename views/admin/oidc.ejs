@@ -360,7 +360,7 @@
               <span class="uri-label">Callback / Redirect URI</span>
               <div class="uri-value">
                 <span id="callbackUri"><%= baseUrl %>/api/auth/oidc/callback</span>
-                <button onclick="copyToClipboard('callbackUri')" title="Copy to clipboard">
+                <button data-copy-target="callbackUri" title="Copy to clipboard">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -370,7 +370,7 @@
               <span class="uri-label">Post-Logout Redirect URI</span>
               <div class="uri-value">
                 <span id="logoutUri"><%= baseUrl %>/login</span>
-                <button onclick="copyToClipboard('logoutUri')" title="Copy to clipboard">
+                <button data-copy-target="logoutUri" title="Copy to clipboard">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -380,7 +380,7 @@
               <span class="uri-label">Application Base URL</span>
               <div class="uri-value">
                 <span id="baseUri"><%= baseUrl %></span>
-                <button onclick="copyToClipboard('baseUri')" title="Copy to clipboard">
+                <button data-copy-target="baseUri" title="Copy to clipboard">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -497,5 +497,10 @@
 
   <script src="/js/mobile-nav.js"></script>
   <script src="/js/admin-oidc.js?v=2"></script>
+  <script nonce="<%= nonce %>">
+    document.querySelectorAll('[data-copy-target]').forEach(btn => {
+      btn.addEventListener('click', () => copyToClipboard(btn.dataset.copyTarget));
+    });
+  </script>
 </body>
 </html>

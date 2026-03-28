@@ -511,7 +511,7 @@
                         <p style="margin: 5px 0 0 0; color: var(--text-secondary); font-size: 14px;">Monitor and control all active playback sessions</p>
                     </div>
                     <div class="header-controls">
-                        <button class="btn-refresh" onclick="refreshSessions()" id="refreshBtn">
+                        <button class="btn-refresh" id="refreshBtn">
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
                     </div>
@@ -539,7 +539,7 @@
 
                 <!-- Bulk Controls -->
                 <div class="bulk-controls">
-                    <button class="btn-danger" onclick="stopAllSessions()" id="stopAllBtn">
+                    <button class="btn-danger" id="stopAllBtn">
                         <i class="fas fa-stop-circle"></i> Stop All Sessions
                     </button>
                     <span style="color: var(--text-secondary); font-size: 12px; align-self: center;">
@@ -687,7 +687,7 @@
                 const userInitial = userGroup.userName.charAt(0).toUpperCase();
                 html += `
                     <div class="user-section">
-                        <div class="user-header expanded" onclick="toggleUserSection(this)">
+                        <div class="user-header expanded" data-action="toggle-user">
                             <div class="user-header-info">
                                 <div class="user-avatar">${userInitial}</div>
                                 <div class="user-name">${escapeHtml(userGroup.userName)}</div>
@@ -741,38 +741,38 @@
                     </div>
                     <div class="session-controls">
                         ${session.playbackState?.isPlaying ? `
-                            <button class="control-btn" onclick="pauseSession('${session.sessionId}', '${escapeHtml(userName)}')">
+                            <button class="control-btn" data-session-id="${session.sessionId}" data-session-user="${escapeHtml(userName)}" data-action="pause">
                                 <i class="fas fa-pause"></i> Pause
                             </button>
                         ` : ''}
                         ${!session.playbackState?.isPlaying ? `
-                            <button class="control-btn" onclick="resumeSession('${session.sessionId}', '${escapeHtml(userName)}')">
+                            <button class="control-btn" data-session-id="${session.sessionId}" data-session-user="${escapeHtml(userName)}" data-action="resume">
                                 <i class="fas fa-play"></i> Resume
                             </button>
                         ` : ''}
-                        <button class="control-btn" onclick="skipPreviousAdmin('${session.sessionId}', '${escapeHtml(userName)}')" title="Skip to previous">
+                        <button class="control-btn" data-session-id="${session.sessionId}" data-session-user="${escapeHtml(userName)}" data-action="prev" title="Skip to previous">
                             <i class="fas fa-step-backward"></i> Prev
                         </button>
-                        <button class="control-btn" onclick="skipNextAdmin('${session.sessionId}', '${escapeHtml(userName)}')" title="Skip to next">
+                        <button class="control-btn" data-session-id="${session.sessionId}" data-session-user="${escapeHtml(userName)}" data-action="next" title="Skip to next">
                             <i class="fas fa-step-forward"></i> Next
                         </button>
-                        <button class="control-btn" onclick="toggleSessionTracks('${session.sessionId}')" title="Show track options">
+                        <button class="control-btn" data-session-id="${session.sessionId}" data-action="tracks" title="Show track options">
                             <i class="fas fa-closed-captioning"></i> Tracks
                         </button>
-                        <button class="control-btn stop" onclick="stopSession('${session.sessionId}', '${escapeHtml(userName)}')">
+                        <button class="control-btn stop" data-session-id="${session.sessionId}" data-session-user="${escapeHtml(userName)}" data-action="stop">
                             <i class="fas fa-stop"></i> Stop
                         </button>
                     </div>
                     <div class="track-controls-section" id="tracks-${session.sessionId}" style="display: none;">
                         <div>
                             <span class="track-label">Audio Track</span>
-                            <select class="track-select" id="audio-${session.sessionId}" onchange="changeAdminAudioTrack('${session.sessionId}', this.value)">
+                            <select class="track-select" id="audio-${session.sessionId}" data-track-type="audio" data-session-id="${session.sessionId}">
                                 <option value="">Loading...</option>
                             </select>
                         </div>
                         <div>
                             <span class="track-label">Subtitles</span>
-                            <select class="track-select" id="subtitle-${session.sessionId}" onchange="changeAdminSubtitleTrack('${session.sessionId}', this.value)">
+                            <select class="track-select" id="subtitle-${session.sessionId}" data-track-type="subtitle" data-session-id="${session.sessionId}">
                                 <option value="">Loading...</option>
                             </select>
                         </div>
@@ -1028,6 +1028,41 @@
             loadSessions();
             // Auto-refresh every 10 seconds
             setInterval(loadSessions, 10000);
+
+            // Static buttons
+            document.getElementById('refreshBtn').addEventListener('click', refreshSessions);
+            document.getElementById('stopAllBtn').addEventListener('click', stopAllSessions);
+
+            // Dynamic session controls (delegated on sessionsList)
+            const sessionsList = document.getElementById('sessionsList');
+
+            sessionsList.addEventListener('click', (e) => {
+                // User section toggle
+                const userHeader = e.target.closest('[data-action="toggle-user"]');
+                if (userHeader) { toggleUserSection(userHeader); return; }
+
+                const btn = e.target.closest('[data-action]');
+                if (!btn) return;
+                const action = btn.dataset.action;
+                const sessionId = btn.dataset.sessionId;
+                const sessionUser = btn.dataset.sessionUser || '';
+
+                if (action === 'pause')  { pauseSession(sessionId, sessionUser); return; }
+                if (action === 'resume') { resumeSession(sessionId, sessionUser); return; }
+                if (action === 'stop')   { stopSession(sessionId, sessionUser); return; }
+                if (action === 'next')   { skipNextAdmin(sessionId, sessionUser); return; }
+                if (action === 'prev')   { skipPreviousAdmin(sessionId, sessionUser); return; }
+                if (action === 'tracks') { toggleSessionTracks(sessionId); return; }
+            });
+
+            // Track selects (delegated change on sessionsList)
+            sessionsList.addEventListener('change', (e) => {
+                const sel = e.target.closest('[data-track-type]');
+                if (!sel) return;
+                const sessionId = sel.dataset.sessionId;
+                if (sel.dataset.trackType === 'audio') changeAdminAudioTrack(sessionId, sel.value);
+                if (sel.dataset.trackType === 'subtitle') changeAdminSubtitleTrack(sessionId, sel.value);
+            });
         });
     </script>
 </body>

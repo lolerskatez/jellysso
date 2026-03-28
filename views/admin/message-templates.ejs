@@ -324,9 +324,9 @@
           </div>
           <div class="editor-actions">
             <label class="toggle-switch" title="${t.is_active ? 'Click to disable' : 'Click to enable'}">
-              <input type="checkbox" id="toggleActive" ${t.is_active ? 'checked' : ''} onchange="toggleActive('${escHtml(t.key)}', this.checked)">
+              <input type="checkbox" id="toggleActiveChk" data-toggle-key="${escHtml(t.key)}" ${t.is_active ? 'checked' : ''}>
               <span class="toggle-track"></span>
-              <span style="font-size:0.85rem;font-weight:500">${t.is_active ? 'Active' : 'Inactive'}</span>
+              <span id="toggleActiveLabel" style="font-size:0.85rem;font-weight:500">${t.is_active ? 'Active' : 'Inactive'}</span>
             </label>
           </div>
         </div>
@@ -344,8 +344,8 @@
         <div class="form-group">
           <label class="form-label">Body</label>
           <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('edit', this)"><i class="fas fa-pen"></i> Edit</button>
-            <button class="tab-btn" onclick="switchTab('preview', this)"><i class="fas fa-eye"></i> Preview</button>
+            <button class="tab-btn active" data-tab="edit"><i class="fas fa-pen"></i> Edit</button>
+            <button class="tab-btn" data-tab="preview"><i class="fas fa-eye"></i> Preview</button>
           </div>
           <div id="tab-edit" class="tab-content active">
             <textarea id="fieldBody" class="form-control" rows="12">${escHtml(t.body || '')}</textarea>
@@ -353,7 +353,7 @@
               <div style="margin-top:8px;">
                 <small style="color:var(--text-secondary)">Available variables — click to insert:</small>
                 <div class="variable-chips">
-                  ${vars.map(v => `<span class="variable-chip" onclick="insertVar('{{${escHtml(v)}}}')">{{${escHtml(v)}}}</span>`).join('')}
+                  ${vars.map(v => `<span class="variable-chip" data-insert-var="{{${escHtml(v)}}}">{{${escHtml(v)}}}</span>`).join('')}
                 </div>
               </div>
             ` : ''}
@@ -364,8 +364,8 @@
         </div>
 
         <div style="display:flex;gap:var(--spacing-md);justify-content:flex-end;margin-top:var(--spacing-xl);">
-          <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
-          <button class="btn btn-primary" onclick="saveTemplate('${escHtml(t.key)}')">
+          <button class="btn btn-secondary" data-action="cancel-edit">Cancel</button>
+          <button class="btn btn-primary" data-save-key="${escHtml(t.key)}">
             <i class="fas fa-save"></i> Save Template
           </button>
         </div>
@@ -455,7 +455,7 @@
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
 
-        const label = document.querySelector('#toggleActive + .toggle-track + span');
+        const label = document.getElementById('toggleActiveLabel');
         if (label) label.textContent = isActive ? 'Active' : 'Inactive';
 
         // Update local cache
@@ -493,7 +493,31 @@
         .replace(/'/g, '&#39;');
     }
 
-    window.addEventListener('DOMContentLoaded', loadTemplates);
+    window.addEventListener('DOMContentLoaded', () => {
+      loadTemplates();
+
+      const editorPanel = document.getElementById('editorPanel');
+
+      // Delegated change: toggle active
+      editorPanel.addEventListener('change', (e) => {
+        const el = e.target.closest('[data-toggle-key]');
+        if (el) toggleActive(el.dataset.toggleKey, el.checked);
+      });
+
+      // Delegated click: tab buttons, variable chips, cancel, save
+      editorPanel.addEventListener('click', (e) => {
+        const tabBtn = e.target.closest('[data-tab]');
+        if (tabBtn) { switchTab(tabBtn.dataset.tab, tabBtn); return; }
+
+        const chip = e.target.closest('[data-insert-var]');
+        if (chip) { insertVar(chip.dataset.insertVar); return; }
+
+        if (e.target.closest('[data-action="cancel-edit"]')) { cancelEdit(); return; }
+
+        const saveBtn = e.target.closest('[data-save-key]');
+        if (saveBtn) { saveTemplate(saveBtn.dataset.saveKey); return; }
+      });
+    });
   </script>
 
   <script src="/js/mobile-nav.js"></script>

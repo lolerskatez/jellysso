@@ -184,12 +184,15 @@ class AccountLockoutManager {
   async lockAccount(username, durationMinutes = 15, reason = 'Too many failed login attempts', attemptsCount = 0) {
     try {
       const unlockAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+      // Use SQLite-compatible datetime format (space separator, no Z suffix)
+      // ISO 8601 'T' separator causes string comparison to always be > datetime('now')
+      const unlockAtStr = unlockAt.toISOString().replace('T', ' ').slice(0, 19);
 
       return new Promise((resolve, reject) => {
         this.db.run(
           `INSERT OR REPLACE INTO account_lockouts (username, unlock_at, reason, attempts_count) 
            VALUES (?, ?, ?, ?)`,
-          [username, unlockAt.toISOString(), reason, attemptsCount],
+          [username, unlockAtStr, reason, attemptsCount],
           function(err) {
             if (err) {
               reject(err);

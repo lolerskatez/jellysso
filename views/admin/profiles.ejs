@@ -214,7 +214,7 @@
       <div id="alertContainer"></div>
 
           <div class="header-right">
-          <button class="btn-primary" onclick="openCreateModal()" style="margin: 0; padding: 8px 16px;">
+          <button class="btn-primary" id="openCreateProfileBtn" style="margin: 0; padding: 8px 16px;">
             <i class="fas fa-plus"></i> New Profile
           </button>
         </div>
@@ -244,7 +244,7 @@
     <div class="modal-content">
       <h2 style="margin-top: 0;" id="modalTitle">Create Profile</h2>
       
-      <form id="profileForm" onsubmit="handleSaveProfile(event)">
+      <form id="profileForm">
         <div class="form-group">
           <label class="form-label">Profile Name</label>
           <input type="text" id="nameInput" class="form-control" required placeholder="e.g., Premium Tier">
@@ -282,7 +282,7 @@
 
         <div style="display: flex; gap: var(--spacing-md);">
           <button type="submit" class="btn-primary" style="flex: 1;">Save</button>
-          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" onclick="closeModal()">Cancel</button>
+          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" id="cancelProfileModalBtn">Cancel</button>
         </div>
       </form>
     </div>
@@ -350,13 +350,13 @@
           </div>
 
           <div class="profile-actions">
-            <button class="btn-small btn-edit" onclick="editProfile('${profile.id}')">
+            <button class="btn-small btn-edit" data-edit="${profile.id}">
               <i class="fas fa-edit"></i> Edit
             </button>
-            <button class="btn-small btn-duplicate" onclick="duplicateProfile('${profile.id}')">
+            <button class="btn-small btn-duplicate" data-duplicate="${profile.id}">
               <i class="fas fa-copy"></i> Duplicate
             </button>
-            <button class="btn-small btn-delete" onclick="deleteProfile('${profile.id}')">
+            <button class="btn-small btn-delete" data-delete="${profile.id}">
               <i class="fas fa-trash"></i> Delete
             </button>
           </div>
@@ -496,6 +496,19 @@
     window.addEventListener('DOMContentLoaded', loadProfiles);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeModal();
+    });
+    // Static handlers
+    document.getElementById('openCreateProfileBtn')?.addEventListener('click', openCreateModal);
+    document.getElementById('profileForm')?.addEventListener('submit', handleSaveProfile);
+    document.getElementById('cancelProfileModalBtn')?.addEventListener('click', closeModal);
+    // Event delegation for dynamic profile cards
+    document.getElementById('profilesContainer')?.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('[data-edit]');
+      if (editBtn) { editProfile(editBtn.dataset.edit); return; }
+      const dupBtn = e.target.closest('[data-duplicate]');
+      if (dupBtn) { duplicateProfile(dupBtn.dataset.duplicate); return; }
+      const delBtn = e.target.closest('[data-delete]');
+      if (delBtn) { deleteProfile(delBtn.dataset.delete); return; }
     });
   </script>
 

@@ -52,7 +52,8 @@ function escHtml(s) {
 }
 
 function openCreate() {
-  document.getElementById('modalTitle').textContent = 'New Label';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'New Label';
   document.getElementById('editId').value = '';
   document.getElementById('labelName').value = '';
   document.getElementById('labelColor').value = '#0066CC';
@@ -61,7 +62,8 @@ function openCreate() {
 }
 
 function openEdit(l) {
-  document.getElementById('modalTitle').textContent = 'Edit Label';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Edit Label';
   document.getElementById('editId').value = l.id;
   document.getElementById('labelName').value = l.name;
   document.getElementById('labelColor').value = l.color || '#0066CC';
@@ -118,6 +120,7 @@ function showToast(msg, type) {
 document.getElementById('labelModal').addEventListener('click', e => { if (e.target === document.getElementById('labelModal')) closeModal(); });
 document.getElementById('newLabelBtn')?.addEventListener('click', openCreate);
 document.getElementById('cancelLabelBtn')?.addEventListener('click', closeModal);
+document.getElementById('closeLabelModalBtn')?.addEventListener('click', closeModal);
 document.getElementById('saveLabelBtn')?.addEventListener('click', saveLabel);
 
 // Event delegation for dynamically rendered label cards

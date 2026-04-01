@@ -98,43 +98,70 @@
     .modal {
       display: none;
       position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
+      z-index: 500;
+      top: 0; left: 0;
+      width: 100% !important; height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible !important;
+      animation: none !important;
+      background: rgba(0,0,0,0.5) !important;
+    }
+    .modal.show {
+      display: flex;
       align-items: center;
       justify-content: center;
     }
-    .modal.show { display: flex; }
     .modal-content {
       background: var(--bg-primary);
       border-radius: var(--border-radius);
-      padding: var(--spacing-2xl);
-      width: 90%;
+      box-shadow: var(--shadow-lg);
       max-width: 480px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    .modal-content h3 { margin: 0 0 var(--spacing-lg) 0; }
-    .form-group { margin-bottom: var(--spacing-lg); }
-    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
-    .form-group input, .form-group textarea {
-      width: 100%;
-      padding: 8px 12px;
+      width: 92%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: var(--spacing-lg);
       border: 1px solid var(--border-color);
-      border-radius: var(--border-radius);
-      background: var(--bg-secondary);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--border-color);
+    }
+    .modal-header h2 {
+      margin: 0;
       color: var(--text-primary);
-      font-size: 0.95rem;
-      box-sizing: border-box;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
     }
-    .color-row { display: flex; align-items: center; gap: 12px; }
-    .color-row input[type="color"] { width: 48px; height: 36px; padding: 2px; cursor: pointer; border-radius: 4px; }
-    .color-presets { display: flex; gap: 6px; flex-wrap: wrap; }
-    .color-preset {
-      width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
-      border: 2px solid transparent; transition: transform 0.15s;
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      width: 32px; height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      border-radius: var(--border-radius-sm);
     }
-    .color-preset:hover { transform: scale(1.2); border-color: var(--text-primary); }
-    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: var(--spacing-lg); }
+    .modal-close:hover { color: var(--text-primary); background: var(--bg-secondary); }
+    .modal-actions {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
     #toastMsg {
       position: fixed;
       bottom: 20px;
@@ -175,10 +202,13 @@
 <!-- Create/Edit modal -->
 <div class="modal" id="labelModal">
   <div class="modal-content">
-    <h3 id="modalTitle">New Label</h3>
+    <div class="modal-header">
+      <h2 id="modalTitle"><i class="fas fa-tags" style="margin-right:8px;color:var(--primary)"></i>New Label</h2>
+      <button class="modal-close" id="closeLabelModalBtn">&times;</button>
+    </div>
     <input type="hidden" id="editId">
     <div class="form-group">
-      <label for="labelName">Name <span style="color:#dc3545">*</span></label>
+      <label for="labelName">Name <span style="color:var(--danger)">*</span></label>
       <input type="text" id="labelName" placeholder="e.g. VIP, Trial, Friends" maxlength="60">
     </div>
     <div class="form-group">
@@ -189,12 +219,12 @@
       </div>
     </div>
     <div class="form-group">
-      <label for="labelDesc">Description (optional)</label>
+      <label for="labelDesc">Description <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></label>
       <input type="text" id="labelDesc" placeholder="Short description" maxlength="200">
     </div>
-    <div class="modal-footer">
+    <div class="modal-actions">
       <button class="btn-secondary" id="cancelLabelBtn">Cancel</button>
-      <button class="btn-primary" id="saveLabelBtn">Save</button>
+      <button class="btn-primary" id="saveLabelBtn"><i class="fas fa-save"></i> Save</button>
     </div>
   </div>
 </div>

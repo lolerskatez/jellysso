@@ -32,7 +32,7 @@ async function loadLockouts() {
         <td>${new Date(l.unlock_at).toLocaleString()}</td>
         <td>${l.attempts_count || 0}</td>
         <td>${escHtml(l.reason || '—')}</td>
-        <td><button class="btn-danger btn-sm" onclick="unlockAccount('${escHtml(l.username)}')"><i class="fas fa-unlock"></i> Unlock</button></td>
+        <td><button class="btn-danger btn-sm" data-unlock-username="${escHtml(l.username)}"><i class="fas fa-unlock"></i> Unlock</button></td>
       </tr>`).join('')}</tbody></table>`;
   } catch(e) {
     wrap.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load lockouts.</p></div>';
@@ -113,5 +113,22 @@ function showToast(msg, type) {
   t.className = `show ${type}`;
   setTimeout(() => t.className = '', 3500);
 }
+
+// Tab switching via event delegation
+document.querySelector('.tabs').addEventListener('click', function(e) {
+  const btn = e.target.closest('.tab-btn');
+  if (btn) switchTab(btn.dataset.tab, btn);
+});
+
+// Static button wiring
+document.getElementById('cleanupOldBtn')?.addEventListener('click', cleanupOld);
+document.getElementById('refreshHistoryBtn')?.addEventListener('click', loadHistory);
+document.getElementById('historyFilter')?.addEventListener('input', filterHistory);
+
+// Event delegation for dynamic unlock buttons
+document.getElementById('lockoutsTable').addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-unlock-username]');
+  if (btn) unlockAccount(btn.dataset.unlockUsername);
+});
 
 loadLockouts();

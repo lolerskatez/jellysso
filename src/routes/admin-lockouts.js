@@ -8,7 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const DatabaseManager = require('../models/DatabaseManager');
-const AccountLockoutManager = require('../models/AccountLockoutManager');
+const { AccountLockoutManager } = require('../models/AccountLockoutManager');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { csrfProtection } = require('../middleware/csrf');
 

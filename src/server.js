@@ -161,8 +161,6 @@ app.use(helmet({
   }
 }));
 
-app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB
-
 // Fail fast if SESSION_SECRET is missing (in all environments — ensureSecrets() should have generated it)
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret || sessionSecret === 'default-secret') {
@@ -206,6 +204,10 @@ app.use(requestIdMiddleware);
 
 // Input sanitization middleware - prevent XSS attacks
 app.use(sanitizationMiddleware());
+
+// Dynamic rate limiting — must come AFTER session middleware so req.session.user is set
+// and authenticated users can be excluded from the global limit.
+app.use(securityConfig.getRateLimiterMiddleware());
 
 // Set CSRF token in response locals for all requests (AFTER session middleware)
 app.use(setCsrfToken);

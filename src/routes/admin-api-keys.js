@@ -8,12 +8,12 @@
 
 const express = require('express');
 const router = express.Router();
-const DatabaseManager = require('../../models/DatabaseManager');
-const APIKeyManager = require('../../models/APIKeyManager');
-const AuditLogger = require('../../models/AuditLogger');
-const { requireAuth, requireAdmin } = require('../../middleware/auth');
-const { csrfProtection } = require('../../middleware/csrf');
-const logger = require('../../utils/logger');
+const DatabaseManager = require('../models/DatabaseManager');
+const APIKeyManager = require('../models/APIKeyManager');
+const AuditLogger = require('../models/AuditLogger');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { csrfProtection } = require('../middleware/csrf');
+const logger = require('../utils/logger');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

@@ -61,25 +61,76 @@
     .modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
+      z-index: 500;
+      top: 0; left: 0;
+      width: 100% !important; height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible !important;
+      animation: none !important;
+      background: rgba(0,0,0,0.5) !important;
+    }
+
+    .modal.show {
+      display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .modal.show { display: flex; }
-
     .modal-content {
-      background: white;
+      background: var(--bg-primary);
       border-radius: var(--border-radius);
-      padding: var(--spacing-2xl);
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: var(--shadow-lg);
+      max-width: 540px;
+      width: 92%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      width: 32px; height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      border-radius: var(--border-radius-sm);
+    }
+
+    .modal-close:hover { color: var(--text-primary); background: var(--bg-secondary); }
+
+    .modal-actions {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
     }
 
     .form-group {
@@ -279,8 +330,11 @@
   <!-- Create Invite Modal -->
   <div id="createModal" class="modal">
     <div class="modal-content">
-      <h2 style="margin-top: 0;">Create Invite(s)</h2>
-      
+      <div class="modal-header">
+        <h2><i class="fas fa-envelope-open-text" style="margin-right:8px;color:var(--primary)"></i>Create Invite(s)</h2>
+        <button class="modal-close" id="closeCreateModalBtn">&times;</button>
+      </div>
+
       <form id="createForm">
         <div class="form-group">
           <label class="form-label">Signup Profile</label>
@@ -295,29 +349,30 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Expiry (Days) - Leave blank for no expiry</label>
-          <input type="number" id="expiryInput" class="form-control" min="1" max="365" placeholder="30">
+          <label class="form-label">Expiry (Days)</label>
+          <input type="number" id="expiryInput" class="form-control" min="1" max="365" placeholder="Leave blank for no expiry">
         </div>
 
         <div class="form-group">
-          <label class="form-label">Max Uses (how many users can use this invite)</label>
+          <label class="form-label">Max Uses</label>
           <input type="number" id="maxUsesInput" class="form-control" value="1" min="1" max="10000">
+          <small>How many users can redeem this invite.</small>
         </div>
 
         <div class="form-group">
-          <label class="form-label">User Account Expiry (days after signup, blank = never)</label>
-          <input type="number" id="userExpiryInput" class="form-control" min="1" max="3650" placeholder="e.g. 365">
+          <label class="form-label">User Account Expiry (days after signup)</label>
+          <input type="number" id="userExpiryInput" class="form-control" min="1" max="3650" placeholder="Leave blank for never">
         </div>
 
         <div class="form-group">
-          <label class="form-label">Label (optional)</label>
+          <label class="form-label">Label <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></label>
           <input type="text" id="labelInput" class="form-control" maxlength="64" placeholder="e.g. Friends & family, Event 2025">
-          <small style="color:var(--text-secondary)">A short tag to categorise this invite. Visible in the invites table.</small>
+          <small>A short tag to categorise this invite. Visible in the invites table.</small>
         </div>
 
-        <div style="display: flex; gap: var(--spacing-md);">
-          <button type="submit" class="btn-primary" style="flex: 1;">Create</button>
-          <button type="button" class="btn-primary" style="flex: 1; background: #ccc; color: #333;" id="cancelCreateInviteBtn">Cancel</button>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelCreateInviteBtn">Cancel</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Create</button>
         </div>
       </form>
     </div>

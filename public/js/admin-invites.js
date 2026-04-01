@@ -191,6 +191,7 @@ window.addEventListener('DOMContentLoaded', loadData);
 document.getElementById('openCreateInviteBtn')?.addEventListener('click', openCreateModal);
 document.getElementById('createForm')?.addEventListener('submit', handleCreateInvite);
 document.getElementById('cancelCreateInviteBtn')?.addEventListener('click', closeModal);
+document.getElementById('closeCreateModalBtn')?.addEventListener('click', closeModal);
 
 // Event delegation for dynamically generated rows
 document.getElementById('invitesTableBody')?.addEventListener('click', (e) => {

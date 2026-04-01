@@ -76,7 +76,8 @@ function renderProfiles() {
 
 function openCreateModal() {
   editingProfileId = null;
-  document.getElementById('modalTitle').textContent = 'Create Profile';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Create Profile';
   document.getElementById('profileForm').reset();
   document.getElementById('profileModal').classList.add('show');
 }
@@ -90,7 +91,8 @@ function editProfile(profileId) {
   if (!profile) return;
 
   editingProfileId = profileId;
-  document.getElementById('modalTitle').textContent = 'Edit Profile';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Edit Profile';
   document.getElementById('nameInput').value = profile.name;
   document.getElementById('descInput').value = profile.description || '';
   document.getElementById('tierInput').value = profile.jellyfinTier || 'basic';
@@ -211,6 +213,7 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('openCreateProfileBtn')?.addEventListener('click', openCreateModal);
 document.getElementById('profileForm')?.addEventListener('submit', handleSaveProfile);
 document.getElementById('cancelProfileModalBtn')?.addEventListener('click', closeModal);
+document.getElementById('closeProfileModalBtn')?.addEventListener('click', closeModal);
 
 document.getElementById('profilesContainer')?.addEventListener('click', (e) => {
   const editBtn = e.target.closest('[data-edit]');

@@ -44,18 +44,19 @@ function renderTable() {
       <td>${w.event_count || 0} total${w.failed_count ? ` / <span style="color:#dc3545">${w.failed_count} failed</span>` : ''}</td>
       <td style="font-size:.82rem;white-space:nowrap">${formatDate(w.created_at)}</td>
       <td class="actions-cell">
-        <button class="btn-secondary btn-sm" onclick="openEditModal(${w.id})" title="Edit"><i class="fas fa-edit"></i></button>
-        <button class="btn-secondary btn-sm" onclick="toggleWebhook(${w.id},${w.active ? 0 : 1})" title="${w.active ? 'Disable' : 'Enable'}"><i class="fas fa-power-off"></i></button>
-        <button class="btn-secondary btn-sm" onclick="sendTest(${w.id})" title="Send test"><i class="fas fa-vial"></i></button>
-        <button class="btn-secondary btn-sm" onclick="openDrawer(${w.id},'${escHtml(w.url).replace(/'/g, "\\'")}')"><i class="fas fa-history"></i></button>
-        <button class="btn-danger btn-sm" onclick="deleteWebhook(${w.id})"><i class="fas fa-trash"></i></button>
+        <button class="btn-secondary btn-sm" data-edit-id="${w.id}" title="Edit"><i class="fas fa-edit"></i></button>
+        <button class="btn-secondary btn-sm" data-toggle-id="${w.id}" data-toggle-active="${w.active ? 0 : 1}" title="${w.active ? 'Disable' : 'Enable'}"><i class="fas fa-power-off"></i></button>
+        <button class="btn-secondary btn-sm" data-test-id="${w.id}" title="Send test"><i class="fas fa-vial"></i></button>
+        <button class="btn-secondary btn-sm" data-history-id="${w.id}" data-history-url="${escHtml(w.url)}"><i class="fas fa-history"></i></button>
+        <button class="btn-danger btn-sm" data-delete-id="${w.id}"><i class="fas fa-trash"></i></button>
       </td>
     </tr>
   `).join('');
 }
 
 function openCreateModal() {
-  document.getElementById('modalTitle').textContent = 'New Webhook';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'New Webhook';
   document.getElementById('editId').value = '';
   document.getElementById('wUserId').value = '';
   document.getElementById('wUrl').value = '';
@@ -71,7 +72,8 @@ function openCreateModal() {
 function openEditModal(id) {
   const w = allWebhooks.find(x => x.id === id);
   if (!w) return;
-  document.getElementById('modalTitle').textContent = 'Edit Webhook';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Edit Webhook';
   document.getElementById('editId').value = id;
   document.getElementById('wUserId').value = w.user_id;
   document.getElementById('wUserId').disabled = true;
@@ -246,6 +248,31 @@ function showToast(msg, type) {
 
 document.getElementById('webhookModal').addEventListener('click', e => {
   if (e.target === document.getElementById('webhookModal')) closeModal();
+});
+
+// Static button wiring
+document.getElementById('newWebhookBtn')?.addEventListener('click', openCreateModal);
+document.getElementById('cancelWebhookBtn')?.addEventListener('click', closeModal);
+document.getElementById('closeWebhookModalBtn')?.addEventListener('click', closeModal);
+document.getElementById('modalSaveBtn')?.addEventListener('click', saveWebhook);
+document.getElementById('refreshWebhooksBtn')?.addEventListener('click', loadWebhooks);
+document.getElementById('closeDrawerBtn')?.addEventListener('click', closeDrawer);
+document.getElementById('drawerOverlay')?.addEventListener('click', closeDrawer);
+document.getElementById('filterSearch')?.addEventListener('input', renderTable);
+document.getElementById('filterStatus')?.addEventListener('change', renderTable);
+
+// Event delegation for dynamic table buttons
+document.getElementById('webhookTbody').addEventListener('click', function(e) {
+  const editBtn = e.target.closest('[data-edit-id]');
+  if (editBtn) { openEditModal(parseInt(editBtn.dataset.editId)); return; }
+  const toggleBtn = e.target.closest('[data-toggle-id]');
+  if (toggleBtn) { toggleWebhook(parseInt(toggleBtn.dataset.toggleId), parseInt(toggleBtn.dataset.toggleActive)); return; }
+  const testBtn = e.target.closest('[data-test-id]');
+  if (testBtn) { sendTest(parseInt(testBtn.dataset.testId)); return; }
+  const histBtn = e.target.closest('[data-history-id]');
+  if (histBtn) { openDrawer(parseInt(histBtn.dataset.historyId), histBtn.dataset.historyUrl); return; }
+  const deleteBtn = e.target.closest('[data-delete-id]');
+  if (deleteBtn) { deleteWebhook(parseInt(deleteBtn.dataset.deleteId)); }
 });
 
 loadWebhooks();

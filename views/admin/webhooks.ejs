@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
     .stats-row { display:flex; gap:var(--spacing-lg); margin-bottom:var(--spacing-xl); flex-wrap:wrap; }
     .stat-card { flex:1; min-width:130px; padding:var(--spacing-lg); background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); }
     .stat-card .val { font-size:2rem; font-weight:700; }
@@ -33,10 +32,14 @@
     .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
     .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
     /* Modal */
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; }
-    .modal-overlay.open { display:flex; }
-    .modal { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); padding:var(--spacing-2xl); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
-    .modal h2 { margin:0 0 var(--spacing-xl); }
+    .modal-overlay { display:none; position:fixed; z-index:500; top:0; left:0; width:100% !important; height:100% !important; max-width:none !important; background:rgba(0,0,0,.55) !important; }
+    .modal-overlay.open { display:flex; align-items:center; justify-content:center; }
+    .modal { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); box-shadow:var(--shadow-lg); padding:var(--spacing-lg); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-lg); padding-bottom:var(--spacing-lg); border-bottom:2px solid var(--border-color); }
+    .modal-header h2 { margin:0; color:var(--text-primary); font-size:1.25rem; font-weight:700; letter-spacing:-0.3px; }
+    .modal-close { background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-secondary); width:32px; height:32px; display:flex; align-items:center; justify-content:center; transition:all var(--transition); border-radius:var(--border-radius-sm); }
+    .modal-close:hover { color:var(--text-primary); background:var(--bg-secondary); }
+    .modal-actions { display:flex; gap:var(--spacing-md); justify-content:flex-end; margin-top:var(--spacing-xl); padding-top:var(--spacing-lg); border-top:1px solid var(--border-color); }
     .form-group { margin-bottom:var(--spacing-lg); }
     .form-group label { display:block; margin-bottom:6px; font-size:.88rem; font-weight:600; }
     .form-group input, .form-group select, .form-group textarea { width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; box-sizing:border-box; }
@@ -60,59 +63,72 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-webhooks' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-plug"></i> Webhooks</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Manage outbound webhooks for event-driven integrations.</p>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-webhooks' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-plug" style="margin-right:8px;color:var(--primary)"></i>Webhooks
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" id="newWebhookBtn"><i class="fas fa-plus"></i> New Webhook</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Manage outbound webhooks for event-driven integrations.</p>
+
+        <div class="stats-row" id="statsRow">
+          <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total</div></div>
+          <div class="stat-card"><div class="val" style="color:#28a745" id="statActive">—</div><div class="lbl">Active</div></div>
+          <div class="stat-card"><div class="val" style="color:#dc3545" id="statFailed">—</div><div class="lbl">Failed Deliveries</div></div>
+        </div>
+
+        <div class="filter-row">
+          <input type="text" id="filterSearch" placeholder="Filter by URL or user ID…" style="flex:1;min-width:180px">
+          <select id="filterStatus">
+            <option value="">All Status</option>
+            <option value="1">Active Only</option>
+            <option value="0">Inactive Only</option>
+          </select>
+          <button class="btn-secondary" id="refreshWebhooksBtn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+
+        <div id="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>URL</th>
+                <th>User ID</th>
+                <th>Events</th>
+                <th>Status</th>
+                <th>Deliveries</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="webhookTbody">
+              <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <button class="btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> New Webhook</button>
-    </div>
-
-    <div class="stats-row" id="statsRow">
-      <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total</div></div>
-      <div class="stat-card"><div class="val" style="color:#28a745" id="statActive">—</div><div class="lbl">Active</div></div>
-      <div class="stat-card"><div class="val" style="color:#dc3545" id="statFailed">—</div><div class="lbl">Failed Deliveries</div></div>
-    </div>
-
-    <div class="filter-row">
-      <input type="text" id="filterSearch" placeholder="Filter by URL or user ID…" oninput="renderTable()" style="flex:1;min-width:180px">
-      <select id="filterStatus" onchange="renderTable()">
-        <option value="">All Status</option>
-        <option value="1">Active Only</option>
-        <option value="0">Inactive Only</option>
-      </select>
-      <button class="btn-secondary" onclick="loadWebhooks()"><i class="fas fa-sync"></i> Refresh</button>
-    </div>
-
-    <div id="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>URL</th>
-            <th>User ID</th>
-            <th>Events</th>
-            <th>Status</th>
-            <th>Deliveries</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="webhookTbody">
-          <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
+    </main>
   </div>
-</div>
 
 <!-- Create/Edit Modal -->
 <div class="modal-overlay" id="webhookModal">
   <div class="modal">
-    <h2 id="modalTitle">New Webhook</h2>
+    <div class="modal-header">
+      <h2 id="modalTitle"><i class="fas fa-plug" style="margin-right:8px;color:var(--primary)"></i>New Webhook</h2>
+      <button class="modal-close" id="closeWebhookModalBtn">&times;</button>
+    </div>
     <input type="hidden" id="editId">
 
     <div class="form-group">
@@ -153,19 +169,19 @@
       </div>
     </div>
     <div id="modalError" style="color:#dc3545;margin-bottom:12px;display:none;"></div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" id="modalSaveBtn" onclick="saveWebhook()">Save</button>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelWebhookBtn">Cancel</button>
+      <button class="btn-primary" id="modalSaveBtn"><i class="fas fa-save"></i> Save</button>
     </div>
   </div>
 </div>
 
 <!-- Events Drawer -->
-<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer-overlay" id="drawerOverlay"></div>
 <div class="drawer" id="eventsDrawer">
   <div class="drawer-header">
     <h3 id="drawerTitle">Delivery History</h3>
-    <button class="btn-secondary btn-sm" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
+    <button class="btn-secondary btn-sm" id="closeDrawerBtn"><i class="fas fa-times"></i></button>
   </div>
   <div id="drawerContent"><p style="color:var(--text-muted)">Loading…</p></div>
 </div>

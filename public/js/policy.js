@@ -397,3 +397,13 @@ function getCurrentUserId() {
   console.warn('Could not determine user ID');
   return null;
 }
+
+// Page initialization
+document.addEventListener('DOMContentLoaded', function() {
+  loadUserPolicy();
+  loadWhitelistedDevices();
+  loadAuditLog();
+
+  document.getElementById('addDeviceBtn')?.addEventListener('click', addDevice);
+  document.getElementById('refreshAuditLogBtn')?.addEventListener('click', refreshAuditLog);
+});

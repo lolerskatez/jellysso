@@ -182,6 +182,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load settings on page load
   loadSettings();
+
+  // Wire up copy-to-clipboard buttons
+  document.querySelectorAll('[data-copy-target]').forEach(btn => {
+    btn.addEventListener('click', () => copyToClipboard(btn.dataset.copyTarget));
+  });
 });
 
 // Copy to clipboard helper

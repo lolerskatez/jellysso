@@ -500,17 +500,5 @@
     </div>
 
     <script src="/js/policy.js" nonce="<%= nonce %>"></script>
-    <script nonce="<%= nonce %>">
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadUserPolicy();
-            loadWhitelistedDevices();
-            loadAuditLog();
-            
-            // Add event listeners
-            document.getElementById('addDeviceBtn')?.addEventListener('click', addDevice);
-            document.getElementById('refreshAuditLogBtn')?.addEventListener('click', refreshAuditLog);
-        });
-    </script>
 </body>
 </html>

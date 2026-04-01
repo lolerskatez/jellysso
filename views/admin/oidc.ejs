@@ -497,10 +497,6 @@
 
   <script src="/js/mobile-nav.js"></script>
   <script src="/js/admin-oidc.js?v=2"></script>
-  <script nonce="<%= nonce %>">
-    document.querySelectorAll('[data-copy-target]').forEach(btn => {
-      btn.addEventListener('click', () => copyToClipboard(btn.dataset.copyTarget));
-    });
-  </script>
+  
 </body>
 </html>

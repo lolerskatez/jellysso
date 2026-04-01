@@ -717,6 +717,27 @@ function initPage() {
   var editTier = document.getElementById('editTier');
   if (editTier) editTier.addEventListener('change', updateStreamsFromTier);
 
+  // Add modal close/cancel buttons
+  document.getElementById('addModalClose')?.addEventListener('click', () => closeModal('addModal'));
+  document.getElementById('addModalCancel')?.addEventListener('click', () => closeModal('addModal'));
+  document.getElementById('addPasswordForm')?.addEventListener('submit', e => e.preventDefault());
+  document.getElementById('addSubmitBtn')?.addEventListener('click', submitAddUser);
+
+  // Edit modal close/cancel buttons and tab wiring
+  document.getElementById('editModalClose')?.addEventListener('click', () => closeModal('editModal'));
+  document.getElementById('editModalCancel')?.addEventListener('click', () => closeModal('editModal'));
+  document.getElementById('editPasswordForm')?.addEventListener('submit', e => e.preventDefault());
+  document.getElementById('tabBtnAccount')?.addEventListener('click', () => switchTab('account'));
+  document.getElementById('tabBtnPolicy')?.addEventListener('click', () => switchTab('policy'));
+  document.getElementById('clearExpiryBtn')?.addEventListener('click', clearExpiry);
+  document.getElementById('genPassBtn')?.addEventListener('click', generatePassword);
+  document.getElementById('editSaveBtn')?.addEventListener('click', saveChanges);
+
+  // Delete modal close/cancel/confirm buttons
+  document.getElementById('deleteModalClose')?.addEventListener('click', () => closeModal('deleteModal'));
+  document.getElementById('deleteModalCancel')?.addEventListener('click', () => closeModal('deleteModal'));
+  document.getElementById('deleteConfirmBtn')?.addEventListener('click', confirmDelete);
+
   // Backdrop click closes modals
   ['addModal', 'editModal', 'deleteModal'].forEach(function(id) {
     var modal = document.getElementById(id);

@@ -1010,4 +1010,69 @@ const AccountManager = {
 };
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => AccountManager.init());
+document.addEventListener('DOMContentLoaded', () => {
+  AccountManager.init();
+
+  // Account deletion button
+  document.getElementById('requestDeletionBtn')?.addEventListener('click', () => {
+    alert('Please contact an administrator to delete your account.');
+  });
+
+  // Renewal section (only active when window._renewalConfig is set)
+  const renewalConfig = window._renewalConfig;
+  if (renewalConfig) {
+    const observer = new MutationObserver(() => {
+      const daysEl = document.getElementById('expiryDaysValue');
+      if (!daysEl) return;
+      const match = daysEl.textContent.match(/^(-?\d+)/);
+      if (match) {
+        const days = parseInt(match[1]);
+        const section = document.getElementById('renewalSection');
+        const msg = document.getElementById('renewalMessage');
+        if (section) {
+          if (days <= renewalConfig.windowDays) {
+            section.style.display = '';
+            if (msg) {
+              msg.textContent = days < 0
+                ? 'Your account has expired. Contact the server administrator or request a renewal.'
+                : `Your account expires in ${days} day${days === 1 ? '' : 's'}. Request a renewal from the server administrator.`;
+            }
+          } else {
+            section.style.display = 'none';
+          }
+        }
+      }
+    });
+    const target = document.getElementById('expiryDaysValue');
+    if (target) observer.observe(target, { characterData: true, childList: true, subtree: true });
+
+    document.getElementById('renewalRequestBtn')?.addEventListener('click', submitRenewalRequest);
+  }
+});
+
+async function submitRenewalRequest() {
+  const btn = document.getElementById('renewalRequestBtn');
+  const statusEl = document.getElementById('renewalStatus');
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = 'Sending request...';
+  try {
+    const resp = await fetch('/api/user/renewal-request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': window._renewalConfig?.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
+    });
+    const data = await resp.json();
+    if (data.success) {
+      if (statusEl) { statusEl.textContent = '\u2705 ' + data.message; statusEl.style.color = 'var(--success)'; }
+      if (btn) btn.style.display = 'none';
+    } else {
+      if (statusEl) { statusEl.textContent = '\u274c ' + (data.error || 'Failed to send request'); statusEl.style.color = 'var(--danger)'; }
+      if (btn) btn.disabled = false;
+    }
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = '\u274c ' + e.message; statusEl.style.color = 'var(--danger)'; }
+    if (btn) btn.disabled = false;
+  }
+}

@@ -234,6 +234,22 @@ document.addEventListener('DOMContentLoaded', function() {
   loadMaintenanceHistory();
   // Load audit log stats on page load (powers the logging tab summary box)
   loadAuditLogStats();
+
+  // Toggle CAPTCHA fields when the captchaEnabled toggle is clicked
+  (function () {
+    const toggle = document.getElementById('captchaEnabledToggle');
+    const fields = document.getElementById('captchaFields');
+    if (toggle && fields) {
+      const observer = new MutationObserver(() => {
+        fields.style.display = toggle.classList.contains('active') ? '' : 'none';
+      });
+      observer.observe(toggle, { attributes: true, attributeFilter: ['class'] });
+    }
+  })();
+
+  // Test connection buttons
+  document.getElementById('testJellyseerrBtn')?.addEventListener('click', testJellyseerrConnection);
+  document.getElementById('testOmbiBtn')?.addEventListener('click', testOmbiConnection);
 });
 
 // Load maintenance history from audit logs
@@ -245,6 +261,78 @@ async function loadMaintenanceHistory() {
     if (!data.success) return;
     const el = id => document.getElementById(id);
     if (el('lastCleanupHistory'))  el('lastCleanupHistory').textContent  = data.history.lastCleanup;
+    if (el('lastOptimizeHistory')) el('lastOptimizeHistory').textContent = data.history.lastOptimize;
+    if (el('lastBackupHistory'))   el('lastBackupHistory').textContent   = data.history.lastBackup;
+  } catch (e) {
+    console.error('Failed to load maintenance history:', e);
+  }
+}
+
+// Test Jellyseerr connection
+async function testJellyseerrConnection() {
+  const btn = document.getElementById('testJellyseerrBtn');
+  const result = document.getElementById('jellyseerrTestResult');
+  const url = document.querySelector('#jellyseerr input[name="jellyseerrUrl"]')?.value || '';
+  const apiKey = document.querySelector('#jellyseerr input[name="jellyseerrApiKey"]')?.value || '';
+  if (!url) { result.textContent = 'Enter a Jellyseerr URL first.'; result.style.color = 'var(--danger)'; return; }
+  btn.disabled = true;
+  result.textContent = 'Testing...';
+  result.style.color = 'var(--text-secondary)';
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const resp = await fetch('/admin/api/jellyseerr/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+      body: JSON.stringify({ jellyseerrUrl: url, jellyseerrApiKey: apiKey })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      result.textContent = '\u2705 ' + (data.message || 'Connected');
+      result.style.color = 'var(--success)';
+    } else {
+      result.textContent = '\u274c ' + (data.message || 'Failed');
+      result.style.color = 'var(--danger)';
+    }
+  } catch (e) {
+    result.textContent = '\u274c ' + e.message;
+    result.style.color = 'var(--danger)';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Test Ombi connection
+async function testOmbiConnection() {
+  const btn = document.getElementById('testOmbiBtn');
+  const result = document.getElementById('ombiTestResult');
+  const url = document.querySelector('#ombi input[name="ombiUrl"]')?.value || '';
+  const apiKey = document.querySelector('#ombi input[name="ombiApiKey"]')?.value || '';
+  if (!url) { result.textContent = 'Enter an Ombi URL first.'; result.style.color = 'var(--danger)'; return; }
+  btn.disabled = true;
+  result.textContent = 'Testing...';
+  result.style.color = 'var(--text-secondary)';
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const resp = await fetch('/admin/api/ombi/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+      body: JSON.stringify({ ombiUrl: url, ombiApiKey: apiKey })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      result.textContent = '\u2705 ' + (data.message || 'Connected') + (data.version ? ' v' + data.version : '');
+      result.style.color = 'var(--success)';
+    } else {
+      result.textContent = '\u274c ' + (data.message || 'Failed');
+      result.style.color = 'var(--danger)';
+    }
+  } catch (e) {
+    result.textContent = '\u274c ' + e.message;
+    result.style.color = 'var(--danger)';
+  } finally {
+    btn.disabled = false;
+  }
+}
     if (el('lastOptimizeHistory')) el('lastOptimizeHistory').textContent = data.history.lastOptimize;
     if (el('lastBackupHistory'))   el('lastBackupHistory').textContent   = data.history.lastBackup;
   } catch (e) {

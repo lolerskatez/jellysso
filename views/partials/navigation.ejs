@@ -366,39 +366,4 @@
     </button>
   </div>
 </aside>
-<script nonce="<%= nonce %>">
-  (function () {
-    var groupMap = {
-      usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry', 'admin-labels'],
-      commsSubnav:    ['admin-notifications', 'admin-message-templates', 'admin-announcements'],
-      securitySubnav: ['admin-policy', 'admin-oidc', 'admin-lockouts', 'admin-security-alerts'],
-      devSubnav:      ['admin-api-keys', 'admin-webhooks'],
-      systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions', 'admin-system', 'admin-monitoring', 'admin-activity-log', 'admin-policy-audit', 'admin-device-whitelist']
-    };
-    var currentPage = '<%= currentPage %>';
-
-    document.querySelectorAll('.nav-group-btn').forEach(function (btn) {
-      var subnavId = btn.getAttribute('data-toggle');
-      var subnav = document.getElementById(subnavId);
-      if (!subnav) return;
-
-      function openGroup() {
-        subnav.classList.add('open');
-        btn.setAttribute('aria-expanded', 'true');
-      }
-      function closeGroup() {
-        subnav.classList.remove('open');
-        btn.setAttribute('aria-expanded', 'false');
-      }
-
-      // Auto-open if the current page belongs to this group
-      if (groupMap[subnavId] && groupMap[subnavId].includes(currentPage)) {
-        openGroup();
-      }
-
-      btn.addEventListener('click', function () {
-        subnav.classList.contains('open') ? closeGroup() : openGroup();
-      });
-    });
-  })();
-</script>
+<script>window._currentPage = '<%= currentPage %>';</script>

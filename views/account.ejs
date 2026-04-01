@@ -447,70 +447,7 @@
     </main>
   </div>
   <% if (renewalEnabled) { %>
-  <script nonce="<%= nonce %>">
-    // Show renewal section when account is expiring within the configured window
-    const _renewalWindowDays = <%= renewalWindowDays %>;
-    (function checkRenewalVisibility() {
-      // Poll until account data is loaded (account.js populates #expiryDaysValue)
-      const observer = new MutationObserver(() => {
-        const daysEl = document.getElementById('expiryDaysValue');
-        if (!daysEl) return;
-        const match = daysEl.textContent.match(/^(-?\d+)/);
-        if (match) {
-          const days = parseInt(match[1]);
-          const section = document.getElementById('renewalSection');
-          const msg = document.getElementById('renewalMessage');
-          if (section) {
-            if (days <= _renewalWindowDays) {
-              section.style.display = '';
-              if (msg) {
-                msg.textContent = days < 0
-                  ? 'Your account has expired. Contact the server administrator or request a renewal.'
-                  : `Your account expires in ${days} day${days === 1 ? '' : 's'}. Request a renewal from the server administrator.`;
-              }
-            } else {
-              section.style.display = 'none';
-            }
-          }
-        }
-      });
-      const target = document.getElementById('expiryDaysValue');
-      if (target) observer.observe(target, { characterData: true, childList: true, subtree: true });
-    })();
-
-    async function submitRenewalRequest() {
-      const btn = document.getElementById('renewalRequestBtn');
-      const statusEl = document.getElementById('renewalStatus');
-      if (btn) btn.disabled = true;
-      if (statusEl) statusEl.textContent = 'Sending request...';
-      try {
-        const resp = await fetch('/api/user/renewal-request', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': '<%= csrfToken %>'
-          }
-        });
-        const data = await resp.json();
-        if (data.success) {
-          if (statusEl) { statusEl.textContent = '\u2705 ' + data.message; statusEl.style.color = 'var(--success)'; }
-          if (btn) btn.style.display = 'none';
-        } else {
-          if (statusEl) { statusEl.textContent = '\u274c ' + (data.error || 'Failed to send request'); statusEl.style.color = 'var(--danger)'; }
-          if (btn) btn.disabled = false;
-        }
-      } catch (e) {
-        if (statusEl) { statusEl.textContent = '\u274c ' + e.message; statusEl.style.color = 'var(--danger)'; }
-        if (btn) btn.disabled = false;
-      }
-    }
-    document.getElementById('renewalRequestBtn')?.addEventListener('click', submitRenewalRequest);
-  </script>
+  <script>window._renewalConfig = { windowDays: <%= renewalWindowDays %>, csrfToken: '<%= csrfToken %>' };</script>
   <% } %>
-  <script nonce="<%= nonce %>">
-    document.getElementById('requestDeletionBtn')?.addEventListener('click', () => {
-      alert('Please contact an administrator to delete your account.');
-    });
-  </script>
 </body>
 </html>

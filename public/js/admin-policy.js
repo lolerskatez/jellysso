@@ -336,3 +336,28 @@ if (typeof window !== 'undefined') {
   window.escapeHtml = escapeHtml;
   console.log('admin-policy.js initialization complete');
 }
+
+// Page initialization: wire up all modal buttons and load data
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof window.loadTiers === 'function') {
+    try { window.loadTiers(); } catch (err) { console.error('Error calling loadTiers:', err.message); }
+  }
+
+  document.getElementById('btnOpenCreateModal')?.addEventListener('click', () => window.openCreateModal && window.openCreateModal());
+  document.getElementById('closeCreateModalBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('createModal'));
+  document.getElementById('cancelCreateBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('createModal'));
+  document.getElementById('createTierForm')?.addEventListener('submit', (e) => { e.preventDefault(); window.submitCreateTier && window.submitCreateTier(e); });
+  document.getElementById('createId')?.addEventListener('input', () => window.syncCreatePreview && window.syncCreatePreview());
+  document.getElementById('createDisplayName')?.addEventListener('input', () => window.syncCreatePreview && window.syncCreatePreview());
+  document.getElementById('createColor')?.addEventListener('input', () => window.syncCreatePreview && window.syncCreatePreview());
+
+  document.getElementById('closeEditModalBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('editModal'));
+  document.getElementById('cancelEditBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('editModal'));
+  document.getElementById('editTierForm')?.addEventListener('submit', (e) => { e.preventDefault(); window.submitEditTier && window.submitEditTier(e); });
+  document.getElementById('editDisplayName')?.addEventListener('input', () => window.syncEditPreview && window.syncEditPreview());
+  document.getElementById('editColor')?.addEventListener('input', () => window.syncEditPreview && window.syncEditPreview());
+
+  document.getElementById('closeDeleteModalBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('deleteModal'));
+  document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('deleteModal'));
+  document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => window.confirmDeleteTier && window.confirmDeleteTier());
+});

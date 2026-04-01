@@ -190,10 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
     instructionsBtn.addEventListener('click', showInstallationInstructions);
   }
 
-  // Bind modal close buttons
+  // Bind modal close buttons (by data attribute)
   document.querySelectorAll('[data-close-modal]').forEach(btn => {
     btn.addEventListener('click', closeInstructionsModal);
   });
+
+  // Bind instructions modal close button by ID
+  document.getElementById('instructionsModalClose')?.addEventListener('click', () => closeInstructionsModal());
 
   // Close modals when clicking outside
   document.addEventListener('click', (e) => {

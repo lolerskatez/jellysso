@@ -394,6 +394,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   loadConfiguration();
   loadLogs();
 
+  // Wire up copy-to-clipboard buttons
+  document.querySelectorAll('[data-copy-target]').forEach(btn => {
+    btn.addEventListener('click', () => window.copyToClipboard(btn.dataset.copyTarget));
+  });
+
   /**
    * Refresh status and logs every 30 seconds
    */

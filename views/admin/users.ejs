@@ -874,44 +874,6 @@
 </div>
 
 <script src="/js/admin-users.js"></script>
-<script nonce="<%= nonce %>">
-  // Track if external script loaded
-  console.log('After admin-users.js script tag: _adminUsersLoaded =', window._adminUsersLoaded);
-  
-  // Ensure functions are available before page initialization
-  (function() {
-    // Define fallbacks explicitly in global scope
-    window.loadData = window.loadData || function() { console.error('loadData not defined'); };
-    window.openAddUserModal = window.openAddUserModal || function() { console.error('openAddUserModal not defined'); };
-    window.openEditUserModal = window.openEditUserModal || function() { console.error('openEditUserModal not defined'); };
-    window.openDeleteModal = window.openDeleteModal || function() { console.error('openDeleteModal not defined'); };
-    window.closeModal = window.closeModal || function() { console.error('closeModal not defined'); };
-    window.confirmDelete = window.confirmDelete || function() { console.error('confirmDelete not defined'); };
-    window.applyFilter = window.applyFilter || function() { };
-    
-    console.log('After fallback setup:', {
-      loadData: typeof window.loadData,
-      openAddUserModal: typeof window.openAddUserModal,
-      _adminUsersLoaded: window._adminUsersLoaded
-    });
 
-    // Wire up inline handler replacements
-    document.getElementById('addModalClose')?.addEventListener('click', () => closeModal('addModal'));
-    document.getElementById('addModalCancel')?.addEventListener('click', () => closeModal('addModal'));
-    document.getElementById('addPasswordForm')?.addEventListener('submit', e => e.preventDefault());
-    document.getElementById('addSubmitBtn')?.addEventListener('click', submitAddUser);
-    document.getElementById('editModalClose')?.addEventListener('click', () => closeModal('editModal'));
-    document.getElementById('editModalCancel')?.addEventListener('click', () => closeModal('editModal'));
-    document.getElementById('editPasswordForm')?.addEventListener('submit', e => e.preventDefault());
-    document.getElementById('tabBtnAccount')?.addEventListener('click', () => switchTab('account'));
-    document.getElementById('tabBtnPolicy')?.addEventListener('click', () => switchTab('policy'));
-    document.getElementById('clearExpiryBtn')?.addEventListener('click', clearExpiry);
-    document.getElementById('genPassBtn')?.addEventListener('click', generatePassword);
-    document.getElementById('editSaveBtn')?.addEventListener('click', saveChanges);
-    document.getElementById('deleteModalClose')?.addEventListener('click', () => closeModal('deleteModal'));
-    document.getElementById('deleteModalCancel')?.addEventListener('click', () => closeModal('deleteModal'));
-    document.getElementById('deleteConfirmBtn')?.addEventListener('click', confirmDelete);
-  })();
-</script>
 </body>
 </html>

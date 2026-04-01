@@ -291,4 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', closeActivityModal);
     }
   });
+
+  // Additional button bindings
+  document.getElementById('logoutBtn')?.addEventListener('click', logout);
+  document.getElementById('createUserModalClose')?.addEventListener('click', closeModal);
 });

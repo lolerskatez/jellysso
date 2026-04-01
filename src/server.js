@@ -404,11 +404,13 @@ app.use('/api/user', require('./routes/user-account')); // User account info and
 app.use('/api/labels', require('./routes/labels')); // User labels and tagging system
 app.use('/policy', require('./routes/user-policy'));
 app.use('/setup', require('./routes/setup'));
+app.use('/api/swagger', require('./routes/swagger'));
 
 // OIDC routes - enable if you need external identity provider support
 if (process.env.ENABLE_OIDC === 'true') {
   const oidc = require('./oidc');
   app.use('/oidc', oidc.callback());
+  app.use('/oidc-auth', require('./routes/oidc-auth'));
   logger.info('OIDC provider enabled');
 }
 

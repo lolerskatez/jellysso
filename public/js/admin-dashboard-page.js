@@ -295,3 +295,42 @@ function showNotification(message, type = 'success') {
     setTimeout(() => notification.classList.remove('show'), 4000);
   }
 }
+
+// Phase 2: User Lifecycle Stats
+async function loadPhase2Stats() {
+  try {
+    const inviteRes = await fetch('/api/invites/stats');
+    const inviteData = await inviteRes.json();
+    if (inviteData.success) {
+      document.getElementById('phaseStatInvites').textContent = inviteData.stats.pending || 0;
+      document.getElementById('phaseStatAccepted').textContent = inviteData.stats.accepted || 0;
+    }
+    const expiryRes = await fetch('/api/users/expiry/stats');
+    const expiryData = await expiryRes.json();
+    if (expiryData.success) {
+      document.getElementById('phaseStatExpiring').textContent = expiryData.stats.expiringWithin7Days || 0;
+    }
+    try {
+      const profileRes = await fetch('/api/signup-profiles');
+      const profileData = await profileRes.json();
+      if (profileData.success) {
+        document.getElementById('phaseStatProfiles').textContent = profileData.profiles.filter(p => p.isActive).length || 0;
+      }
+    } catch (e) {
+      console.warn('Could not load profile stats:', e);
+      document.getElementById('phaseStatProfiles').textContent = '-';
+    }
+  } catch (error) {
+    console.error('Error loading Phase 2 stats:', error);
+    document.getElementById('phaseStatInvites').textContent = '0';
+    document.getElementById('phaseStatAccepted').textContent = '0';
+    document.getElementById('phaseStatExpiring').textContent = '0';
+    document.getElementById('phaseStatProfiles').textContent = '0';
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadPhase2Stats);
+} else {
+  loadPhase2Stats();
+}

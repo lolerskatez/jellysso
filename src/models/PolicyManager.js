@@ -286,51 +286,9 @@ class PolicyManager {
 
     } catch (error) {
       logger.error('Error checking stream permission:', error);
-      // On error, allow stream (fail-open approach)
-      return { allowed: true };
+      return { allowed: false, reason: 'policy_check_error' };
     }
   }
-
-  /**
-   * Check if device is whitelisted for user (if whitelist enabled)
-   */
-  // DEPRECATED: Device whitelist feature removed
-
-  /**
-   * Add device to whitelist
-   */
-  // DEPRECATED: Device whitelist feature removed
-
-  /**
-   * Remove device from whitelist
-   */
-  // DEPRECATED: Device whitelist feature removed
-
-  /**
-   * Get whitelisted devices for user
-   */
-  // DEPRECATED: Device whitelist feature removed
-
-  /**
-   * Enable/disable device whitelist for user
-   */
-  // DEPRECATED: Device whitelist feature removed
-
-  /**
-   * Check if current time is within user's access schedule
-   * Uses Jellyfin's AccessSchedules via API
-   */
-  // DEPRECATED: Access schedule feature removed
-
-  /**
-   * Check if day matches Jellyfin schedule patterns
-   */
-  // DEPRECATED: Access schedule feature removed
-
-  /**
-   * Enable/disable access schedule enforcement
-   */
-  // DEPRECATED: Access schedule feature removed
 
   /**
    * Log policy audit event
@@ -606,7 +564,7 @@ class PolicyManager {
       return { allowed: true };
     } catch (error) {
       logger.error('Error checking account access:', error);
-      return { allowed: true }; // Fail-open on unexpected error
+      return { allowed: false, reason: 'Account access check failed. Please try again later.' };
     }
   }
 

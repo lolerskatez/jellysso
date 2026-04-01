@@ -5,14 +5,15 @@
 
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
+const { RATE_LIMIT } = require('../config/constants');
 
 /**
  * Critical endpoints (login, password change, 2FA setup)
  * Very strict: 5 attempts per 15 minutes per IP
  */
 const criticalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  windowMs: RATE_LIMIT.CRITICAL.windowMs,
+  max: RATE_LIMIT.CRITICAL.max,
   message: 'Too many login attempts from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -44,8 +45,8 @@ const criticalLimiter = rateLimit({
  * Moderate: 20 attempts per 15 minutes per IP
  */
 const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  windowMs: RATE_LIMIT.ADMIN.windowMs,
+  max: RATE_LIMIT.ADMIN.max,
   message: 'Too many admin operations from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -78,8 +79,8 @@ const adminLimiter = rateLimit({
  * Lenient: 100 attempts per 15 minutes per IP
  */
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: RATE_LIMIT.API.windowMs,
+  max: RATE_LIMIT.API.max,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -108,8 +109,8 @@ const apiLimiter = rateLimit({
  * Moderate: 50 attempts per 15 minutes per IP
  */
 const publicLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50,
+  windowMs: RATE_LIMIT.PUBLIC.windowMs,
+  max: RATE_LIMIT.PUBLIC.max,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,

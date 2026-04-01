@@ -49,6 +49,34 @@ const MIGRATIONS = [
     version: 7,
     name: 'add_user_policies_allowDownloads',
     sql: 'ALTER TABLE user_policies ADD COLUMN allowDownloads INTEGER NOT NULL DEFAULT 1'
+  },
+  {
+    version: 8,
+    name: 'fix_message_templates_drop_invalid_fk',
+    // SQLite cannot drop constraints; recreate the table without the broken
+    // FOREIGN KEY (created_by) REFERENCES users(id) — 'created_by' stores a
+    // Jellyfin user ID that may not exist in the local 'users' table, which
+    // violates the FK when PRAGMA foreign_keys=ON.
+    sqls: [
+      `CREATE TABLE IF NOT EXISTS message_templates_new (
+         id TEXT PRIMARY KEY,
+         key TEXT UNIQUE NOT NULL,
+         title TEXT NOT NULL,
+         subject TEXT,
+         body TEXT NOT NULL,
+         format TEXT DEFAULT 'markdown',
+         variables JSON,
+         is_active BOOLEAN DEFAULT 1,
+         created_by TEXT,
+         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       )`,
+      'INSERT OR IGNORE INTO message_templates_new SELECT * FROM message_templates',
+      'DROP TABLE message_templates',
+      'ALTER TABLE message_templates_new RENAME TO message_templates',
+      'CREATE INDEX IF NOT EXISTS idx_message_templates_key ON message_templates(key)',
+      'CREATE INDEX IF NOT EXISTS idx_message_templates_active ON message_templates(is_active)'
+    ]
   }
 ];
 
@@ -82,8 +110,13 @@ async function runMigrations(db) {
   for (const migration of MIGRATIONS) {
     if (appliedVersions.has(migration.version)) continue;
 
+    // Support both single `sql` string and `sqls` array (for multi-step migrations)
+    const statements = migration.sqls || [migration.sql];
+
     try {
-      await run(migration.sql);
+      for (const stmt of statements) {
+        await run(stmt);
+      }
     } catch (err) {
       // Idempotent: skip structural conflicts from already-applied changes
       const msg = err.message || '';

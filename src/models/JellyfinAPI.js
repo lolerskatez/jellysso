@@ -791,6 +791,27 @@ class JellyfinAPI {
   }
 
   // Add more methods as needed
+
+  /**
+   * Return a long-lived singleton instance configured with the admin API key.
+   * Uses the same 5-minute in-memory cache across requests, avoiding repeated
+   * cold-cache Round-Trips to Jellyfin for admin dashboard operations.
+   *
+   * Call JellyfinAPI.resetAdminInstance() after changing server settings so the
+   * next request picks up the new URL / API key.
+   */
+  static getAdminInstance() {
+    if (!JellyfinAPI._adminInstance) {
+      const SetupManager = require('./SetupManager');
+      const config = SetupManager.getConfig();
+      JellyfinAPI._adminInstance = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+    }
+    return JellyfinAPI._adminInstance;
+  }
+
+  static resetAdminInstance() {
+    JellyfinAPI._adminInstance = null;
+  }
 }
 
 module.exports = JellyfinAPI;

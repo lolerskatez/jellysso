@@ -105,6 +105,63 @@ class OmbiManager {
   }
 
   /**
+   * Find an Ombi user by their Jellyfin user ID.
+   * Returns the Ombi user object or null if not found.
+   */
+  async _findOmbiUser(client, jellyfinUserId) {
+    const resp = await client.get('/api/v1/Identity/Users');
+    const users = Array.isArray(resp.data) ? resp.data : (resp.data?.result || []);
+    return users.find(u => u.jellyfinUserId === jellyfinUserId) || null;
+  }
+
+  /**
+   * Sync a user's email and display name from JellySSO's user_profiles table into Ombi.
+   * Call this after syncUser() to ensure profile data is kept in sync.
+   *
+   * @param {string} jellyfinUserId — Jellyfin user UUID
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async syncUserProfile(jellyfinUserId) {
+    const { url, apiKey, syncEnabled } = await this._getSettings();
+    if (!syncEnabled || !url || !apiKey) return { success: false, reason: 'disabled' };
+
+    try {
+      // Pull the user's email from JellySSO's local profile
+      const profile = await DatabaseManager.queryOne(
+        'SELECT email, display_name, first_name, last_name FROM user_profiles WHERE jellyfin_user_id = ?',
+        [jellyfinUserId]
+      );
+      if (!profile || !profile.email) {
+        return { success: false, reason: 'no_local_profile' };
+      }
+
+      const client = this._client(url, apiKey);
+      const ombiUser = await this._findOmbiUser(client, jellyfinUserId);
+      if (!ombiUser) {
+        return { success: false, reason: 'user_not_found_in_ombi' };
+      }
+
+      // Update the Ombi user's email (and display name when available)
+      const updates = {
+        ...ombiUser,
+        emailAddress: profile.email,
+        alias: profile.display_name ||
+               [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+               ombiUser.alias
+      };
+
+      await client.put(`/api/v1/Identity/${ombiUser.id}`, updates);
+      logger.info(`Ombi: updated profile for user ${jellyfinUserId} (email: ${profile.email})`);
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || err.message || '';
+      const msgStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
+      logger.warn(`Ombi: failed to update profile for ${jellyfinUserId}: ${msgStr}`);
+      return { success: false, reason: msgStr };
+    }
+  }
+
+  /**
    * Remove a user from Ombi by finding them by their Jellyfin user ID.
    *
    * @param {string} jellyfinUserId — Jellyfin user UUID
@@ -116,12 +173,7 @@ class OmbiManager {
 
     try {
       const client = this._client(url, apiKey);
-
-      // Fetch all Ombi users (small list in typical home-server setups)
-      const resp = await client.get('/api/v1/Identity/Users');
-      const users = Array.isArray(resp.data) ? resp.data : (resp.data?.result || []);
-
-      const match = users.find(u => u.jellyfinUserId === jellyfinUserId);
+      const match = await this._findOmbiUser(client, jellyfinUserId);
       if (!match) {
         logger.info(`Ombi: user ${jellyfinUserId} not found (may not have been synced)`);
         return { success: true }; // no-op is fine

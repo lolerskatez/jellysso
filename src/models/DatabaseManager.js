@@ -455,6 +455,28 @@ class DatabaseManager {
   }
 
   /**
+   * Count audit logs matching the given filters (without fetching rows)
+   */
+  countAuditLogs(options = {}) {
+    return new Promise((resolve, reject) => {
+      let query = 'SELECT COUNT(*) as total FROM audit_logs WHERE 1=1';
+      const params = [];
+
+      if (options.action) { query += ' AND action = ?'; params.push(options.action); }
+      if (options.userId) { query += ' AND userId = ?'; params.push(options.userId); }
+      if (options.resource) { query += ' AND resource = ?'; params.push(options.resource); }
+      if (options.status) { query += ' AND status = ?'; params.push(options.status); }
+      if (options.startDate) { query += ' AND timestamp >= ?'; params.push(options.startDate); }
+      if (options.endDate) { query += ' AND timestamp <= ?'; params.push(options.endDate); }
+
+      this.db.get(query, params, (err, row) => {
+        if (err) return reject(err);
+        resolve(row ? row.total : 0);
+      });
+    });
+  }
+
+  /**
    * Get audit logs with filtering
    */
   getAuditLogs(options = {}) {
@@ -489,6 +511,11 @@ class DatabaseManager {
 
       query += ' ORDER BY timestamp DESC LIMIT ?';
       params.push(Math.min(options.limit || 100, 10000));
+
+      if (options.offset) {
+        query += ' OFFSET ?';
+        params.push(options.offset);
+      }
 
       this.db.all(query, params, (err, rows) => {
         if (err) return reject(err);

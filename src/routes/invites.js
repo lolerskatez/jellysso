@@ -82,7 +82,8 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
       expiryDays = null,
       maxUses = 1,
       userExpiryDays = null,
-      label = null
+      label = null,
+      recipientEmail = null
     } = req.body;
 
     // Validate inputs
@@ -127,6 +128,31 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
       maxUses: safeMaxUses,
       userExpiryDays: safeUserExpiryDays
     });
+
+    // Deliver invite link via email if a recipient address was provided
+    const safeEmail = recipientEmail ? String(recipientEmail).trim() : null;
+    if (safeEmail && invites.length === 1) {
+      // Basic email format validation before attempting delivery
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail)) {
+        const inviteUrl = `${getBaseUrl(req)}/signup?invite=${invites[0].code}`;
+        const nm = NotificationManager.getInstance();
+        const expiryNote = invites[0].expiresAt
+          ? `This invite expires on ${new Date(invites[0].expiresAt).toLocaleDateString()}.`
+          : 'This invite has no expiry date.';
+        nm.sendEmailNotification(safeEmail, {
+          title: "You've been invited",
+          subject: "Your Invitation",
+          body: `You have been invited to create an account.\n\nClick the link below to get started:\n${inviteUrl}\n\n${expiryNote}`,
+          format: 'text'
+        }).catch(err => auditLogger.log('warn', 'INVITE_EMAIL_SEND_FAILED', {
+          userId: adminId,
+          recipientEmail: safeEmail,
+          error: err.message
+        }));
+      } else {
+        return res.status(400).json({ success: false, error: 'Invalid recipient email address' });
+      }
+    }
 
     res.json({
       success: true,

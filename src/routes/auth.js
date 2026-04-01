@@ -241,9 +241,18 @@ router.get('/validate-sso', (req, res) => {
   const { token } = req.query;
   const apiKey = req.headers['x-api-key'];
   
-  // Check API key (must match the apiKey configured in setup)
+  // Check API key using constant-time comparison to prevent timing attacks
   const expectedKey = SetupManager.getConfig().apiKey;
-  if (!expectedKey || apiKey !== expectedKey) {
+  const keyValid = expectedKey && apiKey && (() => {
+    try {
+      const a = Buffer.from(String(apiKey));
+      const b = Buffer.from(String(expectedKey));
+      return a.length === b.length && crypto.timingSafeEqual(a, b);
+    } catch {
+      return false;
+    }
+  })();
+  if (!keyValid) {
     return res.status(401).json({ valid: false, error: 'Invalid API key' });
   }
   
@@ -253,7 +262,7 @@ router.get('/validate-sso', (req, res) => {
   
   try {
     // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-jwt-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Check if token is not expired and contains valid user info
     if (decoded && decoded.userId && decoded.exp > Date.now() / 1000) {
@@ -1028,11 +1037,12 @@ router.post('/signup', criticalLimiter, async (req, res) => {
     JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
       logger.warn('Jellyseerr sync failed on signup:', e.message)
     );
-    // Sync the new user to Ombi (if enabled) — fire-and-forget
+    // Sync the new user to Ombi (if enabled) — fire-and-forget: import + profile
     const OmbiManager = require('../models/OmbiManager');
-    OmbiManager.getInstance().syncUser(newUser.Id).catch(e =>
-      logger.warn('Ombi sync failed on signup:', e.message)
-    );
+    const ombi = OmbiManager.getInstance();
+    ombi.syncUser(newUser.Id)
+      .then(() => ombi.syncUserProfile(newUser.Id))
+      .catch(e => logger.warn('Ombi sync failed on signup:', e.message));
 
     await AuditLogger.log({
       action: 'USER_SIGNUP',

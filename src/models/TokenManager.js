@@ -4,7 +4,10 @@ const logger = require('../utils/logger');
 
 class TokenManager {
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'default-jwt-secret';
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is required. Run the server once to auto-generate secrets.');
+    }
+    this.jwtSecret = process.env.JWT_SECRET;
     this.refreshTokens = new Map(); // In-memory store for refresh tokens (use Redis in production)
     this.tokenExpiry = 3600; // 1 hour in seconds
     this.refreshTokenExpiry = 2592000; // 30 days in seconds

@@ -25,7 +25,7 @@ if (!fsSyncApi.existsSync(uploadsDir)) {
 
 const upload = multer({ 
   dest: uploadsDir,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   fileFilter: (req, file, cb) => {
     if (file.originalname.endsWith('.db')) {
       cb(null, true);
@@ -45,8 +45,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     let enrichedLogs = recentLogs;
     let userCount = 0;
     try {
-      const config = SetupManager.getConfig();
-      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+      const jellyfin = JellyfinAPI.getAdminInstance();
       const users = await jellyfin.getUsers();
       userCount = users.length;
       
@@ -74,19 +73,16 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     let latestBackup = null;
 
     try {
-      const fs = require('fs');
-      const path = require('path');
       const backupDir = path.join(__dirname, '..', 'config', 'backups');
-      if (fs.existsSync(backupDir)) {
-        const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.db'));
-        backupCount = files.length;
-        if (files.length > 0) {
-          const sorted = files.map(f => ({
-            name: f,
-            time: fs.statSync(path.join(backupDir, f)).mtime
-          })).sort((a, b) => b.time - a.time);
-          latestBackup = sorted[0]?.time;
-        }
+      const files = (await fs.readdir(backupDir).catch(() => []))
+        .filter(f => f.endsWith('.db'));
+      backupCount = files.length;
+      if (files.length > 0) {
+        const entries = await Promise.all(
+          files.map(async f => ({ name: f, time: (await fs.stat(path.join(backupDir, f))).mtime }))
+        );
+        entries.sort((a, b) => b.time - a.time);
+        latestBackup = entries[0]?.time;
       }
     } catch (e) {
       appLogger.warn('Could not get backup info:', e.message);
@@ -121,8 +117,7 @@ router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
     // User count from Jellyfin
     let userCount = 0;
     try {
-      const config = SetupManager.getConfig();
-      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+      const jellyfin = JellyfinAPI.getAdminInstance();
       const users = await jellyfin.getUsers();
       userCount = users.length;
     } catch (e) {
@@ -133,7 +128,7 @@ router.get('/api/stats', requireAuth, requireAdmin, async (req, res) => {
     let dbSize = '—';
     try {
       const dbPath = path.join(__dirname, '../config/companion.db');
-      const stat = fsSyncApi.statSync(dbPath);
+      const stat = await fs.stat(dbPath);
       const kb = Math.round(stat.size / 1024);
       dbSize = kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB';
     } catch (e) {
@@ -165,29 +160,26 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { action, userId, status, limit = 25, page = 1, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-
-    // Fetch ALL matching logs (up to 10000) so totals/stats are accurate
-    const allMatchingLogs = await AuditLogger.getLogs({
+    const filters = {
       action: action || undefined,
       userId: userId || undefined,
       status: status || undefined,
       startDate: startDate || undefined,
-      endDate: endDate ? endDate + 'T23:59:59.999Z' : undefined,
-      limit: 10000
-    });
+      endDate: endDate ? endDate + 'T23:59:59.999Z' : undefined
+    };
 
-    const totalLogs = allMatchingLogs.length;
-    const paginatedLogs = allMatchingLogs.slice(offset, offset + parseInt(limit));
-
-    // Count success/failure stats across all matching logs (not just the current page)
-    const successCount = allMatchingLogs.filter(l => l.status === 'success').length;
-    const failureCount = allMatchingLogs.filter(l => l.status === 'failure').length;
+    // Fetch total count and per-status counts with efficient SQL queries
+    const [totalLogs, successCount, failureCount, paginatedLogs] = await Promise.all([
+      DatabaseManager.countAuditLogs(filters),
+      DatabaseManager.countAuditLogs({ ...filters, status: 'success' }),
+      DatabaseManager.countAuditLogs({ ...filters, status: 'failure' }),
+      AuditLogger.getLogs({ ...filters, limit: parseInt(limit), offset })
+    ]);
     
     // Enrich logs with usernames from Jellyfin
     let enrichedLogs = paginatedLogs;
     try {
-      const config = SetupManager.getConfig();
-      const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+      const jellyfin = JellyfinAPI.getAdminInstance();
       const jellyfinUsers = await jellyfin.getUsers();
       
       // Create a map of userId to username
@@ -273,11 +265,12 @@ router.post('/api/users/create', requireAuth, requireAdmin, async (req, res) => 
     JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
       appLogger.warn('Jellyseerr sync failed on admin user create:', e.message)
     );
-    // Sync new user to Ombi (fire-and-forget)
+    // Sync new user to Ombi (fire-and-forget: import + profile)
     const OmbiManager = require('../models/OmbiManager');
-    OmbiManager.getInstance().syncUser(newUser.Id).catch(e =>
-      appLogger.warn('Ombi sync failed on admin user create:', e.message)
-    );
+    const ombi = OmbiManager.getInstance();
+    ombi.syncUser(newUser.Id)
+      .then(() => ombi.syncUserProfile(newUser.Id))
+      .catch(e => appLogger.warn('Ombi sync failed on admin user create:', e.message));
 
     // Log the action
     await AuditLogger.log({
@@ -1239,16 +1232,14 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
 
     // Validate file extension
     if (!req.file.originalname.endsWith('.db')) {
-      fsSyncApi.unlinkSync(req.file.path);
+      await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({ success: false, message: 'Invalid file type. Please upload a .db file' });
     }
 
     const backupsDir = path.join(__dirname, '..', 'config', 'backups');
     
     // Ensure backups directory exists
-    if (!fsSyncApi.existsSync(backupsDir)) {
-      fsSyncApi.mkdirSync(backupsDir, { recursive: true });
-    }
+    await fs.mkdir(backupsDir, { recursive: true });
 
     // Generate a unique filename for the imported backup
     const date = new Date();
@@ -1257,7 +1248,7 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
     let counter = 1;
     
     // If file already exists, add a counter
-    while (fsSyncApi.existsSync(path.join(backupsDir, importedName))) {
+    while (await fs.stat(path.join(backupsDir, importedName)).then(() => true).catch(() => false)) {
       importedName = `companion-imported-${timestamp}-${counter}.db`;
       counter++;
     }
@@ -1274,7 +1265,7 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
     }
 
     // Get file stats
-    const stats = fsSyncApi.statSync(finalPath);
+    const stats = await fs.stat(finalPath);
 
     // Log to audit logs
     try {
@@ -1299,12 +1290,10 @@ router.post('/api/backups/import', requireAuth, requireAdmin, upload.single('bac
   } catch (error) {
     appLogger.error('Import backup error:', error);
     // Clean up file if it exists
-    if (req.file && fsSyncApi.existsSync(req.file.path)) {
-      try {
-        fsSyncApi.unlinkSync(req.file.path);
-      } catch (cleanupError) {
+    if (req.file) {
+      await fs.unlink(req.file.path).catch(cleanupError => {
         appLogger.error('Error cleaning up uploaded file:', cleanupError);
-      }
+      });
     }
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1605,6 +1594,8 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         updates.apiKey = s.apiKey.trim();
       }
       SetupManager.updateConfig(updates);
+      // Invalidate the admin Jellyfin singleton so next request picks up new URL/key
+      JellyfinAPI.resetAdminInstance();
 
     } else if (section === 'security') {
       if (s.csrfProtection   !== undefined) await DatabaseManager.setSetting('csrf_protection',    String(s.csrfProtection));

@@ -163,11 +163,11 @@ app.use(helmet({
 
 app.use(securityConfig.getRateLimiterMiddleware()); // Dynamic rate limiting — reads rateLimitEnabled + rateLimit from DB
 
-// Fail fast in production if SESSION_SECRET is missing
+// Fail fast if SESSION_SECRET is missing (in all environments — ensureSecrets() should have generated it)
 const sessionSecret = process.env.SESSION_SECRET;
-if (isProduction && (!sessionSecret || sessionSecret === 'default-secret')) {
-  logger.error('❌ Unable to generate SESSION_SECRET in production.');
-  logger.error('   Please set SESSION_SECRET manually in .env with: openssl rand -hex 32');
+if (!sessionSecret || sessionSecret === 'default-secret') {
+  logger.error('❌ SESSION_SECRET is not set or is still the insecure default.');
+  logger.error('   Delete your .env file and restart to auto-generate secrets, or set SESSION_SECRET manually.');
   process.exit(1);
 }
 
@@ -189,7 +189,7 @@ const sessionTimeoutManager = new SessionTimeoutManager(sessionStore);
 // at cloudflared - the user's connection is still secure.
 app.use(session({
   store: sessionStore,
-  secret: sessionSecret || 'default-secret',
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   proxy: true, // Trust the reverse proxy

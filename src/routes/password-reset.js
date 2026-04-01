@@ -205,4 +205,92 @@ router.post('/reset-password', publicLimiter, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/pin-reset
+ * Apply a Jellyfin-generated PIN to set a new password.
+ * The PIN payload is a base64url-encoded JSON object placed by JellyfinPinWatcher
+ * into the link: { pin, username, userId }
+ */
+router.post('/pin-reset', publicLimiter, async (req, res) => {
+  try {
+    const { data, newPassword } = req.body;
+
+    if (!data || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+    }
+
+    // Decode the PIN payload
+    let payload;
+    try {
+      payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
+    } catch {
+      return res.status(400).json({ success: false, message: 'Invalid reset data' });
+    }
+
+    const { pin, username, userId } = payload;
+    if (!pin || !username) {
+      return res.status(400).json({ success: false, message: 'Invalid reset data' });
+    }
+
+    // Use the Jellyfin PIN to authenticate the reset (verify PIN is accepted by Jellyfin)
+    let jellyfin;
+    try {
+      jellyfin = new JellyfinAPI(SetupManager.getConfig().jellyfinUrl, SetupManager.getConfig().apiKey);
+    } catch (err) {
+      logger.error('PIN reset: failed to init Jellyfin API:', err.message);
+      return res.status(500).json({ success: false, message: 'Service temporarily unavailable' });
+    }
+
+    // Apply the PIN (this validates it against Jellyfin and sets the password to PIN first)
+    try {
+      await jellyfin.resetPasswordWithPin(username, pin);
+    } catch (err) {
+      logger.warn(`PIN reset: Jellyfin PIN application failed for ${username}: ${err.message}`);
+      await AuditLogger.log('PIN_RESET_INVALID', userId || 'unknown', 'auth:pin-reset',
+        { username }, 'failure', req.ip);
+      return res.status(400).json({ success: false, message: 'PIN is invalid or has expired' });
+    }
+
+    // Now set the user's desired new password
+    try {
+      await jellyfin.updateUserPassword(userId || username, pin, newPassword);
+    } catch (err) {
+      logger.error(`PIN reset: failed to set new password for ${username}: ${err.message}`);
+      return res.status(500).json({ success: false, message: 'Failed to set new password' });
+    }
+
+    await AuditLogger.log('PIN_RESET_SUCCESS', userId || username, 'auth:pin-reset',
+      { username }, 'success', req.ip);
+
+    res.json({ success: true, message: 'Password reset successful. You can now log in.' });
+  } catch (err) {
+    logger.error('PIN reset error:', err.message);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+  }
+});
+
+/**
+ * GET /api/auth/pin-reset/config
+ * Returns whether PIN-file password reset is enabled (for UI feature detection).
+ * Admin-only.
+ */
+router.get('/pin-reset/config', requireAuth, async (req, res) => {
+  try {
+    const DatabaseManager = require('../models/DatabaseManager');
+    const configDir = await DatabaseManager.getSetting('jellyfin_config_dir');
+    const mode = (await DatabaseManager.getSetting('pin_reset_mode')) || 'link';
+    res.json({
+      enabled: !!configDir,
+      configDir: configDir || null,
+      mode
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

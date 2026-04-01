@@ -58,7 +58,21 @@ function ensureSecrets() {
     needsUpdate = true;
     logger.info('✅ Generated new SESSION_SECRET');
   }
-  
+
+  // Generate COOKIE_SECRET if missing or default (used by OIDC provider)
+  if (!secrets.COOKIE_SECRET || secrets.COOKIE_SECRET === 'some-secret-key') {
+    secrets.COOKIE_SECRET = crypto.randomBytes(32).toString('hex');
+    needsUpdate = true;
+    logger.info('✅ Generated new COOKIE_SECRET');
+  }
+
+  // Generate OIDC_CLIENT_SECRET if missing or default
+  if (!secrets.OIDC_CLIENT_SECRET || secrets.OIDC_CLIENT_SECRET === 'companion-secret') {
+    secrets.OIDC_CLIENT_SECRET = crypto.randomBytes(32).toString('hex');
+    needsUpdate = true;
+    logger.info('✅ Generated new OIDC_CLIENT_SECRET');
+  }
+
   // Write back to .env if any secrets were generated
   if (needsUpdate) {
     const newEnvContent = Object.entries(secrets)
@@ -749,6 +763,16 @@ app.listen(PORT, () => {
 
 // Start maintenance scheduler
 MaintenanceScheduler.start();
+
+// Start Jellyfin PIN-file watcher (for ForgotPassword flow from Jellyfin login screen)
+require('./services/JellyfinPinWatcher').start().catch(err =>
+  logger.warn('JellyfinPinWatcher failed to start:', err.message)
+);
+
+// Start session enforcement service (stops streams exceeding tier limits)
+require('./services/SessionEnforcementService').start().catch(err =>
+  logger.warn('SessionEnforcementService failed to start:', err.message)
+);
 
 // Initialise security config from DB so rate-limit max is correct from the first request
 DatabaseManager.getSetting('rate_limit').then(val => {

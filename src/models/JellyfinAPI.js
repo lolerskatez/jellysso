@@ -290,6 +290,38 @@ class JellyfinAPI {
     }
   }
 
+  /**
+   * Apply a Jellyfin-generated PIN to a username (ForgotPassword flow).
+   * Submits the PIN to Jellyfin's /Users/ForgotPassword/Pin endpoint.
+   */
+  async resetPasswordWithPin(username, pin) {
+    try {
+      const response = await this.client.post('/Users/ForgotPassword/Pin', {
+        Pin: pin
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleApiError(error, `PIN reset for ${username}`);
+    }
+  }
+
+  /**
+   * Change a user's password given the current (old) password and the new one.
+   * Used after applying a PIN to immediately set a user-chosen password.
+   */
+  async updateUserPassword(userId, currentPassword, newPassword) {
+    try {
+      const response = await this.client.post(`/Users/${userId}/Password`, {
+        Id: userId,
+        CurrentPw: currentPassword,
+        NewPw: newPassword
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleApiError(error, `update password for user ${userId}`);
+    }
+  }
+
   async deleteUser(userId) {
     try {
       // Jellyfin API returns 204 No Content on success

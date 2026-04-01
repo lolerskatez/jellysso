@@ -219,8 +219,9 @@ class LabelManager {
    * @returns {Promise<boolean>} Success
    */
   async deleteLabel(labelId, deletedBy) {
+    const db = this.db;
     return new Promise((resolve, reject) => {
-      this.db.run(`
+      db.run(`
         UPDATE labels
         SET isActive = 0, updatedAt = CURRENT_TIMESTAMP
         WHERE id = ?
@@ -228,7 +229,7 @@ class LabelManager {
         if (err) reject(err);
         else {
           // Also remove all user associations with this label
-          this.db.run(`
+          db.run(`
             DELETE FROM user_labels WHERE labelId = ?
           `, [labelId], (delErr) => {
             if (delErr) logger.error('Error removing user label associations:', delErr);

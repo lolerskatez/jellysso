@@ -355,23 +355,6 @@ class SignupProfileManager {
               isActive = current.isActive
             } = updates;
 
-            // Validate name uniqueness if changed
-            if (name !== current.name) {
-              this.db.get(
-                'SELECT id FROM signup_profiles WHERE name = ? AND id != ?',
-                [name, profileId],
-                (err, existing) => {
-                  if (existing) {
-                    return reject(new Error('Profile name already exists'));
-                  }
-
-                  this.performUpdate();
-                }
-              );
-            } else {
-              this.performUpdate();
-            }
-
             const performUpdate = () => {
               this.db.run(
                 `UPDATE signup_profiles 
@@ -389,9 +372,9 @@ class SignupProfileManager {
                   now.toISOString(),
                   profileId
                 ],
-                (err) => {
-                  if (err) {
-                    this.logger.log('error', 'PROFILE_UPDATE_FAIL', { profileId, error: err.message });
+                (updateErr) => {
+                  if (updateErr) {
+                    this.logger.log('error', 'PROFILE_UPDATE_FAIL', { profileId, error: updateErr.message });
                     return reject(new Error('Failed to update profile'));
                   }
 
@@ -411,6 +394,26 @@ class SignupProfileManager {
                 }
               );
             };
+
+            // Validate name uniqueness if changed
+            if (name !== current.name) {
+              this.db.get(
+                'SELECT id FROM signup_profiles WHERE name = ? AND id != ?',
+                [name, profileId],
+                (nameCheckErr, existing) => {
+                  if (nameCheckErr) {
+                    this.logger.log('error', 'PROFILE_UPDATE_NAME_CHECK', { profileId, error: nameCheckErr.message });
+                    return reject(new Error('Database error'));
+                  }
+                  if (existing) {
+                    return reject(new Error('Profile name already exists'));
+                  }
+                  performUpdate();
+                }
+              );
+            } else {
+              performUpdate();
+            }
           }
         );
       } catch (error) {

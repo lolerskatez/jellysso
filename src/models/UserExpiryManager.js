@@ -397,6 +397,7 @@ class UserExpiryManager {
    * @returns {Promise<number>} Number of users deleted
    */
   async bulkCleanupDisabledUsers(olderThanDays = 90) {
+    const log = this.logger;
     return new Promise((resolve, reject) => {
       try {
         const cutoffDate = new Date();
@@ -412,13 +413,13 @@ class UserExpiryManager {
           [cutoffDate.toISOString()],
           function (err) {
             if (err) {
-              this.logger.log('error', 'CLEANUP_ERROR', { error: err.message });
+              log.log('error', 'CLEANUP_ERROR', { error: err.message });
               return reject(new Error('Failed to cleanup users'));
             }
 
             const deletedCount = this.changes;
             if (deletedCount > 0) {
-              this.logger.log('info', 'USERS_CLEANUP_COMPLETE', { deletedCount, olderThanDays });
+              log.log('info', 'USERS_CLEANUP_COMPLETE', { deletedCount, olderThanDays });
             }
             resolve(deletedCount);
           }

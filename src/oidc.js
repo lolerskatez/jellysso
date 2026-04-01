@@ -32,14 +32,22 @@ const SCOPES = {
   'api': 'Full API access'
 };
 
+// Fail fast if required secrets are missing — never silently use weak defaults
+if (!process.env.COOKIE_SECRET) {
+  throw new Error('COOKIE_SECRET environment variable is required but not set. Run the server once to auto-generate it.');
+}
+if (!process.env.OIDC_CLIENT_SECRET) {
+  throw new Error('OIDC_CLIENT_SECRET environment variable is required but not set. Run the server once to auto-generate it.');
+}
+
 const configuration = {
   cookies: {
-    keys: [process.env.COOKIE_SECRET || 'some-secret-key']
+    keys: [process.env.COOKIE_SECRET]
   },
   clients: [
     {
       client_id: 'jellyfin-companion',
-      client_secret: process.env.OIDC_CLIENT_SECRET || 'companion-secret',
+      client_secret: process.env.OIDC_CLIENT_SECRET,
       grant_types: ['authorization_code', 'refresh_token', 'client_credentials'],
       redirect_uris: [
         `${getPublicUrl()}/auth/callback`,

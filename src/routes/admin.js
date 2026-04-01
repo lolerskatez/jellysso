@@ -273,6 +273,11 @@ router.post('/api/users/create', requireAuth, requireAdmin, async (req, res) => 
     JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
       appLogger.warn('Jellyseerr sync failed on admin user create:', e.message)
     );
+    // Sync new user to Ombi (fire-and-forget)
+    const OmbiManager = require('../models/OmbiManager');
+    OmbiManager.getInstance().syncUser(newUser.Id).catch(e =>
+      appLogger.warn('Ombi sync failed on admin user create:', e.message)
+    );
 
     // Log the action
     await AuditLogger.log({
@@ -399,6 +404,11 @@ router.delete('/users/:userId', requireAuth, requireAdmin, async (req, res) => {
     JellyseerrManager.getInstance().removeUser(userId).catch(e =>
       appLogger.warn('Jellyseerr remove failed on user delete:', e.message)
     );
+    // Remove from Ombi (fire-and-forget)
+    const OmbiManager = require('../models/OmbiManager');
+    OmbiManager.getInstance().removeUser(userId).catch(e =>
+      appLogger.warn('Ombi remove failed on user delete:', e.message)
+    );
     
     // Log the action
     await AuditLogger.log({
@@ -455,6 +465,10 @@ router.delete('/api/users/:userId', requireAuth, requireAdmin, async (req, res) 
     // Remove from Jellyseerr (fire-and-forget)
     JellyseerrManager.getInstance().removeUser(userId).catch(e =>
       appLogger.warn('Jellyseerr remove failed on user delete (alt path):', e.message)
+    );
+    // Remove from Ombi (fire-and-forget)
+    require('../models/OmbiManager').getInstance().removeUser(userId).catch(e =>
+      appLogger.warn('Ombi remove failed on user delete (alt path):', e.message)
     );
     
     // Log the action
@@ -611,6 +625,13 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       jellyseerrUrl:         rawSettings.jellyseerr_url          || '',
       jellyseerrSyncEnabled: rawSettings.jellyseerr_sync_enabled === 'true',
       // jellyseerr_api_key intentionally excluded — never sent to browser
+      // Ombi
+      ombiUrl:         rawSettings.ombi_url          || '',
+      ombiSyncEnabled: rawSettings.ombi_sync_enabled === 'true',
+      // ombi_api_key intentionally excluded — never sent to browser
+      // Session Enforcement
+      sessionEnforcementEnabled:  rawSettings.session_enforcement_enabled  === 'true',
+      sessionEnforcementInterval: parseInt(rawSettings.session_enforcement_interval) || 60,
       // Renewal
       renewalEnabled:     rawSettings.renewal_enabled      === 'true',
       renewalWindowDays:  parseInt(rawSettings.renewal_window_days) || 30,
@@ -1436,6 +1457,23 @@ router.post('/api/oidc/test', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Test Ombi connection
+router.post('/api/ombi/test', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { ombiUrl, ombiApiKey } = req.body;
+    if (ombiUrl) await DatabaseManager.setSetting('ombi_url', String(ombiUrl).trim());
+    if (ombiApiKey && !/^\u2022/.test(String(ombiApiKey).trim())) {
+      await DatabaseManager.setSetting('ombi_api_key', String(ombiApiKey).trim());
+    }
+    const OmbiManager = require('../models/OmbiManager');
+    const result = await OmbiManager.getInstance().testConnection();
+    res.json(result);
+  } catch (error) {
+    appLogger.error('Ombi test error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Test Jellyseerr connection
 router.post('/api/jellyseerr/test', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -1461,8 +1499,10 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
     const [expiryReminderDays, expiryAction, expiryGraceDays,
            captchaEnabled, captchaProvider, captchaSiteKey,
            jellyseerrUrl, jellyseerrSyncEnabled,
+           ombiUrl, ombiSyncEnabled,
            renewalEnabled, renewalWindowDays,
-           referralsEnabled, maxReferralsPerUser] = await Promise.all([
+           referralsEnabled, maxReferralsPerUser,
+           sessionEnforcementEnabled, sessionEnforcementInterval] = await Promise.all([
       DatabaseManager.getSetting('expiry_reminder_days'),
       DatabaseManager.getSetting('expiry_action'),
       DatabaseManager.getSetting('expiry_grace_days'),
@@ -1471,10 +1511,14 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       DatabaseManager.getSetting('captcha_site_key'),
       DatabaseManager.getSetting('jellyseerr_url'),
       DatabaseManager.getSetting('jellyseerr_sync_enabled'),
+      DatabaseManager.getSetting('ombi_url'),
+      DatabaseManager.getSetting('ombi_sync_enabled'),
       DatabaseManager.getSetting('renewal_enabled'),
       DatabaseManager.getSetting('renewal_window_days'),
       DatabaseManager.getSetting('referrals_enabled'),
-      DatabaseManager.getSetting('max_referrals_per_user')
+      DatabaseManager.getSetting('max_referrals_per_user'),
+      DatabaseManager.getSetting('session_enforcement_enabled'),
+      DatabaseManager.getSetting('session_enforcement_interval')
     ]);
     res.json({
       success: true,
@@ -1509,6 +1553,15 @@ router.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         jellyseerrUrl: jellyseerrUrl || '',
         jellyseerrSyncEnabled: jellyseerrSyncEnabled === 'true'
         // jellyseerrApiKey intentionally omitted — never sent to browser
+      },
+      ombiSettings: {
+        ombiUrl: ombiUrl || '',
+        ombiSyncEnabled: ombiSyncEnabled === 'true'
+        // ombiApiKey intentionally omitted — never sent to browser
+      },
+      sessionEnforcementSettings: {
+        sessionEnforcementEnabled: sessionEnforcementEnabled === 'true',
+        sessionEnforcementInterval: parseInt(sessionEnforcementInterval) || 60
       },
       renewalSettings: {
         renewalEnabled: renewalEnabled === 'true',
@@ -1623,9 +1676,23 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
         await DatabaseManager.setSetting('jellyseerr_api_key', String(s.jellyseerrApiKey).trim());
       }
 
+    } else if (section === 'ombi') {
+      if (s.ombiSyncEnabled !== undefined) await DatabaseManager.setSetting('ombi_sync_enabled', String(s.ombiSyncEnabled));
+      if (s.ombiUrl !== undefined) await DatabaseManager.setSetting('ombi_url', String(s.ombiUrl).trim());
+      // API key: only update when a real value is sent (not blank or masked)
+      if (s.ombiApiKey && String(s.ombiApiKey).trim() && !/^\u2022/.test(String(s.ombiApiKey).trim())) {
+        await DatabaseManager.setSetting('ombi_api_key', String(s.ombiApiKey).trim());
+      }
+
     } else if (section === 'renewal') {
       if (s.renewalEnabled     !== undefined) await DatabaseManager.setSetting('renewal_enabled',      String(s.renewalEnabled));
       if (s.renewalWindowDays  !== undefined) await DatabaseManager.setSetting('renewal_window_days',  String(Math.max(1, parseInt(s.renewalWindowDays) || 30)));
+
+    } else if (section === 'sessionEnforcement') {
+      if (s.sessionEnforcementEnabled  !== undefined) await DatabaseManager.setSetting('session_enforcement_enabled',  String(s.sessionEnforcementEnabled));
+      if (s.sessionEnforcementInterval !== undefined) await DatabaseManager.setSetting('session_enforcement_interval', String(Math.max(30, parseInt(s.sessionEnforcementInterval) || 60)));
+      // Restart enforcement service so the new settings take effect immediately
+      require('../services/SessionEnforcementService').restart().catch(e => appLogger.warn('Enforcement restart:', e.message));
 
     } else if (section === 'referral') {
       if (s.referralsEnabled      !== undefined) await DatabaseManager.setSetting('referrals_enabled',       String(s.referralsEnabled));

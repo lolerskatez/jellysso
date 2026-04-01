@@ -1028,6 +1028,11 @@ router.post('/signup', criticalLimiter, async (req, res) => {
     JellyseerrManager.getInstance().syncUser(newUser.Id).catch(e =>
       logger.warn('Jellyseerr sync failed on signup:', e.message)
     );
+    // Sync the new user to Ombi (if enabled) — fire-and-forget
+    const OmbiManager = require('../models/OmbiManager');
+    OmbiManager.getInstance().syncUser(newUser.Id).catch(e =>
+      logger.warn('Ombi sync failed on signup:', e.message)
+    );
 
     await AuditLogger.log({
       action: 'USER_SIGNUP',

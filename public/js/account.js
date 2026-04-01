@@ -717,29 +717,220 @@ const AccountManager = {
   },
 
   /**
-   * Enable a contact method (placeholder for full implementation)
+   * Show modal to add a new contact method
+   */
+  async showAddContactMethodModal() {
+    this._showContactMethodModal(null);
+  },
+
+  /**
+   * Enable a contact method — open the add-contact modal pre-selecting the given method.
    */
   async enableContactMethod(method) {
-    // This would typically open a modal to add the contact method
-    alert(`Enable ${method} contact method - implementation pending`);
+    this._showContactMethodModal(method);
   },
 
   /**
-   * Verify a contact method (placeholder for full implementation)
+   * Internal: renders a lightweight inline modal for adding a contact method.
+   * @param {string|null} preselect - 'discord', 'telegram', 'matrix', or null
+   */
+  _showContactMethodModal(preselect) {
+    // Remove any existing modal
+    document.getElementById('_cmModal')?.remove();
+
+    const labels = { discord: 'Discord User ID', telegram: 'Telegram Chat ID', matrix: 'Matrix User ID (@user:server)' };
+    const placeholders = { discord: 'e.g. 123456789012345678', telegram: 'e.g. -100123456789', matrix: 'e.g. @you:matrix.org' };
+
+    const modal = document.createElement('div');
+    modal.id = '_cmModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:var(--card-bg,#1e1e2e);border-radius:12px;padding:32px;min-width:340px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5);">
+        <h3 style="margin:0 0 16px;font-size:1.1rem;">Add Contact Method</h3>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:6px;font-size:.875rem;">Method</label>
+          <select id="_cmMethod" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border-color,#333);background:var(--input-bg,#2a2a3a);color:inherit;">
+            <option value="discord" ${preselect === 'discord' ? 'selected' : ''}>Discord</option>
+            <option value="telegram" ${preselect === 'telegram' ? 'selected' : ''}>Telegram</option>
+            <option value="matrix" ${preselect === 'matrix' ? 'selected' : ''}>Matrix</option>
+          </select>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label id="_cmIdLabel" style="display:block;margin-bottom:6px;font-size:.875rem;">${labels[preselect || 'discord']}</label>
+          <input id="_cmContactId" type="text" placeholder="${placeholders[preselect || 'discord']}"
+            style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border-color,#333);background:var(--input-bg,#2a2a3a);color:inherit;box-sizing:border-box;">
+        </div>
+        <div id="_cmError" style="color:var(--danger,#e53e3e);font-size:.875rem;margin-bottom:12px;display:none;"></div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button id="_cmCancelBtn" class="btn btn-secondary">Cancel</button>
+          <button id="_cmSaveBtn" class="btn btn-primary">Add &amp; Send Code</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(modal);
+
+    const methodSel = modal.querySelector('#_cmMethod');
+    const idInput = modal.querySelector('#_cmContactId');
+    const label = modal.querySelector('#_cmIdLabel');
+    const errEl = modal.querySelector('#_cmError');
+
+    methodSel.addEventListener('change', () => {
+      const m = methodSel.value;
+      label.textContent = labels[m];
+      idInput.placeholder = placeholders[m];
+    });
+
+    modal.querySelector('#_cmCancelBtn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    modal.querySelector('#_cmSaveBtn').addEventListener('click', async () => {
+      const method = methodSel.value;
+      const contactId = idInput.value.trim();
+      if (!contactId) { errEl.textContent = 'Please enter a contact ID.'; errEl.style.display = ''; return; }
+      errEl.style.display = 'none';
+      const saveBtn = modal.querySelector('#_cmSaveBtn');
+      saveBtn.disabled = true; saveBtn.textContent = 'Sending...';
+
+      try {
+        const resp = await fetch('/api/contact-methods', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.csrfToken },
+          body: JSON.stringify({ method, contactId })
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.error || 'Failed to add contact method');
+
+        modal.remove();
+        // Show verification code input
+        this._showVerifyModal(method, data.verification.id);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = '';
+        saveBtn.disabled = false; saveBtn.textContent = 'Add & Send Code';
+      }
+    });
+  },
+
+  /**
+   * Verify a contact method that is pending verification.
+   * Re-sends a new verification code by re-registering the method.
    */
   async verifyContactMethod(method) {
-    // This would typically open a verification modal
-    alert(`Verify ${method} contact method - implementation pending`);
+    // Fetch raw contact methods to get the stored ID
+    try {
+      const resp = await fetch('/api/contact-methods');
+      const data = await resp.json();
+      if (!data.success) throw new Error('Failed to load contact methods');
+
+      const idMap = {
+        discord: data.methods?.discord_user_id,
+        telegram: data.methods?.telegram_chat_id,
+        matrix: data.methods?.matrix_user_id
+      };
+      const contactId = idMap[method];
+
+      if (!contactId) {
+        this.showError('contact', `No ${method} ID found. Please add the method first.`);
+        return;
+      }
+
+      // Re-POST to get a fresh verification code
+      const postResp = await fetch('/api/contact-methods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.csrfToken },
+        body: JSON.stringify({ method, contactId })
+      });
+      const postData = await postResp.json();
+      if (!postData.success) throw new Error(postData.error || 'Failed to send verification');
+
+      this._showVerifyModal(method, postData.verification.id);
+    } catch (err) {
+      this.showError('contact', err.message);
+    }
   },
 
   /**
-   * Remove a contact method (placeholder for full implementation)
+   * Show inline verification code modal.
+   */
+  _showVerifyModal(method, verificationId) {
+    document.getElementById('_vfModal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = '_vfModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:var(--card-bg,#1e1e2e);border-radius:12px;padding:32px;min-width:320px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5);">
+        <h3 style="margin:0 0 12px;font-size:1.1rem;">Verify ${method.charAt(0).toUpperCase() + method.slice(1)}</h3>
+        <p style="color:var(--text-secondary);font-size:.875rem;margin:0 0 16px;">
+          A 6-digit code has been sent to your ${method} account. Enter it below.
+        </p>
+        <div style="margin-bottom:16px;">
+          <input id="_vfCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+            style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border-color,#333);background:var(--input-bg,#2a2a3a);color:inherit;font-size:1.25rem;text-align:center;letter-spacing:.3em;box-sizing:border-box;">
+        </div>
+        <div id="_vfError" style="color:var(--danger,#e53e3e);font-size:.875rem;margin-bottom:12px;display:none;"></div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button id="_vfCancelBtn" class="btn btn-secondary">Cancel</button>
+          <button id="_vfVerifyBtn" class="btn btn-primary">Verify</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(modal);
+    modal.querySelector('#_vfCode').focus();
+
+    const errEl = modal.querySelector('#_vfError');
+    modal.querySelector('#_vfCancelBtn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    const doVerify = async () => {
+      const code = modal.querySelector('#_vfCode').value.trim();
+      if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code.'; errEl.style.display = ''; return; }
+      errEl.style.display = 'none';
+      const btn = modal.querySelector('#_vfVerifyBtn');
+      btn.disabled = true; btn.textContent = 'Verifying...';
+
+      try {
+        const resp = await fetch('/api/contact-methods/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.csrfToken },
+          body: JSON.stringify({ verificationId, code })
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.error || 'Verification failed');
+
+        modal.remove();
+        this.showSuccess('contact', `${method.charAt(0).toUpperCase() + method.slice(1)} verified successfully!`);
+        await this.loadAccountStatus();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = '';
+        btn.disabled = false; btn.textContent = 'Verify';
+      }
+    };
+
+    modal.querySelector('#_vfVerifyBtn').addEventListener('click', doVerify);
+    modal.querySelector('#_vfCode').addEventListener('keydown', e => { if (e.key === 'Enter') doVerify(); });
+  },
+
+  /**
+   * Remove a contact method.
    */
   async removeContactMethod(method) {
     if (!confirm(`Remove ${method} contact method?`)) return;
-    
-    // Implementation would call DELETE /api/contact-methods/:method
-    alert(`Remove ${method} contact method - implementation pending`);
+
+    try {
+      const resp = await fetch(`/api/contact-methods/${encodeURIComponent(method)}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': this.csrfToken }
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.error || 'Failed to remove contact method');
+
+      this.showSuccess('contact', `${method.charAt(0).toUpperCase() + method.slice(1)} removed.`);
+      await this.loadAccountStatus();
+    } catch (err) {
+      this.showError('contact', err.message);
+    }
   },
 
   /**

@@ -108,7 +108,7 @@ class ContactMethodManager {
         SET discord_user_id = ?, discord_enabled = 1, discord_verified = 0, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [discordUserId, userId],
-        function (err) {
+        (err) => {
           if (err) {
             this.logger.log('error', 'ADD_DISCORD_ERROR', { userId, discordUserId, error: err.message });
             return reject(err);
@@ -134,7 +134,7 @@ class ContactMethodManager {
         SET telegram_chat_id = ?, telegram_enabled = 1, telegram_verified = 0, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [telegramChatId, userId],
-        function (err) {
+        (err) => {
           if (err) {
             this.logger.log('error', 'ADD_TELEGRAM_ERROR', { userId, telegramChatId, error: err.message });
             return reject(err);
@@ -160,7 +160,7 @@ class ContactMethodManager {
         SET matrix_user_id = ?, matrix_enabled = 1, matrix_verified = 0, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [matrixUserId, userId],
-        function (err) {
+        (err) => {
           if (err) {
             this.logger.log('error', 'ADD_MATRIX_ERROR', { userId, matrixUserId, error: err.message });
             return reject(err);
@@ -190,7 +190,7 @@ class ContactMethodManager {
         SET ${verifiedField} = 1, ${enabledField} = 1, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [userId],
-        function (err) {
+        (err) => {
           if (err) {
             this.logger.log('error', 'VERIFY_METHOD_ERROR', { userId, method, error: err.message });
             return reject(err);
@@ -225,7 +225,7 @@ class ContactMethodManager {
         SET ${idField} = NULL, ${methodLower}_enabled = 0, ${methodLower}_verified = 0, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [userId],
-        function (err) {
+        (err) => {
           if (err) {
             this.logger.log('error', 'REMOVE_METHOD_ERROR', { userId, method, error: err.message });
             return reject(err);
@@ -255,7 +255,7 @@ class ContactMethodManager {
         SET ${enabledField} = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [enabled ? 1 : 0, userId],
-        function (err) {
+        (err) => {
           if (err) {
             this.logger.log('error', 'SET_METHOD_ENABLED_ERROR', { userId, method, enabled, error: err.message });
             return reject(err);
@@ -473,17 +473,18 @@ class ContactMethodManager {
    * @returns {Promise<number>} Number of deleted requests
    */
   async cleanupExpiredVerifications() {
+    const log = this.logger;
     return new Promise((resolve, reject) => {
       this.db.run(
         `DELETE FROM contact_verifications 
          WHERE expires_at < CURRENT_TIMESTAMP AND verified_at IS NULL`,
         function (err) {
           if (err) {
-            this.logger.log('error', 'CLEANUP_VERIFICATIONS_ERROR', { error: err.message });
+            log.log('error', 'CLEANUP_VERIFICATIONS_ERROR', { error: err.message });
             return reject(err);
           }
 
-          this.logger.log('info', 'CLEANUP_VERIFICATIONS', { deleted: this.changes });
+          log.log('info', 'CLEANUP_VERIFICATIONS', { deleted: this.changes });
           resolve(this.changes);
         }
       );

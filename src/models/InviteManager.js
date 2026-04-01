@@ -149,7 +149,7 @@ class InviteManager {
               `INSERT INTO invites (id, code, signupProfileId, createdBy, expiresAt, status, metadata, maxUses, userExpiryDays)
                VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
               [inviteId, code, signupProfileId, createdBy, expiresAt, JSON.stringify(metadata), safeMaxUses, userExpiryDays || null],
-              function (err) {
+              (err) => {
                 if (err) {
                   this.logger.log('error', 'INVITE_INSERT_ERROR', { error: err.message });
                   return reject(new Error('Failed to create invite'));
@@ -441,6 +441,7 @@ class InviteManager {
    * @returns {Promise<number>} Number of invites expired
    */
   async cleanupExpiredInvites() {
+    const log = this.logger;
     return new Promise((resolve, reject) => {
       try {
         this.db.run(
@@ -449,13 +450,13 @@ class InviteManager {
            WHERE status = 'pending' AND expiresAt IS NOT NULL AND expiresAt < datetime('now')`,
           function (err) {
             if (err) {
-              this.logger.log('error', 'INVITE_CLEANUP_ERROR', { error: err.message });
+              log.log('error', 'INVITE_CLEANUP_ERROR', { error: err.message });
               return reject(err);
             }
 
             const expiredCount = this.changes;
             if (expiredCount > 0) {
-              this.logger.log('info', 'INVITES_CLEANUP', { expiredCount });
+              log.log('info', 'INVITES_CLEANUP', { expiredCount });
             }
             resolve(expiredCount);
           }

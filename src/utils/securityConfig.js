@@ -33,6 +33,9 @@ let _limiter = _buildLimiter(60);
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
+// Static asset extensions that should never count against the rate limit
+const STATIC_EXT_RE = /\.(css|js|mjs|svg|ico|png|jpe?g|gif|webp|woff2?|ttf|eot|map)$/i;
+
 function _buildLimiter(maxPerMinute) {
   return rateLimit({
     windowMs: 60 * 1000,          // 1-minute window (matches "requests/minute" label)
@@ -40,12 +43,21 @@ function _buildLimiter(maxPerMinute) {
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) =>
-      req.path === '/api/health' ||
-      req.path.startsWith('/css/') ||
-      req.path.startsWith('/js/') ||
-      req.path.startsWith('/webfonts/') ||
-      req.path.startsWith('/images/'),
+    skip: (req) => {
+      // Never rate-limit authenticated users at the global layer;
+      // they are subject to per-route limiters instead.
+      if (req.session && req.session.user) return true;
+
+      // Skip static assets (by path prefix or file extension)
+      return (
+        req.path === '/api/health' ||
+        req.path.startsWith('/css/') ||
+        req.path.startsWith('/js/') ||
+        req.path.startsWith('/webfonts/') ||
+        req.path.startsWith('/images/') ||
+        STATIC_EXT_RE.test(req.path)
+      );
+    },
   });
 }
 

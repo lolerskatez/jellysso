@@ -51,8 +51,9 @@ const adminLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req, res) => {
-    // Don't rate limit if user is admin
-    return req.session && req.session.user && req.session.user.Policy?.IsAdministrator;
+    // Don't rate limit authenticated users on admin routes;
+    // requireAdmin middleware is the real access gate.
+    return !!(req.session && req.session.user);
   },
   handler: (req, res) => {
     logger.warn('Rate limit exceeded on admin endpoint', {

@@ -14,6 +14,7 @@ const PluginManager = require('./models/PluginManager');
 const PolicyManager = require('./models/PolicyManager');
 const OTPManager   = require('./models/OTPManager');
 const JellyfinAPI = require('./models/JellyfinAPI');
+const cookieParser = require('cookie-parser');
 const { csrfProtection, setCsrfToken, csrfErrorHandler } = require('./middleware/csrf');
 const { requestIdMiddleware } = require('./middleware/request-id');
 const { errorHandler, asyncHandler, AppError } = require('./middleware/error-handler');
@@ -169,6 +170,9 @@ if (isProduction && (!sessionSecret || sessionSecret === 'default-secret')) {
   logger.error('   Please set SESSION_SECRET manually in .env with: openssl rand -hex 32');
   process.exit(1);
 }
+
+// Parse cookies — required by csrf-csrf to read the CSRF cookie
+app.use(cookieParser());
 
 // Initialize session store (database-backed for persistence and clustering)
 const sessionStore = new SessionStore({
@@ -505,7 +509,7 @@ app.get('/login', async (req, res) => {
   }
   
   // Debug logging for session/CSRF on login page
-  const csrfToken = req.csrfToken();
+  const csrfToken = res.locals.csrfToken || '';
   logger.info('📄 Login page rendered:', {
     sessionID: req.sessionID ? req.sessionID.substring(0, 10) + '...' : 'none',
     hasCsrfSecret: !!(req.session?.csrfSecret),
@@ -595,7 +599,7 @@ app.get('/signup', async (req, res) => {
 });
 
 app.get('/quickconnect', requireWebAuth, csrfProtection, (req, res) => {
-  res.render('quickconnect', { user: req.session.user, csrfToken: req.csrfToken() });
+  res.render('quickconnect', { user: req.session.user, csrfToken: res.locals.csrfToken });
 });
 
 app.get('/users', requireWebAuth, (req, res) => {
@@ -603,7 +607,7 @@ app.get('/users', requireWebAuth, (req, res) => {
 });
 
 app.get('/settings', requireWebAuth, csrfProtection, (req, res) => {
-  res.render('settings', { user: req.session.user, csrfToken: req.csrfToken() });
+  res.render('settings', { user: req.session.user, csrfToken: res.locals.csrfToken });
 });
 
 app.get('/plugin', requireWebAuth, (req, res) => {
@@ -619,7 +623,7 @@ app.get('/plugin', requireWebAuth, (req, res) => {
 });
 
 app.get('/playback', requireWebAuth, csrfProtection, (req, res) => {
-  res.render('playback', { user: req.session.user, csrfToken: req.csrfToken(), currentPage: 'playback' });
+  res.render('playback', { user: req.session.user, csrfToken: res.locals.csrfToken, currentPage: 'playback' });
 });
 
 app.get('/account', requireWebAuth, csrfProtection, async (req, res) => {
@@ -633,7 +637,7 @@ app.get('/account', requireWebAuth, csrfProtection, async (req, res) => {
     ]);
     res.render('account', { 
       user: req.session.user, 
-      csrfToken: req.csrfToken(),
+      csrfToken: res.locals.csrfToken,
       currentPage: 'account',
       renewalEnabled: renewalEnabledRaw === 'true',
       renewalWindowDays: parseInt(renewalWindowDaysRaw) || 30,
@@ -662,7 +666,7 @@ app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) =
       details: 'You must be an administrator to access playback administration.'
     });
   }
-  res.render('admin-playback-sessions', { user: req.session.user, csrfToken: req.csrfToken(), currentPage: 'admin-playback-sessions' });
+  res.render('admin-playback-sessions', { user: req.session.user, csrfToken: res.locals.csrfToken, currentPage: 'admin-playback-sessions' });
 });
 
 // Admin dashboard routes

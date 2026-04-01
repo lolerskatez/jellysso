@@ -2160,7 +2160,7 @@ router.get('/user-expiry', csrfProtection, requireAuth, requireAdmin, (req, res)
   try {
     res.render('admin/expiry', {
       user: req.session.user,
-      csrfToken: req.csrfToken()
+      csrfToken: res.locals.csrfToken
     });
   } catch (error) {
     appLogger.error('User expiry management page error:', error);
@@ -2173,7 +2173,7 @@ router.get('/notifications', csrfProtection, requireAuth, requireAdmin, (req, re
   try {
     res.render('admin/notifications', {
       user: req.session.user,
-      csrfToken: req.csrfToken()
+      csrfToken: res.locals.csrfToken
     });
   } catch (error) {
     appLogger.error('Notification management page error:', error);
@@ -2186,7 +2186,7 @@ router.get('/message-templates', csrfProtection, requireAuth, requireAdmin, (req
   try {
     res.render('admin/message-templates', {
       user: req.session.user,
-      csrfToken: req.csrfToken()
+      csrfToken: res.locals.csrfToken
     });
   } catch (error) {
     appLogger.error('Message templates page error:', error);

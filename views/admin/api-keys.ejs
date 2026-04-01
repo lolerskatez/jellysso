@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
     .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:10px 20px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; transition:opacity .2s; }
     .btn-primary:hover { opacity:.9; }
     .btn-danger { background:#dc3545; color:white; padding:5px 12px; border:none; border-radius:var(--border-radius); cursor:pointer; font-size:.85rem; }
@@ -30,17 +29,20 @@
     .mono { font-family:monospace; font-size:.85rem; }
     .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
     .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
-    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; }
-    .modal.show { display:flex; }
-    .modal-content { background:var(--bg-primary); border-radius:var(--border-radius); padding:var(--spacing-2xl); width:90%; max-width:500px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
-    .modal-content h3 { margin:0 0 var(--spacing-lg) 0; }
+    .modal { display:none; position:fixed; z-index:500; top:0; left:0; width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; border-radius:0 !important; box-shadow:none !important; overflow:visible !important; animation:none !important; background:rgba(0,0,0,.5) !important; }
+    .modal.show { display:flex; align-items:center; justify-content:center; }
+    .modal-content { background:var(--bg-primary); border-radius:var(--border-radius); box-shadow:var(--shadow-lg); max-width:500px; width:92%; max-height:90vh; overflow-y:auto; padding:var(--spacing-lg); border:1px solid var(--border-color); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-lg); padding-bottom:var(--spacing-lg); border-bottom:2px solid var(--border-color); }
+    .modal-header h2 { margin:0; color:var(--text-primary); font-size:1.25rem; font-weight:700; letter-spacing:-0.3px; }
+    .modal-close { background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-secondary); width:32px; height:32px; display:flex; align-items:center; justify-content:center; transition:all var(--transition); border-radius:var(--border-radius-sm); }
+    .modal-close:hover { color:var(--text-primary); background:var(--bg-secondary); }
+    .modal-actions { display:flex; gap:var(--spacing-md); justify-content:flex-end; margin-top:var(--spacing-xl); padding-top:var(--spacing-lg); border-top:1px solid var(--border-color); }
     .form-group { margin-bottom:var(--spacing-lg); }
     .form-group label { display:block; margin-bottom:6px; font-weight:600; font-size:.9rem; }
     .form-group input, .form-group select { width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.95rem; box-sizing:border-box; }
     .perm-checkboxes { display:flex; gap:var(--spacing-lg); }
     .perm-checkboxes label { font-weight:400 !important; display:flex; align-items:center; gap:6px; cursor:pointer; }
     .new-key-box { background:#d4edda; border:1px solid #c3e6cb; border-radius:var(--border-radius); padding:var(--spacing-lg); margin-bottom:var(--spacing-lg); word-break:break-all; font-family:monospace; font-size:.9rem; }
-    .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:var(--spacing-lg); }
     #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
     #toastMsg.show { opacity:1; }
     #toastMsg.success { background:#28a745; }
@@ -48,42 +50,54 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-api-keys' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-key"></i> API Keys</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Programmatic access keys for the JellySSO REST API.</p>
-      </div>
-      <button class="btn-primary" onclick="openCreate()"><i class="fas fa-plus"></i> Create Key</button>
-    </div>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-api-keys' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-key" style="margin-right:8px;color:var(--primary)"></i>API Keys
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" id="createKeyBtn"><i class="fas fa-plus"></i> Create Key</button>
+        </div>
+      </header>
 
-    <div class="card" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--border-radius);overflow:hidden">
-      <div id="keysTable">
-        <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Programmatic access keys for the JellySSO REST API.</p>
+        <div class="card" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--border-radius);overflow:hidden">
+          <div id="keysTable">
+            <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
-</div>
 
 <!-- Create modal -->
 <div class="modal" id="createModal">
   <div class="modal-content">
-    <h3>Create API Key</h3>
+    <div class="modal-header">
+      <h2><i class="fas fa-key" style="margin-right:8px;color:var(--primary)"></i>Create API Key</h2>
+      <button class="modal-close" id="closeCreateModalBtn">&times;</button>
+    </div>
     <div id="newKeyDisplay" style="display:none">
       <p style="color:#155724;font-weight:600;margin-bottom:8px"><i class="fas fa-check-circle"></i> Key created — copy it now, it won't be shown again.</p>
       <div class="new-key-box" id="newKeyValue"></div>
-      <button class="btn-secondary" onclick="copyKey()" style="margin-bottom:var(--spacing-lg)"><i class="fas fa-copy"></i> Copy</button>
+      <button class="btn-secondary" id="copyKeyBtn" style="margin-bottom:var(--spacing-lg)"><i class="fas fa-copy"></i> Copy</button>
     </div>
     <div id="createForm">
       <div class="form-group">
-        <label for="keyUserId">User ID <span style="color:#dc3545">*</span></label>
+        <label for="keyUserId">User ID <span style="color:var(--danger)">*</span></label>
         <input type="text" id="keyUserId" placeholder="Jellyfin user ID">
         <small style="color:var(--text-muted)">Find user IDs on the Users page.</small>
       </div>
       <div class="form-group">
-        <label for="keyName">Name <span style="color:#dc3545">*</span></label>
+        <label for="keyName">Name <span style="color:var(--danger)">*</span></label>
         <input type="text" id="keyName" placeholder="e.g. Home Assistant integration" maxlength="100">
       </div>
       <div class="form-group">
@@ -99,9 +113,9 @@
         <input type="datetime-local" id="keyExpires">
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeCreate()">Close</button>
-      <button class="btn-primary" id="saveKeyBtn" onclick="createKey()">Create</button>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelCreateBtn">Close</button>
+      <button class="btn-primary" id="saveKeyBtn"><i class="fas fa-plus"></i> Create</button>
     </div>
   </div>
 </div>

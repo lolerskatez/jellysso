@@ -28,8 +28,8 @@ async function loadKeys() {
           <td>${status}</td>
           <td>${k.expires_at ? new Date(k.expires_at).toLocaleDateString() : '—'}</td>
           <td style="white-space:nowrap">
-            ${k.active && !expired ? `<button class="btn-secondary" onclick="revokeKey(${k.id},'${escHtml(k.name)}')">Revoke</button> ` : ''}
-            <button class="btn-danger" onclick="deleteKey(${k.id},'${escHtml(k.name)}')"><i class="fas fa-trash"></i></button>
+            ${k.active && !expired ? `<button class="btn-secondary" data-revoke-id="${k.id}" data-revoke-name="${escHtml(k.name)}">Revoke</button> ` : ''}
+            <button class="btn-danger" data-delete-id="${k.id}" data-delete-name="${escHtml(k.name)}"><i class="fas fa-trash"></i></button>
           </td>
         </tr>`;
       }).join('')}</tbody></table>`;
@@ -124,8 +124,24 @@ function showToast(msg, type) {
   setTimeout(() => t.className = '', 3500);
 }
 
+// Static button wiring
+document.getElementById('createKeyBtn')?.addEventListener('click', openCreate);
+document.getElementById('cancelCreateBtn')?.addEventListener('click', closeCreate);
+document.getElementById('closeCreateModalBtn')?.addEventListener('click', closeCreate);
+document.getElementById('saveKeyBtn')?.addEventListener('click', createKey);
+document.getElementById('copyKeyBtn')?.addEventListener('click', copyKey);
+
+// Backdrop click
 document.getElementById('createModal').addEventListener('click', e => {
   if (e.target === document.getElementById('createModal')) closeCreate();
+});
+
+// Event delegation for dynamic table buttons
+document.getElementById('keysTable').addEventListener('click', function(e) {
+  const revokeBtn = e.target.closest('[data-revoke-id]');
+  if (revokeBtn) { revokeKey(revokeBtn.dataset.revokeId, revokeBtn.dataset.revokeName); return; }
+  const deleteBtn = e.target.closest('[data-delete-id]');
+  if (deleteBtn) { deleteKey(deleteBtn.dataset.deleteId, deleteBtn.dataset.deleteName); }
 });
 
 loadKeys();

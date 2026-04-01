@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Labels - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-2xl);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #0066cc);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+      padding: 6px 14px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-danger:hover { opacity: 0.85; }
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: 6px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-secondary:hover { background: var(--bg-tertiary); }
+    .labels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+    }
+    .label-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      border-left: 4px solid #0066cc;
+    }
+    .label-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-sm);
+    }
+    .label-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+    .label-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .label-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    .label-desc { font-size: 0.9rem; color: var(--text-secondary); margin: var(--spacing-sm) 0 0 0; }
+    .label-actions { display: flex; gap: 6px; }
+    .user-count-badge {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-2xl);
+      color: var(--text-muted);
+    }
+    .empty-state i { font-size: 3rem; margin-bottom: var(--spacing-md); display: block; }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-2xl);
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .modal-content h3 { margin: 0 0 var(--spacing-lg) 0; }
+    .form-group { margin-bottom: var(--spacing-lg); }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+    .color-row { display: flex; align-items: center; gap: 12px; }
+    .color-row input[type="color"] { width: 48px; height: 36px; padding: 2px; cursor: pointer; border-radius: 4px; }
+    .color-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+    .color-preset {
+      width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.15s;
+    }
+    .color-preset:hover { transform: scale(1.2); border-color: var(--text-primary); }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: var(--spacing-lg); }
+    #toastMsg {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: var(--border-radius);
+      color: white;
+      font-weight: 600;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #toastMsg.show { opacity: 1; }
+    #toastMsg.success { background: #28a745; }
+    #toastMsg.error { background: #dc3545; }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-labels' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-tags"></i> Labels</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Organise users with colour-coded labels for easy filtering and bulk operations.</p>
+      </div>
+      <button class="btn-primary" onclick="openCreate()"><i class="fas fa-plus"></i> New Label</button>
+    </div>
+
+    <div id="labelsGrid" class="labels-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+        <i class="fas fa-spinner fa-spin" style="font-size:2rem"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit modal -->
+<div class="modal" id="labelModal">
+  <div class="modal-content">
+    <h3 id="modalTitle">New Label</h3>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label for="labelName">Name <span style="color:#dc3545">*</span></label>
+      <input type="text" id="labelName" placeholder="e.g. VIP, Trial, Friends" maxlength="60">
+    </div>
+    <div class="form-group">
+      <label>Colour</label>
+      <div class="color-row">
+        <input type="color" id="labelColor" value="#0066CC">
+        <div class="color-presets" id="colorPresets"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="labelDesc">Description (optional)</label>
+      <input type="text" id="labelDesc" placeholder="Short description" maxlength="200">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveLabel()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastMsg"></div>
+
+<script nonce="<%= nonce %>">
+  const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  const PRESET_COLORS = ['#0066CC','#28a745','#dc3545','#ffc107','#17a2b8','#6f42c1','#e83e8c','#fd7e14','#6c757d','#20c997'];
+
+  // Build preset swatches
+  const presetsEl = document.getElementById('colorPresets');
+  PRESET_COLORS.forEach(c => {
+    const s = document.createElement('div');
+    s.className = 'color-preset';
+    s.style.background = c;
+    s.title = c;
+    s.onclick = () => document.getElementById('labelColor').value = c;
+    presetsEl.appendChild(s);
+  });
+
+  async function loadLabels() {
+    const grid = document.getElementById('labelsGrid');
+    try {
+      const r = await fetch('/api/labels?includeStats=true');
+      const data = await r.json();
+      if (!data.success || !data.labels.length) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-tags"></i><p>No labels yet. Create one to start organising users.</p></div>';
+        return;
+      }
+      grid.innerHTML = data.labels.map(l => `
+        <div class="label-card" style="border-left-color:${escHtml(l.color || '#0066cc')}">
+          <div class="label-card-header">
+            <div class="label-name">
+              <span class="label-dot" style="background:${escHtml(l.color || '#0066cc')}"></span>
+              ${escHtml(l.name)}
+            </div>
+            <div class="label-actions">
+              <button class="btn-secondary" onclick="openEdit(${JSON.stringify(l).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i></button>
+              <button class="btn-danger" onclick="deleteLabel(${l.id},'${escHtml(l.name)}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+          ${l.description ? `<p class="label-desc">${escHtml(l.description)}</p>` : ''}
+          <div class="label-meta">
+            <span class="user-count-badge"><i class="fas fa-users"></i> ${l.userCount || 0} user${l.userCount !== 1 ? 's' : ''}</span>
+            &nbsp;&bull;&nbsp;Created ${new Date(l.createdAt).toLocaleDateString()}
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-exclamation-circle"></i><p>Failed to load labels.</p></div>';
+    }
+  }
+
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function openCreate() {
+    document.getElementById('modalTitle').textContent = 'New Label';
+    document.getElementById('editId').value = '';
+    document.getElementById('labelName').value = '';
+    document.getElementById('labelColor').value = '#0066CC';
+    document.getElementById('labelDesc').value = '';
+    document.getElementById('labelModal').classList.add('show');
+  }
+
+  function openEdit(l) {
+    document.getElementById('modalTitle').textContent = 'Edit Label';
+    document.getElementById('editId').value = l.id;
+    document.getElementById('labelName').value = l.name;
+    document.getElementById('labelColor').value = l.color || '#0066CC';
+    document.getElementById('labelDesc').value = l.description || '';
+    document.getElementById('labelModal').classList.add('show');
+  }
+
+  function closeModal() { document.getElementById('labelModal').classList.remove('show'); }
+
+  async function saveLabel() {
+    const id = document.getElementById('editId').value;
+    const name = document.getElementById('labelName').value.trim();
+    if (!name) { showToast('Label name is required.', 'error'); return; }
+    const body = {
+      name,
+      color: document.getElementById('labelColor').value,
+      description: document.getElementById('labelDesc').value.trim() || null
+    };
+    try {
+      const r = await fetch(id ? `/api/labels/${id}` : '/api/labels', {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': CSRF },
+        body: JSON.stringify(body)
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast(id ? 'Label updated.' : 'Label created.', 'success');
+      closeModal();
+      loadLabels();
+    } catch(e) { showToast(e.message || 'Save failed.', 'error'); }
+  }
+
+  async function deleteLabel(id, name) {
+    if (!confirm(`Delete label "${name}"? Users will be untagged.`)) return;
+    try {
+      const r = await fetch(`/api/labels/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast('Label deleted.', 'success');
+      loadLabels();
+    } catch(e) { showToast(e.message || 'Delete failed.', 'error'); }
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toastMsg');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    setTimeout(() => t.className = '', 3000);
+  }
+
+  document.getElementById('labelModal').addEventListener('click', e => { if (e.target === document.getElementById('labelModal')) closeModal(); });
+  loadLabels();
+</script>
+</body>
+</html>

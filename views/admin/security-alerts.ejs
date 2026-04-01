@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Security Alerts - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .stats-row { display:flex; gap:var(--spacing-lg); margin-bottom:var(--spacing-xl); flex-wrap:wrap; }
+    .stat-card { flex:1; min-width:140px; padding:var(--spacing-lg); background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); }
+    .stat-card .val { font-size:2rem; font-weight:700; }
+    .stat-card .lbl { color:var(--text-muted); font-size:.85rem; }
+    .sev-critical { color:#dc3545; }
+    .sev-high     { color:#fd7e14; }
+    .sev-medium   { color:#ffc107; }
+    .sev-low      { color:#17a2b8; }
+    .sev-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+    .sev-badge.critical { background:#f8d7da; color:#721c24; }
+    .sev-badge.high     { background:#ffe5d0; color:#7d3c00; }
+    .sev-badge.medium   { background:#fff3cd; color:#856404; }
+    .sev-badge.low      { background:#d1ecf1; color:#0c5460; }
+    .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
+    .filter-row select, .filter-row input { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:10px 20px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
+    .btn-danger { background:#dc3545; color:white; padding:7px 14px; border:none; border-radius:var(--border-radius); cursor:pointer; }
+    .btn-danger:hover { opacity:.85; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 16px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
+    .btn-sm { padding:3px 8px; font-size:.8rem; }
+    .alert-list { display:flex; flex-direction:column; gap:var(--spacing-sm); }
+    .alert-item { display:flex; gap:var(--spacing-lg); align-items:flex-start; padding:var(--spacing-lg); background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); border-left:4px solid var(--border-color); transition:opacity .2s; }
+    .alert-item.read { opacity:.55; }
+    .alert-item.critical { border-left-color:#dc3545; }
+    .alert-item.high     { border-left-color:#fd7e14; }
+    .alert-item.medium   { border-left-color:#ffc107; }
+    .alert-item.low      { border-left-color:#17a2b8; }
+    .alert-icon { font-size:1.4rem; margin-top:2px; min-width:28px; text-align:center; }
+    .alert-body { flex:1; }
+    .alert-title { font-weight:700; margin:0 0 4px 0; }
+    .alert-meta { color:var(--text-muted); font-size:.82rem; display:flex; gap:10px; flex-wrap:wrap; }
+    .alert-actions { display:flex; gap:6px; align-items:flex-start; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
+    #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
+    #toastMsg.show { opacity:1; }
+    #toastMsg.success { background:#28a745; }
+    #toastMsg.error { background:#dc3545; }
+    .toolbar { display:flex; gap:10px; justify-content:flex-end; margin-bottom:var(--spacing-lg); }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-security-alerts' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-shield-alt"></i> Security Alerts</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">System-wide security events and suspicious activity log.</p>
+      </div>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="val sev-critical" id="stat-critical">—</div><div class="lbl">Critical</div></div>
+      <div class="stat-card"><div class="val sev-high" id="stat-high">—</div><div class="lbl">High</div></div>
+      <div class="stat-card"><div class="val sev-medium" id="stat-medium">—</div><div class="lbl">Medium</div></div>
+      <div class="stat-card"><div class="val sev-low" id="stat-low">—</div><div class="lbl">Low</div></div>
+      <div class="stat-card"><div class="val" id="stat-unread">—</div><div class="lbl">Unread</div></div>
+    </div>
+
+    <div class="filter-row">
+      <select id="filterSeverity" onchange="loadAlerts()">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <select id="filterType" onchange="loadAlerts()">
+        <option value="">All Types</option>
+        <option value="failed_login">Failed Login</option>
+        <option value="new_device">New Device</option>
+        <option value="policy_change">Policy Change</option>
+        <option value="password_change">Password Change</option>
+        <option value="account_locked">Account Locked</option>
+        <option value="suspicious_activity">Suspicious Activity</option>
+        <option value="permission_change">Permission Change</option>
+        <option value="api_key_created">API Key Created</option>
+        <option value="api_key_revoked">API Key Revoked</option>
+      </select>
+      <select id="filterRead" onchange="loadAlerts()">
+        <option value="">All</option>
+        <option value="1">Unread Only</option>
+      </select>
+      <button class="btn-secondary" onclick="loadAlerts()"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn-secondary" onclick="markAllRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
+      <button class="btn-danger" onclick="clearAlerts()"><i class="fas fa-trash"></i> Clear All</button>
+    </div>
+
+    <div id="alertsList">
+      <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toastMsg"></div>
+
+<script nonce="<%= nonce %>">
+  const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+  const TYPE_ICONS = {
+    failed_login: 'fa-sign-in-alt',
+    new_device: 'fa-laptop',
+    policy_change: 'fa-file-alt',
+    password_change: 'fa-key',
+    account_locked: 'fa-lock',
+    suspicious_activity: 'fa-user-secret',
+    permission_change: 'fa-user-cog',
+    api_key_created: 'fa-plus-circle',
+    api_key_revoked: 'fa-minus-circle'
+  };
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadStats() {
+    try {
+      const r = await fetch('/admin/api/security-alerts/stats');
+      const data = await r.json();
+      if (!data.success) return;
+      let totalUnread = 0;
+      const bySev = {};
+      (data.stats || []).forEach(s => { bySev[s.severity] = s; totalUnread += (s.unread || 0); });
+      ['critical','high','medium','low'].forEach(sev => {
+        document.getElementById(`stat-${sev}`).textContent = bySev[sev] ? bySev[sev].count : '0';
+      });
+      document.getElementById('stat-unread').textContent = totalUnread;
+    } catch(e) {}
+  }
+
+  async function loadAlerts() {
+    const wrap = document.getElementById('alertsList');
+    wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>';
+
+    const severity = document.getElementById('filterSeverity').value;
+    const type = document.getElementById('filterType').value;
+    const unread = document.getElementById('filterRead').value;
+
+    const params = new URLSearchParams({ limit: 200 });
+    if (severity) params.append('severity', severity);
+    if (type) params.append('type', type);
+    if (unread) params.append('unread', unread);
+
+    try {
+      const r = await fetch(`/admin/api/security-alerts?${params}`);
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+
+      if (!data.alerts.length) {
+        wrap.innerHTML = '<div class="empty-state"><i class="fas fa-shield-alt"></i><p>No security alerts found.</p></div>';
+        return;
+      }
+
+      wrap.innerHTML = `<div class="alert-list">${data.alerts.map(a => {
+        const icon = TYPE_ICONS[a.alert_type] || 'fa-bell';
+        const typeLabel = (a.alert_type || '').replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase());
+        return `<div class="alert-item ${a.severity} ${a.read ? 'read' : ''}" id="alert-${a.id}">
+          <div class="alert-icon sev-${a.severity}"><i class="fas ${icon}"></i></div>
+          <div class="alert-body">
+            <p class="alert-title">${escHtml(a.title)}</p>
+            <p style="margin:0 0 6px 0;font-size:.9rem;color:var(--text-primary)">${escHtml(a.message)}</p>
+            <div class="alert-meta">
+              <span class="sev-badge ${a.severity}">${a.severity}</span>
+              <span><i class="fas fa-tag"></i> ${escHtml(typeLabel)}</span>
+              ${a.user_id ? `<span><i class="fas fa-user"></i> ${escHtml(a.user_id)}</span>` : ''}
+              ${a.ip_address ? `<span><i class="fas fa-network-wired"></i> ${escHtml(a.ip_address)}</span>` : ''}
+              <span><i class="fas fa-clock"></i> ${new Date(a.created_at).toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="alert-actions">
+            ${!a.read ? `<button class="btn-secondary btn-sm" onclick="markRead(${a.id})" title="Mark read"><i class="fas fa-check"></i></button>` : ''}
+            <button class="btn-danger btn-sm" onclick="deleteAlert(${a.id})" title="Dismiss"><i class="fas fa-times"></i></button>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load alerts.</p></div>';
+    }
+  }
+
+  async function markRead(id) {
+    try {
+      const r = await fetch(`/admin/api/security-alerts/${id}/read`, {
+        method: 'PATCH',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      const el = document.getElementById(`alert-${id}`);
+      if (el) {
+        el.classList.add('read');
+        const btn = el.querySelector('[onclick*="markRead"]');
+        if (btn) btn.remove();
+      }
+      loadStats();
+    } catch(e) { showToast(e.message || 'Failed.', 'error'); }
+  }
+
+  async function deleteAlert(id) {
+    try {
+      const r = await fetch(`/admin/api/security-alerts/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      document.getElementById(`alert-${id}`)?.remove();
+      loadStats();
+    } catch(e) { showToast(e.message || 'Failed.', 'error'); }
+  }
+
+  async function markAllRead() {
+    try {
+      const r = await fetch('/admin/api/security-alerts/read-all', {
+        method: 'PATCH',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast(`${data.updated} alerts marked as read.`, 'success');
+      loadAlerts();
+      loadStats();
+    } catch(e) { showToast(e.message || 'Failed.', 'error'); }
+  }
+
+  async function clearAlerts() {
+    const severity = document.getElementById('filterSeverity').value;
+    const msg = severity ? `Clear all ${severity} severity alerts?` : 'Clear all security alerts? This cannot be undone.';
+    if (!confirm(msg)) return;
+    const url = severity ? `/admin/api/security-alerts?severity=${severity}` : '/admin/api/security-alerts';
+    try {
+      const r = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast(`${data.deleted} alerts deleted.`, 'success');
+      loadAlerts();
+      loadStats();
+    } catch(e) { showToast(e.message || 'Failed.', 'error'); }
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toastMsg');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    setTimeout(() => t.className = '', 3500);
+  }
+
+  loadStats();
+  loadAlerts();
+</script>
+</body>
+</html>

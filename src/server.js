@@ -669,6 +669,11 @@ app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) =
   res.render('admin-playback-sessions', { user: req.session.user, csrfToken: res.locals.csrfToken, currentPage: 'admin-playback-sessions' });
 });
 
+// Admin API routes for new feature management
+app.use('/admin/api/api-keys',       require('./routes/admin-api-keys'));
+app.use('/admin/api/lockouts',       require('./routes/admin-lockouts'));
+app.use('/admin/api/security-alerts', require('./routes/admin-security-alerts'));
+
 // Admin dashboard routes
 app.use('/admin', require('./routes/admin'));
 

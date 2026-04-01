@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Account Lockouts - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .tabs { display:flex; gap:4px; border-bottom:2px solid var(--border-color); margin-bottom:var(--spacing-xl); }
+    .tab-btn { padding:10px 20px; background:none; border:none; cursor:pointer; color:var(--text-muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .2s,border-color .2s; }
+    .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:10px 20px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
+    .btn-danger { background:#dc3545; color:white; padding:5px 12px; border:none; border-radius:var(--border-radius); cursor:pointer; font-size:.85rem; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 16px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
+    .btn-sm { padding:4px 10px; font-size:.82rem; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border-color); font-size:.9rem; }
+    th { background:var(--bg-secondary); color:var(--text-muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.5px; }
+    tr:hover td { background:var(--bg-secondary); }
+    .mono { font-family:monospace; font-size:.85rem; }
+    .badge-success { display:inline-block; padding:2px 8px; border-radius:10px; background:#d4edda; color:#155724; font-size:.78rem; font-weight:600; }
+    .badge-danger  { display:inline-block; padding:2px 8px; border-radius:10px; background:#f8d7da; color:#721c24; font-size:.78rem; font-weight:600; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
+    .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
+    .filter-row input { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
+    #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
+    #toastMsg.show { opacity:1; }
+    #toastMsg.success { background:#28a745; }
+    #toastMsg.error { background:#dc3545; }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-lockouts' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-lock"></i> Account Lockouts</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Manage locked accounts and review login attempt history.</p>
+      </div>
+      <button class="btn-secondary" onclick="cleanupOld()"><i class="fas fa-trash-alt"></i> Cleanup Old Attempts</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('lockouts', this)">
+        <i class="fas fa-lock"></i> Current Lockouts
+      </button>
+      <button class="tab-btn" onclick="switchTab('history', this)">
+        <i class="fas fa-history"></i> Login History
+      </button>
+    </div>
+
+    <!-- Current lockouts -->
+    <div class="tab-panel active" id="tab-lockouts">
+      <div class="card" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--border-radius);overflow:hidden">
+        <div id="lockoutsTable">
+          <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login history -->
+    <div class="tab-panel" id="tab-history">
+      <div class="filter-row">
+        <input type="text" id="historyFilter" placeholder="Filter by username…" oninput="filterHistory()">
+        <button class="btn-secondary" onclick="loadHistory()"><i class="fas fa-sync"></i> Refresh</button>
+      </div>
+      <div class="card" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--border-radius);overflow:hidden">
+        <div id="historyTable">
+          <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastMsg"></div>
+
+<script nonce="<%= nonce %>">
+  const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  let allHistory = [];
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'history' && allHistory.length === 0) loadHistory();
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadLockouts() {
+    const wrap = document.getElementById('lockoutsTable');
+    try {
+      const r = await fetch('/admin/api/lockouts');
+      const data = await r.json();
+      if (!data.success || !data.lockouts.length) {
+        wrap.innerHTML = '<div class="empty-state"><i class="fas fa-unlock"></i><p>No accounts are currently locked.</p></div>';
+        return;
+      }
+      wrap.innerHTML = `<table>
+        <thead><tr>
+          <th>Username</th><th>Locked At</th><th>Unlocks At</th><th>Attempts</th><th>Reason</th><th></th>
+        </tr></thead>
+        <tbody>${data.lockouts.map(l => `<tr>
+          <td><strong>${escHtml(l.username)}</strong></td>
+          <td>${new Date(l.locked_at).toLocaleString()}</td>
+          <td>${new Date(l.unlock_at).toLocaleString()}</td>
+          <td>${l.attempts_count || 0}</td>
+          <td>${escHtml(l.reason || '—')}</td>
+          <td><button class="btn-danger btn-sm" onclick="unlockAccount('${escHtml(l.username)}')"><i class="fas fa-unlock"></i> Unlock</button></td>
+        </tr>`).join('')}</tbody></table>`;
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load lockouts.</p></div>';
+    }
+  }
+
+  async function unlockAccount(username) {
+    if (!confirm(`Unlock account "${username}"?`)) return;
+    try {
+      const r = await fetch(`/admin/api/lockouts/${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast('Account unlocked.', 'success');
+      loadLockouts();
+    } catch(e) { showToast(e.message || 'Failed to unlock.', 'error'); }
+  }
+
+  async function loadHistory(username) {
+    const wrap = document.getElementById('historyTable');
+    wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>';
+    const q = username ? `?username=${encodeURIComponent(username)}&limit=200` : '?limit=200';
+    try {
+      const r = await fetch(`/admin/api/lockouts/history${q}`);
+      const data = await r.json();
+      allHistory = data.attempts || [];
+      renderHistory(allHistory);
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load history.</p></div>';
+    }
+  }
+
+  function renderHistory(rows) {
+    const wrap = document.getElementById('historyTable');
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No login attempts found.</p></div>';
+      return;
+    }
+    wrap.innerHTML = `<table>
+      <thead><tr>
+        <th>Username</th><th>IP Address</th><th>Timestamp</th><th>Result</th><th>Reason</th>
+      </tr></thead>
+      <tbody>${rows.map(a => `<tr>
+        <td class="mono">${escHtml(a.username)}</td>
+        <td class="mono">${escHtml(a.ip_address)}</td>
+        <td>${new Date(a.timestamp).toLocaleString()}</td>
+        <td>${a.success ? '<span class="badge-success">Success</span>' : '<span class="badge-danger">Failed</span>'}</td>
+        <td>${escHtml(a.reason || '—')}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }
+
+  function filterHistory() {
+    const q = document.getElementById('historyFilter').value.trim().toLowerCase();
+    if (!q) { renderHistory(allHistory); return; }
+    renderHistory(allHistory.filter(a => a.username.toLowerCase().includes(q) || (a.ip_address || '').toLowerCase().includes(q)));
+  }
+
+  async function cleanupOld() {
+    if (!confirm('Delete login attempt records older than 30 days?')) return;
+    try {
+      const r = await fetch('/admin/api/lockouts/cleanup', {
+        method: 'POST',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast(`Deleted ${data.deleted} old records.`, 'success');
+      allHistory = [];
+      loadHistory();
+    } catch(e) { showToast(e.message || 'Cleanup failed.', 'error'); }
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toastMsg');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    setTimeout(() => t.className = '', 3500);
+  }
+
+  loadLockouts();
+</script>
+</body>
+</html>

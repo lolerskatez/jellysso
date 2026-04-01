@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>API Keys - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:10px 20px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; transition:opacity .2s; }
+    .btn-primary:hover { opacity:.9; }
+    .btn-danger { background:#dc3545; color:white; padding:5px 12px; border:none; border-radius:var(--border-radius); cursor:pointer; font-size:.85rem; }
+    .btn-danger:hover { opacity:.85; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:5px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; font-size:.85rem; }
+    .btn-secondary:hover { background:var(--bg-tertiary); }
+    .perm-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:.75rem; font-weight:600; margin-right:4px; }
+    .perm-read    { background:#17a2b822; color:#17a2b8; border:1px solid #17a2b866; }
+    .perm-write   { background:#ffc10722; color:#856404; border:1px solid #ffc10766; }
+    .perm-admin   { background:#dc354522; color:#dc3545; border:1px solid #dc354566; }
+    .status-active   { color:#28a745; font-weight:600; }
+    .status-revoked  { color:#6c757d; }
+    .status-expired  { color:#dc3545; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border-color); font-size:.9rem; }
+    th { background:var(--bg-secondary); color:var(--text-muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.5px; }
+    tr:hover td { background:var(--bg-secondary); }
+    .mono { font-family:monospace; font-size:.85rem; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal.show { display:flex; }
+    .modal-content { background:var(--bg-primary); border-radius:var(--border-radius); padding:var(--spacing-2xl); width:90%; max-width:500px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+    .modal-content h3 { margin:0 0 var(--spacing-lg) 0; }
+    .form-group { margin-bottom:var(--spacing-lg); }
+    .form-group label { display:block; margin-bottom:6px; font-weight:600; font-size:.9rem; }
+    .form-group input, .form-group select { width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.95rem; box-sizing:border-box; }
+    .perm-checkboxes { display:flex; gap:var(--spacing-lg); }
+    .perm-checkboxes label { font-weight:400 !important; display:flex; align-items:center; gap:6px; cursor:pointer; }
+    .new-key-box { background:#d4edda; border:1px solid #c3e6cb; border-radius:var(--border-radius); padding:var(--spacing-lg); margin-bottom:var(--spacing-lg); word-break:break-all; font-family:monospace; font-size:.9rem; }
+    .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:var(--spacing-lg); }
+    #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
+    #toastMsg.show { opacity:1; }
+    #toastMsg.success { background:#28a745; }
+    #toastMsg.error { background:#dc3545; }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-api-keys' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-key"></i> API Keys</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Programmatic access keys for the JellySSO REST API.</p>
+      </div>
+      <button class="btn-primary" onclick="openCreate()"><i class="fas fa-plus"></i> Create Key</button>
+    </div>
+
+    <div class="card" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--border-radius);overflow:hidden">
+      <div id="keysTable">
+        <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create modal -->
+<div class="modal" id="createModal">
+  <div class="modal-content">
+    <h3>Create API Key</h3>
+    <div id="newKeyDisplay" style="display:none">
+      <p style="color:#155724;font-weight:600;margin-bottom:8px"><i class="fas fa-check-circle"></i> Key created — copy it now, it won't be shown again.</p>
+      <div class="new-key-box" id="newKeyValue"></div>
+      <button class="btn-secondary" onclick="copyKey()" style="margin-bottom:var(--spacing-lg)"><i class="fas fa-copy"></i> Copy</button>
+    </div>
+    <div id="createForm">
+      <div class="form-group">
+        <label for="keyUserId">User ID <span style="color:#dc3545">*</span></label>
+        <input type="text" id="keyUserId" placeholder="Jellyfin user ID">
+        <small style="color:var(--text-muted)">Find user IDs on the Users page.</small>
+      </div>
+      <div class="form-group">
+        <label for="keyName">Name <span style="color:#dc3545">*</span></label>
+        <input type="text" id="keyName" placeholder="e.g. Home Assistant integration" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>Permissions</label>
+        <div class="perm-checkboxes">
+          <label><input type="checkbox" id="permRead" checked> Read</label>
+          <label><input type="checkbox" id="permWrite"> Write</label>
+          <label><input type="checkbox" id="permAdmin"> Admin</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="keyExpires">Expires At (optional)</label>
+        <input type="datetime-local" id="keyExpires">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeCreate()">Close</button>
+      <button class="btn-primary" id="saveKeyBtn" onclick="createKey()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastMsg"></div>
+
+<script nonce="<%= nonce %>">
+  const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+  async function loadKeys() {
+    const wrap = document.getElementById('keysTable');
+    try {
+      const r = await fetch('/admin/api/api-keys');
+      const data = await r.json();
+      if (!data.success || !data.keys.length) {
+        wrap.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>No API keys yet.</p></div>';
+        return;
+      }
+      wrap.innerHTML = `<table>
+        <thead><tr>
+          <th>Name</th><th>User ID</th><th>Permissions</th><th>Last Used</th><th>Requests</th><th>Status</th><th>Expires</th><th></th>
+        </tr></thead>
+        <tbody>${data.keys.map(k => {
+          const now = Date.now();
+          const expired = k.expires_at && new Date(k.expires_at) < new Date();
+          const status = expired ? '<span class="status-expired">Expired</span>'
+                       : k.active ? '<span class="status-active">Active</span>'
+                       : '<span class="status-revoked">Revoked</span>';
+          const perms = (k.permissions || []).map(p => `<span class="perm-badge perm-${p}">${p}</span>`).join('');
+          return `<tr>
+            <td><strong>${escHtml(k.name)}</strong></td>
+            <td class="mono">${escHtml(k.user_id)}</td>
+            <td>${perms || '<span style="color:var(--text-muted)">—</span>'}</td>
+            <td>${k.last_used ? new Date(k.last_used).toLocaleString() : '—'}</td>
+            <td>${k.request_count || 0}</td>
+            <td>${status}</td>
+            <td>${k.expires_at ? new Date(k.expires_at).toLocaleDateString() : '—'}</td>
+            <td style="white-space:nowrap">
+              ${k.active && !expired ? `<button class="btn-secondary" onclick="revokeKey(${k.id},'${escHtml(k.name)}')">Revoke</button> ` : ''}
+              <button class="btn-danger" onclick="deleteKey(${k.id},'${escHtml(k.name)}')"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody></table>`;
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load keys.</p></div>';
+    }
+  }
+
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function openCreate() {
+    document.getElementById('newKeyDisplay').style.display = 'none';
+    document.getElementById('createForm').style.display = 'block';
+    document.getElementById('saveKeyBtn').style.display = 'inline-block';
+    document.getElementById('keyUserId').value = '';
+    document.getElementById('keyName').value = '';
+    document.getElementById('permRead').checked = true;
+    document.getElementById('permWrite').checked = false;
+    document.getElementById('permAdmin').checked = false;
+    document.getElementById('keyExpires').value = '';
+    document.getElementById('createModal').classList.add('show');
+  }
+
+  function closeCreate() {
+    document.getElementById('createModal').classList.remove('show');
+    loadKeys();
+  }
+
+  async function createKey() {
+    const userId = document.getElementById('keyUserId').value.trim();
+    const name = document.getElementById('keyName').value.trim();
+    if (!userId || !name) { showToast('User ID and name are required.', 'error'); return; }
+    const permissions = [];
+    if (document.getElementById('permRead').checked) permissions.push('read');
+    if (document.getElementById('permWrite').checked) permissions.push('write');
+    if (document.getElementById('permAdmin').checked) permissions.push('admin');
+    const expiresAt = document.getElementById('keyExpires').value || null;
+    try {
+      const r = await fetch('/admin/api/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': CSRF },
+        body: JSON.stringify({ userId, name, permissions, expiresAt })
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      document.getElementById('newKeyValue').textContent = data.key.key;
+      document.getElementById('newKeyDisplay').style.display = 'block';
+      document.getElementById('createForm').style.display = 'none';
+      document.getElementById('saveKeyBtn').style.display = 'none';
+    } catch(e) { showToast(e.message || 'Create failed.', 'error'); }
+  }
+
+  function copyKey() {
+    const text = document.getElementById('newKeyValue').textContent;
+    navigator.clipboard.writeText(text).then(() => showToast('Key copied!', 'success'));
+  }
+
+  async function revokeKey(id, name) {
+    if (!confirm(`Revoke key "${name}"? It will stop working immediately.`)) return;
+    try {
+      const r = await fetch(`/admin/api/api-keys/${id}/revoke`, {
+        method: 'PATCH',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast('Key revoked.', 'success');
+      loadKeys();
+    } catch(e) { showToast(e.message || 'Revoke failed.', 'error'); }
+  }
+
+  async function deleteKey(id, name) {
+    if (!confirm(`Permanently delete key "${name}"?`)) return;
+    try {
+      const r = await fetch(`/admin/api/api-keys/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': CSRF }
+      });
+      const data = await r.json();
+      if (!data.success) throw new Error(data.message);
+      showToast('Key deleted.', 'success');
+      loadKeys();
+    } catch(e) { showToast(e.message || 'Delete failed.', 'error'); }
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toastMsg');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    setTimeout(() => t.className = '', 3500);
+  }
+
+  document.getElementById('createModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('createModal')) closeCreate();
+  });
+
+  loadKeys();
+</script>
+</body>
+</html>

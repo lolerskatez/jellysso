@@ -22,7 +22,8 @@ describe('JellyfinAPI', () => {
   test('should handle network errors gracefully', async () => {
     // Mock network error
     mockedAxios.create.mockReturnValue({
-      get: jest.fn().mockRejectedValue({ code: 'ECONNREFUSED' })
+      get: jest.fn().mockRejectedValue({ code: 'ECONNREFUSED' }),
+      defaults: { headers: {} }
     });
 
     const invalidApi = new JellyfinAPI('http://invalid-url');
@@ -38,7 +39,8 @@ describe('JellyfinAPI', () => {
     mockedAxios.create.mockReturnValue({
       post: jest.fn().mockRejectedValue({
         response: { status: 401, data: { message: 'Invalid username or password' } }
-      })
+      }),
+      defaults: { headers: {} }
     });
 
     api.client = mockedAxios.create();

@@ -24,6 +24,7 @@ const { AccountLockoutManager } = require('./models/AccountLockoutManager');
 const CONSTANTS = require('./config/constants');
 const crypto = require('crypto');
 require('dotenv').config();
+const logger = require('./utils/logger');
 
 // Auto-generate secrets if missing
 function ensureSecrets() {
@@ -97,9 +98,6 @@ const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
 
 // Trust proxy for proper IP detection and protocol handling
 app.set('trust proxy', 1);
-
-// Logging setup — shared singleton so admin routes can adjust level/transports at runtime
-const logger = require('./utils/logger');
 
 // Security configuration — dynamic rate-limit / CSRF / HTTPS controlled via DB settings
 const securityConfig = require('./utils/securityConfig');

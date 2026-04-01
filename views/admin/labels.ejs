@@ -161,7 +161,7 @@
         <h1><i class="fas fa-tags"></i> Labels</h1>
         <p style="color:var(--text-muted);margin:4px 0 0 0">Organise users with colour-coded labels for easy filtering and bulk operations.</p>
       </div>
-      <button class="btn-primary" onclick="openCreate()"><i class="fas fa-plus"></i> New Label</button>
+      <button class="btn-primary" id="newLabelBtn"><i class="fas fa-plus"></i> New Label</button>
     </div>
 
     <div id="labelsGrid" class="labels-grid">
@@ -193,8 +193,8 @@
       <input type="text" id="labelDesc" placeholder="Short description" maxlength="200">
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveLabel()">Save</button>
+      <button class="btn-secondary" id="cancelLabelBtn">Cancel</button>
+      <button class="btn-primary" id="saveLabelBtn">Save</button>
     </div>
   </div>
 </div>

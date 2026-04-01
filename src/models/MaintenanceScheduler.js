@@ -11,9 +11,28 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
 
+// Max safe setTimeout delay (~24.85 days). Values above this overflow a 32-bit signed int.
+const MAX_SAFE_DELAY = 2147483647;
+
 class MaintenanceScheduler {
   constructor() {
     this.tasks = [];
+    this._backupRunning = false;
+  }
+
+  /**
+   * Schedule a callback after `delay` ms, safely handling values that exceed
+   * the 32-bit signed-integer limit by breaking them into intermediate steps.
+   */
+  _safeTimeout(callback, delay) {
+    if (delay <= MAX_SAFE_DELAY) {
+      return setTimeout(callback, delay);
+    }
+    // Wait a safe chunk, then re-evaluate the remaining time
+    return setTimeout(() => {
+      const remaining = delay - MAX_SAFE_DELAY;
+      this._safeTimeout(callback, remaining);
+    }, MAX_SAFE_DELAY);
   }
 
   /**
@@ -50,6 +69,18 @@ class MaintenanceScheduler {
    * Schedule daily task at specific hour
    */
   scheduleDaily(name, task, hour) {
+    const runTask = async () => {
+      logger.info(`⏰ Running task: ${name}`);
+      try {
+        await task();
+      } catch (error) {
+        logger.error(`❌ Task ${name} failed:`, error);
+      }
+      // Reschedule for next day (24h is well under the safe limit)
+      const timeout = setTimeout(runTask, 24 * 60 * 60 * 1000);
+      this.tasks.push({ name, timeout });
+    };
+
     const now = new Date();
     let nextRun = new Date();
     nextRun.setHours(hour, 0, 0, 0);
@@ -59,17 +90,7 @@ class MaintenanceScheduler {
     }
     
     const delay = nextRun.getTime() - now.getTime();
-    
-    const timeout = setTimeout(async () => {
-      logger.info(`⏰ Running task: ${name}`);
-      try {
-        await task();
-      } catch (error) {
-        logger.error(`❌ Task ${name} failed:`, error);
-      }
-      // Reschedule for next day
-      setInterval(task, 24 * 60 * 60 * 1000);
-    }, delay);
+    const timeout = this._safeTimeout(runTask, delay);
     
     this.tasks.push({ name, timeout });
     logger.info(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
@@ -79,6 +100,18 @@ class MaintenanceScheduler {
    * Schedule weekly task
    */
   scheduleWeekly(name, task, dayOfWeek, hour) {
+    const runTask = async () => {
+      logger.info(`⏰ Running task: ${name}`);
+      try {
+        await task();
+      } catch (error) {
+        logger.error(`❌ Task ${name} failed:`, error);
+      }
+      // Reschedule for next week (7 days is well under the safe limit)
+      const timeout = setTimeout(runTask, 7 * 24 * 60 * 60 * 1000);
+      this.tasks.push({ name, timeout });
+    };
+    
     const now = new Date();
     let nextRun = new Date();
     nextRun.setHours(hour, 0, 0, 0);
@@ -87,17 +120,7 @@ class MaintenanceScheduler {
     nextRun.setDate(nextRun.getDate() + daysUntil);
     
     const delay = nextRun.getTime() - now.getTime();
-    
-    const timeout = setTimeout(async () => {
-      logger.info(`⏰ Running task: ${name}`);
-      try {
-        await task();
-      } catch (error) {
-        logger.error(`❌ Task ${name} failed:`, error);
-      }
-      // Reschedule for next week
-      setInterval(task, 7 * 24 * 60 * 60 * 1000);
-    }, delay);
+    const timeout = this._safeTimeout(runTask, delay);
     
     this.tasks.push({ name, timeout });
     logger.info(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
@@ -107,6 +130,22 @@ class MaintenanceScheduler {
    * Schedule monthly task
    */
   scheduleMonthly(name, task, dayOfMonth, hour) {
+    const runTask = async () => {
+      logger.info(`⏰ Running task: ${name}`);
+      try {
+        await task();
+      } catch (error) {
+        logger.error(`❌ Task ${name} failed:`, error);
+      }
+      // Calculate actual next month date and use safe timeout
+      const now = new Date();
+      let nextRun = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
+      nextRun.setHours(hour, 0, 0, 0);
+      const delay = nextRun.getTime() - now.getTime();
+      const timeout = this._safeTimeout(runTask, delay);
+      this.tasks.push({ name, timeout });
+    };
+    
     const now = new Date();
     let nextRun = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
     nextRun.setHours(hour, 0, 0, 0);
@@ -117,17 +156,7 @@ class MaintenanceScheduler {
     }
     
     const delay = nextRun.getTime() - now.getTime();
-    
-    const timeout = setTimeout(async () => {
-      logger.info(`⏰ Running task: ${name}`);
-      try {
-        await task();
-      } catch (error) {
-        logger.error(`❌ Task ${name} failed:`, error);
-      }
-      // Reschedule for next month
-      setInterval(task, 30 * 24 * 60 * 60 * 1000);
-    }, delay);
+    const timeout = this._safeTimeout(runTask, delay);
     
     this.tasks.push({ name, timeout });
     logger.info(`📅 Scheduled ${name} for ${nextRun.toLocaleString()}`);
@@ -203,6 +232,11 @@ class MaintenanceScheduler {
    * Backup database to timestamped file
    */
   async backupDatabase() {
+    if (this._backupRunning) {
+      logger.warn('Database backup already in progress — skipping concurrent request');
+      return null;
+    }
+    this._backupRunning = true;
     try {
       const dbPath = path.join(__dirname, '..', 'config', 'companion.db');
       const backupDir = path.join(__dirname, '..', 'config', 'backups');
@@ -248,6 +282,8 @@ class MaintenanceScheduler {
     } catch (error) {
       logger.error('Error during database backup:', error);
       throw error;
+    } finally {
+      this._backupRunning = false;
     }
   }
 

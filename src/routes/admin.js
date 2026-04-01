@@ -2185,4 +2185,69 @@ router.get('/message-templates', csrfProtection, requireAuth, requireAdmin, (req
   }
 });
 
+// Announcements management page
+router.get('/announcements', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/announcements', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Announcements page error:', error);
+    res.status(500).render('error', { message: 'Error loading announcements page', code: 500 });
+  }
+});
+
+// Labels management page
+router.get('/labels', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/labels', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Labels page error:', error);
+    res.status(500).render('error', { message: 'Error loading labels page', code: 500 });
+  }
+});
+
+// API Keys management page
+router.get('/api-keys', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/api-keys', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('API Keys page error:', error);
+    res.status(500).render('error', { message: 'Error loading API keys page', code: 500 });
+  }
+});
+
+// Account lockouts management page
+router.get('/lockouts', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/lockouts', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Lockouts page error:', error);
+    res.status(500).render('error', { message: 'Error loading lockouts page', code: 500 });
+  }
+});
+
+// Security alerts page
+router.get('/security-alerts', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/security-alerts', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Security alerts page error:', error);
+    res.status(500).render('error', { message: 'Error loading security alerts page', code: 500 });
+  }
+});
+
 module.exports = router;

@@ -213,7 +213,7 @@
 
       <!-- Security group -->
       <div class="nav-item">
-        <button class="nav-group-btn <%= ['admin-policy','admin-oidc'].includes(currentPage) ? 'active' : '' %>"
+        <button class="nav-group-btn <%= ['admin-policy','admin-oidc','admin-lockouts','admin-security-alerts'].includes(currentPage) ? 'active' : '' %>"
                 data-toggle="securitySubnav"
                 aria-expanded="false"
                 aria-label="Toggle Security section">
@@ -234,12 +234,44 @@
               OIDC SSO
             </a>
           </div>
+          <div class="nav-item">
+            <a href="/admin/lockouts" class="nav-link <%= currentPage === 'admin-lockouts' ? 'active' : '' %>">
+              <i class="fas fa-lock"></i>
+              Account Lockouts
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/security-alerts" class="nav-link <%= currentPage === 'admin-security-alerts' ? 'active' : '' %>">
+              <i class="fas fa-exclamation-triangle"></i>
+              Security Alerts
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Developer group -->
+      <div class="nav-item">
+        <button class="nav-group-btn <%= ['admin-api-keys'].includes(currentPage) ? 'active' : '' %>"
+                data-toggle="devSubnav"
+                aria-expanded="false"
+                aria-label="Toggle Developer section">
+          <i class="fas fa-code group-icon"></i>
+          Developer
+          <i class="fas fa-chevron-right toggle-icon"></i>
+        </button>
+        <div class="nav-subnav" id="devSubnav">
+          <div class="nav-item">
+            <a href="/admin/api-keys" class="nav-link <%= currentPage === 'admin-api-keys' ? 'active' : '' %>">
+              <i class="fas fa-key"></i>
+              API Keys
+            </a>
+          </div>
         </div>
       </div>
 
       <!-- System group -->
       <div class="nav-item">
-        <button class="nav-group-btn <%= ['admin-settings','admin-audit-logs','admin-backups','admin-plugins','admin-troubleshoot','admin-playback-sessions'].includes(currentPage) ? 'active' : '' %>"
+        <button class="nav-group-btn <%= ['admin-settings','admin-audit-logs','admin-backups','admin-plugins','admin-troubleshoot','admin-playback-sessions','admin-system'].includes(currentPage) ? 'active' : '' %>"
                 data-toggle="systemSubnav"
                 aria-expanded="false"
                 aria-label="Toggle System section">
@@ -284,6 +316,12 @@
               Troubleshooting
             </a>
           </div>
+          <div class="nav-item">
+            <a href="/admin/system" class="nav-link <%= currentPage === 'admin-system' ? 'active' : '' %>">
+              <i class="fas fa-microchip"></i>
+              System Info
+            </a>
+          </div>
         </div>
       </div>
     <% } %>
@@ -301,10 +339,11 @@
 <script nonce="<%= nonce %>">
   (function () {
     var groupMap = {
-      usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry'],
-      commsSubnav:    ['admin-notifications', 'admin-message-templates'],
-      securitySubnav: ['admin-policy', 'admin-oidc'],
-      systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions']
+      usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry', 'admin-labels'],
+      commsSubnav:    ['admin-notifications', 'admin-message-templates', 'admin-announcements'],
+      securitySubnav: ['admin-policy', 'admin-oidc', 'admin-lockouts', 'admin-security-alerts'],
+      devSubnav:      ['admin-api-keys'],
+      systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions', 'admin-system']
     };
     var currentPage = '<%= currentPage %>';
 

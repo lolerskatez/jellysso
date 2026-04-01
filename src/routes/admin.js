@@ -2250,4 +2250,69 @@ router.get('/security-alerts', csrfProtection, requireAuth, requireAdmin, (req, 
   }
 });
 
+// Webhook management page
+router.get('/webhooks', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/webhooks', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Webhooks page error:', error);
+    res.status(500).render('error', { message: 'Error loading webhooks page', code: 500 });
+  }
+});
+
+// Performance monitoring page
+router.get('/monitoring', requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/monitoring', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Monitoring page error:', error);
+    res.status(500).render('error', { message: 'Error loading monitoring page', code: 500 });
+  }
+});
+
+// Jellyfin activity log page
+router.get('/activity-log', requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/activity-log', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Activity log page error:', error);
+    res.status(500).render('error', { message: 'Error loading activity log page', code: 500 });
+  }
+});
+
+// Policy audit log page (cross-user admin view)
+router.get('/policy-audit', requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/policy-audit', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Policy audit page error:', error);
+    res.status(500).render('error', { message: 'Error loading policy audit page', code: 500 });
+  }
+});
+
+// Device whitelist management page
+router.get('/device-whitelist', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/device-whitelist', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Device whitelist page error:', error);
+    res.status(500).render('error', { message: 'Error loading device whitelist page', code: 500 });
+  }
+});
+
 module.exports = router;

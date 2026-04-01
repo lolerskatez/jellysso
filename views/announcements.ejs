@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Announcements</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    body { background:var(--bg-secondary); }
+    .announcements-wrap { max-width:760px; margin:0 auto; padding:var(--spacing-2xl) var(--spacing-lg); }
+    .page-header { margin-bottom:var(--spacing-2xl); }
+    .page-header h1 { margin:0 0 6px; }
+    .page-header p { color:var(--text-muted); margin:0; }
+    .ann-card { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); padding:var(--spacing-xl); margin-bottom:var(--spacing-lg); border-left:4px solid var(--border-color); transition:box-shadow .15s; }
+    .ann-card:hover { box-shadow:0 4px 18px rgba(0,0,0,.12); }
+    .ann-card.priority-high { border-left-color:#fd7e14; }
+    .ann-card.priority-urgent { border-left-color:#dc3545; }
+    .ann-card.priority-low { border-left-color:#28a745; }
+    .ann-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:10px; }
+    .ann-title { font-size:1.1rem; font-weight:700; margin:0; }
+    .priority-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap; flex-shrink:0; }
+    .priority-badge.urgent  { background:#f8d7da; color:#721c24; }
+    .priority-badge.high    { background:#ffe5d0; color:#7d3c00; }
+    .priority-badge.normal  { background:#cce5ff; color:#004085; }
+    .priority-badge.low     { background:#d4edda; color:#155724; }
+    .ann-meta { color:var(--text-muted); font-size:.82rem; margin-bottom:10px; }
+    .ann-body { line-height:1.6; white-space:pre-wrap; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3.5rem; margin-bottom:var(--spacing-lg); display:block; }
+    .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--text-muted); text-decoration:none; font-size:.9rem; margin-bottom:var(--spacing-xl); }
+    .back-link:hover { color:var(--text-primary); }
+    #loading { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); display:none; }
+  </style>
+</head>
+<body>
+<div class="announcements-wrap">
+  <a href="/account" class="back-link"><i class="fas fa-arrow-left"></i> Back to account</a>
+
+  <div class="page-header">
+    <h1><i class="fas fa-bullhorn"></i> Announcements</h1>
+    <p>Server news and updates from your administrator.</p>
+  </div>
+
+  <div id="loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+  <div id="annList"></div>
+</div>
+
+<script nonce="<%= nonce %>">
+  async function loadAnnouncements() {
+    document.getElementById('loading').style.display = '';
+    try {
+      const r = await fetch('/api/announcements');
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message || 'Failed to load');
+      renderAnnouncements(d.announcements || []);
+    } catch (e) {
+      document.getElementById('annList').innerHTML =
+        `<div style="color:#dc3545;text-align:center;padding:20px">${escH(e.message)}</div>`;
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+    }
+  }
+
+  function renderAnnouncements(items) {
+    const el = document.getElementById('annList');
+    if (items.length === 0) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-check-circle"></i>
+          <p>No announcements right now. Check back later.</p>
+        </div>`;
+      return;
+    }
+
+    // Sort: higher displayPriority first, then newest first
+    items.sort((a, b) => (b.displayPriority || 0) - (a.displayPriority || 0) || new Date(b.createdAt) - new Date(a.createdAt));
+
+    el.innerHTML = items.map(ann => {
+      const prio = priorityLabel(ann.displayPriority);
+      const cardCls = prio === 'Urgent' ? 'priority-urgent' : prio === 'High' ? 'priority-high' : prio === 'Low' ? 'priority-low' : '';
+      return `
+        <div class="ann-card ${cardCls}">
+          <div class="ann-header">
+            <h2 class="ann-title">${escH(ann.title || 'Announcement')}</h2>
+            <span class="priority-badge ${prio.toLowerCase()}">${prio}</span>
+          </div>
+          <div class="ann-meta">
+            <i class="fas fa-clock"></i> ${formatDate(ann.createdAt)}
+            ${ann.expiresAt ? ` &nbsp;·&nbsp; <i class="fas fa-hourglass-end"></i> Expires ${formatDate(ann.expiresAt)}` : ''}
+          </div>
+          <div class="ann-body">${escH(ann.message || '')}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function priorityLabel(p) {
+    if (p >= 10) return 'Urgent';
+    if (p >= 5)  return 'High';
+    if (p <= -1) return 'Low';
+    return 'Normal';
+  }
+
+  function formatDate(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function escH(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadAnnouncements();
+</script>
+</body>
+</html>

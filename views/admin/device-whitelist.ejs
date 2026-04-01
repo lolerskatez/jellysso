@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Device Whitelist - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
+    .filter-row input, .filter-row select { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:9px 18px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 14px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
+    .btn-danger { background:#dc3545; color:white; padding:6px 12px; border:none; border-radius:var(--border-radius); cursor:pointer; }
+    .btn-sm { padding:4px 10px; font-size:.82rem; }
+    table { width:100%; border-collapse:collapse; }
+    th { text-align:left; padding:10px 12px; background:var(--bg-secondary); color:var(--text-muted); font-size:.82rem; text-transform:uppercase; letter-spacing:.5px; border-bottom:2px solid var(--border-color); }
+    td { padding:9px 12px; border-bottom:1px solid var(--border-color); font-size:.88rem; }
+    tr:hover td { background:var(--bg-secondary); }
+    .uid-cell { font-family:monospace; font-size:.8rem; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); padding:var(--spacing-2xl); width:100%; max-width:480px; }
+    .modal h2 { margin:0 0 var(--spacing-xl); }
+    .form-group { margin-bottom:var(--spacing-lg); }
+    .form-group label { display:block; margin-bottom:6px; font-size:.88rem; font-weight:600; }
+    .form-group input { width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; box-sizing:border-box; }
+    .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:var(--spacing-xl); }
+    #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
+    #toastMsg.show { opacity:1; }
+    #toastMsg.success { background:#28a745; }
+    #toastMsg.error { background:#dc3545; }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-device-whitelist' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-laptop"></i> Device Whitelist</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Manage trusted devices for policy-restricted users.</p>
+      </div>
+      <button class="btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Add Device</button>
+    </div>
+
+    <div class="filter-row">
+      <input type="text" id="filterUserId" placeholder="Filter by User ID…" oninput="debounceLoad()" style="flex:1;min-width:180px">
+      <button class="btn-secondary" onclick="loadDevices()"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+
+    <div id="tableWrap" style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Device ID</th>
+            <th>Device Name</th>
+            <th>Type</th>
+            <th>Added</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="deviceTbody">
+          <tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Device Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h2>Add Device to Whitelist</h2>
+    <div class="form-group">
+      <label>User ID</label>
+      <input type="text" id="mUserId" placeholder="Jellyfin user ID">
+    </div>
+    <div class="form-group">
+      <label>Device ID</label>
+      <input type="text" id="mDeviceId" placeholder="e.g. abc123def456">
+    </div>
+    <div class="form-group">
+      <label>Device Name (optional)</label>
+      <input type="text" id="mDeviceName" placeholder="e.g. Living Room TV">
+    </div>
+    <div class="form-group">
+      <label>Device Type (optional)</label>
+      <input type="text" id="mDeviceType" placeholder="e.g. SmartTV, Mobile">
+    </div>
+    <div id="addModalError" style="color:#dc3545;margin-bottom:10px;display:none;font-size:.875rem;"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="addSaveBtn" onclick="saveDevice()">Add Device</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastMsg"></div>
+
+<script nonce="<%= nonce %>">
+  const csrf = document.querySelector('meta[name="csrf-token"]').content;
+  let allDevices = [];
+  let debTimer = null;
+
+  async function loadDevices() {
+    const userId = document.getElementById('filterUserId').value.trim();
+    const url = userId ? `/api/policy/admin/devices?userId=${encodeURIComponent(userId)}` : '/api/policy/admin/devices';
+    try {
+      const r = await fetch(url);
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message || 'Failed to load');
+      allDevices = d.devices || [];
+      renderTable();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('deviceTbody');
+    if (allDevices.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-laptop"></i><br>No whitelisted devices found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = allDevices.map(d => `
+      <tr>
+        <td class="uid-cell" title="${escH(d.userId)}">${escH(d.userId)}</td>
+        <td style="font-family:monospace;font-size:.8rem">${escH(d.deviceId)}</td>
+        <td>${escH(d.deviceName || '—')}</td>
+        <td>${escH(d.deviceType || '—')}</td>
+        <td style="white-space:nowrap;font-size:.82rem">${formatDate(d.addedAt)}</td>
+        <td>
+          <button class="btn-danger btn-sm" onclick="removeDevice('${escH(d.userId)}','${escH(d.deviceId)}')">
+            <i class="fas fa-trash"></i> Remove
+          </button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function openAddModal() {
+    document.getElementById('mUserId').value = '';
+    document.getElementById('mDeviceId').value = '';
+    document.getElementById('mDeviceName').value = '';
+    document.getElementById('mDeviceType').value = '';
+    document.getElementById('addModalError').style.display = 'none';
+    document.getElementById('addModal').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+
+  async function saveDevice() {
+    const userId = document.getElementById('mUserId').value.trim();
+    const deviceId = document.getElementById('mDeviceId').value.trim();
+    const deviceName = document.getElementById('mDeviceName').value.trim();
+    const deviceType = document.getElementById('mDeviceType').value.trim();
+    const errEl = document.getElementById('addModalError');
+    errEl.style.display = 'none';
+
+    if (!userId) { errEl.textContent = 'User ID is required.'; errEl.style.display = ''; return; }
+    if (!deviceId) { errEl.textContent = 'Device ID is required.'; errEl.style.display = ''; return; }
+
+    const btn = document.getElementById('addSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const r = await fetch(`/api/policy/admin/user/${encodeURIComponent(userId)}/devices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify({ deviceId, deviceName: deviceName || null, deviceType: deviceType || null })
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message || 'Failed to add device');
+      closeModal();
+      showToast('Device whitelisted', 'success');
+      await loadDevices();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = '';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Add Device';
+    }
+  }
+
+  async function removeDevice(userId, deviceId) {
+    if (!confirm(`Remove device "${deviceId}" from whitelist for user "${userId}"?`)) return;
+    try {
+      const r = await fetch(`/api/policy/admin/user/${encodeURIComponent(userId)}/devices/${encodeURIComponent(deviceId)}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrf }
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message || 'Failed to remove');
+      showToast('Device removed', 'success');
+      await loadDevices();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  function debounceLoad() {
+    clearTimeout(debTimer);
+    debTimer = setTimeout(loadDevices, 350);
+  }
+
+  function formatDate(s) { if (!s) return '—'; return new Date(s).toLocaleString(); }
+  function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function showToast(msg, type) {
+    const el = document.getElementById('toastMsg');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  document.getElementById('addModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('addModal')) closeModal();
+  });
+
+  loadDevices();
+</script>
+</body>
+</html>

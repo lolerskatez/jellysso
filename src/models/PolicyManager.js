@@ -101,6 +101,19 @@ class PolicyManager {
         )
       `);
 
+      // Device whitelist table
+      await DatabaseManager.query(`
+        CREATE TABLE IF NOT EXISTS device_whitelist (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId TEXT NOT NULL,
+          deviceId TEXT NOT NULL,
+          deviceName TEXT,
+          deviceType TEXT,
+          addedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(userId, deviceId)
+        )
+      `);
+
       logger.info('âœ… Policy schema initialized');
     } catch (error) {
       logger.error('Error initializing policy schema:', error);
@@ -760,6 +773,66 @@ class PolicyManager {
       `);
     } catch (error) {
       logger.error('Error getting tier distribution:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all whitelisted devices for a user
+   */
+  static async getWhitelistedDevices(userId) {
+    try {
+      return await DatabaseManager.query(
+        `SELECT * FROM device_whitelist WHERE userId = ? ORDER BY addedAt DESC`,
+        [userId]
+      ) || [];
+    } catch (error) {
+      logger.error('Error getting whitelisted devices:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Add a device to a user's whitelist
+   */
+  static async whitelistDevice(userId, deviceId, deviceName = null, deviceType = null) {
+    try {
+      await DatabaseManager.query(
+        `INSERT OR REPLACE INTO device_whitelist (userId, deviceId, deviceName, deviceType)
+         VALUES (?, ?, ?, ?)`,
+        [userId, deviceId, deviceName, deviceType]
+      );
+    } catch (error) {
+      logger.error('Error whitelisting device:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a device from a user's whitelist
+   */
+  static async unwhitelistDevice(userId, deviceId) {
+    try {
+      await DatabaseManager.query(
+        `DELETE FROM device_whitelist WHERE userId = ? AND deviceId = ?`,
+        [userId, deviceId]
+      );
+    } catch (error) {
+      logger.error('Error unwhitelisting device:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all whitelisted devices across all users (admin view)
+   */
+  static async getAllWhitelistedDevices() {
+    try {
+      return await DatabaseManager.query(
+        `SELECT * FROM device_whitelist ORDER BY addedAt DESC`
+      ) || [];
+    } catch (error) {
+      logger.error('Error getting all whitelisted devices:', error);
       return [];
     }
   }

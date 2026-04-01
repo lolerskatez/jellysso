@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const PolicyManager = require('../models/PolicyManager');
+const DatabaseManager = require('../models/DatabaseManager');
 const AuditLogger = require('../models/AuditLogger');
 const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
@@ -445,6 +446,107 @@ router.get('/admin/user/:userId/audit-log', requireAuth, requireAdmin, async (re
       success: false,
       message: 'Failed to retrieve audit log'
     });
+  }
+});
+
+/**
+ * GET /api/policy/admin/audit-log
+ * Cross-user policy audit log (admin view)
+ * Query: userId, action, limit, offset
+ */
+router.get('/admin/audit-log', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const offset = Math.max(0, parseInt(req.query.offset) || 0);
+    const userId = req.query.userId || null;
+    const action = req.query.action || null;
+
+    let sql = `SELECT * FROM policy_audit`;
+    const params = [];
+    const conditions = [];
+
+    if (userId) { conditions.push('userId = ?'); params.push(userId); }
+    if (action) { conditions.push('action = ?'); params.push(action); }
+    if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
+    sql += ' ORDER BY createdAt DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const logs = await DatabaseManager.query(sql, params);
+
+    res.json({
+      success: true,
+      logs: (logs || []).map(log => ({
+        id: log.id,
+        userId: log.userId,
+        type: log.policyType,
+        action: log.action,
+        reason: log.reason,
+        device: log.deviceId,
+        session: log.sessionId,
+        ipAddress: log.ipAddress,
+        timestamp: log.createdAt
+      })),
+      meta: { limit, offset, returned: (logs || []).length }
+    });
+  } catch (error) {
+    logger.error('Error getting admin audit log:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to retrieve audit log' });
+  }
+});
+
+/**
+ * GET /api/policy/admin/devices
+ * Get all whitelisted devices across all users
+ */
+router.get('/admin/devices', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const userId = req.query.userId || null;
+    let devices;
+    if (userId) {
+      devices = await PolicyManager.getWhitelistedDevices(userId);
+    } else {
+      devices = await PolicyManager.getAllWhitelistedDevices();
+    }
+    res.json({ success: true, devices });
+  } catch (error) {
+    logger.error('Error getting device whitelist:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to retrieve device whitelist' });
+  }
+});
+
+/**
+ * POST /api/policy/admin/user/:userId/devices
+ * Whitelist a device for a user (admin)
+ * Body: { deviceId, deviceName?, deviceType? }
+ */
+router.post('/admin/user/:userId/devices', csrfProtection, requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { deviceId, deviceName, deviceType } = req.body;
+    if (!deviceId) return res.status(400).json({ success: false, message: 'deviceId is required' });
+
+    await PolicyManager.whitelistDevice(userId, deviceId, deviceName, deviceType);
+    AuditLogger.log('info', 'ADMIN_DEVICE_WHITELISTED', { adminId: req.session.user?.Id, userId, deviceId });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Error whitelisting device:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to whitelist device' });
+  }
+});
+
+/**
+ * DELETE /api/policy/admin/user/:userId/devices/:deviceId
+ * Remove a device from a user's whitelist (admin)
+ */
+router.delete('/admin/user/:userId/devices/:deviceId', csrfProtection, requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId, deviceId } = req.params;
+    await PolicyManager.unwhitelistDevice(userId, deviceId);
+    AuditLogger.log('info', 'ADMIN_DEVICE_REMOVED', { adminId: req.session.user?.Id, userId, deviceId });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Error removing device:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to remove device' });
   }
 });
 

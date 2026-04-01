@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Monitoring - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:var(--spacing-lg); margin-bottom:var(--spacing-2xl); }
+    .stat-card { padding:var(--spacing-lg); background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); }
+    .stat-card .val { font-size:1.9rem; font-weight:700; }
+    .stat-card .lbl { color:var(--text-muted); font-size:.83rem; margin-top:4px; }
+    .stat-card .sub { color:var(--text-muted); font-size:.76rem; }
+    .section { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); padding:var(--spacing-xl); margin-bottom:var(--spacing-xl); }
+    .section h3 { margin:0 0 var(--spacing-lg); font-size:1rem; }
+    /* Response time bar */
+    .rt-bar-wrap { display:flex; gap:0; border-radius:6px; overflow:hidden; height:36px; margin-bottom:8px; }
+    .rt-seg { display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:700; color:white; transition:width .4s; }
+    .rt-seg.fast   { background:#28a745; }
+    .rt-seg.medium { background:#ffc107; color:#333; }
+    .rt-seg.slow   { background:#dc3545; }
+    .rt-legend { display:flex; gap:16px; font-size:.82rem; color:var(--text-muted); }
+    .rt-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:4px; }
+    /* Top errors */
+    .error-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:6px; background:var(--bg-secondary); margin-bottom:6px; font-size:.88rem; }
+    .error-path { font-family:monospace; font-size:.82rem; }
+    .error-count { font-weight:700; color:#dc3545; min-width:40px; text-align:right; }
+    /* Memory gauge */
+    .mem-bar-wrap { background:var(--bg-secondary); border-radius:6px; height:20px; overflow:hidden; margin-bottom:8px; }
+    .mem-bar { height:100%; border-radius:6px; transition:width .4s; }
+    /* Historical chart (simple) */
+    .chart-wrap { overflow-x:auto; }
+    .bar-chart { display:flex; align-items:flex-end; gap:2px; height:80px; min-width:100%; }
+    .bar-chart .col { flex:1; min-width:8px; background:var(--primary); border-radius:3px 3px 0 0; transition:height .3s; cursor:pointer; position:relative; }
+    .bar-chart .col:hover::after { content:attr(title); position:absolute; bottom:100%; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:3px 7px; border-radius:4px; font-size:.75rem; white-space:nowrap; pointer-events:none; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:9px 18px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 14px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
+    .health-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .health-dot.healthy { background:#28a745; }
+    .health-dot.degraded { background:#ffc107; }
+    .health-dot.unknown { background:#6c757d; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:var(--spacing-xl); }
+    @media(max-width:700px){ .two-col { grid-template-columns:1fr; } }
+    .auto-refresh-label { font-size:.83rem; color:var(--text-muted); margin-right:8px; }
+    #lastUpdated { font-size:.8rem; color:var(--text-muted); }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-monitoring' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-tachometer-alt"></i> Performance Monitoring</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Real-time application metrics and health indicators.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="auto-refresh-label"><i class="fas fa-circle" id="liveDot" style="color:#dc3545;font-size:.6rem"></i> <span id="lastUpdated">—</span></span>
+        <select id="hoursSelect" onchange="loadMetrics()" style="padding:8px 12px;border:1px solid var(--border-color);border-radius:var(--border-radius);background:var(--bg-secondary);color:var(--text-primary)">
+          <option value="1">Last 1h</option>
+          <option value="6">Last 6h</option>
+          <option value="24" selected>Last 24h</option>
+          <option value="72">Last 3d</option>
+          <option value="168">Last 7d</option>
+        </select>
+        <button class="btn-secondary" onclick="loadMetrics()"><i class="fas fa-sync"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Key stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="val" id="mUptime">—</div><div class="lbl">Uptime</div></div>
+      <div class="stat-card"><div class="val" id="mReqPerHr">—</div><div class="lbl">Req / Hour</div></div>
+      <div class="stat-card"><div class="val" id="mAvgResp">—</div><div class="lbl">Avg Response</div><div class="sub">ms</div></div>
+      <div class="stat-card"><div class="val" id="mErrorRate" style="color:#dc3545">—</div><div class="lbl">Error Rate</div><div class="sub">%</div></div>
+      <div class="stat-card"><div class="val" id="mTotalReq">—</div><div class="lbl">Total Requests</div></div>
+      <div class="stat-card"><div class="val" id="mDbSize">—</div><div class="lbl">Database Size</div></div>
+    </div>
+
+    <div class="two-col">
+      <!-- Response time distribution -->
+      <div class="section">
+        <h3><i class="fas fa-stopwatch"></i> Response Time Distribution</h3>
+        <div class="rt-bar-wrap" id="rtBar">
+          <div class="rt-seg fast" id="rtFast" style="width:0%">&lt;200ms</div>
+          <div class="rt-seg medium" id="rtMed" style="width:0%">200–1s</div>
+          <div class="rt-seg slow" id="rtSlow" style="width:0%">&gt;1s</div>
+        </div>
+        <div class="rt-legend">
+          <span><span class="rt-dot" style="background:#28a745"></span><span id="rtFastPct">0</span>% &lt;200ms</span>
+          <span><span class="rt-dot" style="background:#ffc107"></span><span id="rtMedPct">0</span>% 200ms–1s</span>
+          <span><span class="rt-dot" style="background:#dc3545"></span><span id="rtSlowPct">0</span>% &gt;1s</span>
+        </div>
+      </div>
+
+      <!-- Memory usage -->
+      <div class="section">
+        <h3><i class="fas fa-memory"></i> Memory Usage</h3>
+        <div id="memDetails"></div>
+      </div>
+    </div>
+
+    <!-- Historical requests chart -->
+    <div class="section">
+      <h3><i class="fas fa-chart-bar"></i> Request Volume (hourly)</h3>
+      <div class="chart-wrap">
+        <div class="bar-chart" id="barChart"><p style="color:var(--text-muted)">Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- Top errors + Health status -->
+    <div class="two-col">
+      <div class="section">
+        <h3><i class="fas fa-exclamation-triangle"></i> Top Error Paths</h3>
+        <div id="topErrors"><p style="color:var(--text-muted)">Loading…</p></div>
+      </div>
+      <div class="section">
+        <h3><i class="fas fa-heartbeat"></i> System Health</h3>
+        <div id="healthStatus"><p style="color:var(--text-muted)">Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- Cache stats -->
+    <div class="section">
+      <h3><i class="fas fa-bolt"></i> Cache Statistics</h3>
+      <div id="cacheStats"><p style="color:var(--text-muted)">Loading…</p></div>
+    </div>
+
+  </div>
+</div>
+
+<script nonce="<%= nonce %>">
+  let refreshTimer = null;
+
+  async function loadMetrics() {
+    const hours = document.getElementById('hoursSelect').value;
+    try {
+      const [mRes, hRes, cRes] = await Promise.all([
+        fetch(`/api/monitoring/metrics?hours=${hours}`),
+        fetch('/api/monitoring/health'),
+        fetch('/api/monitoring/cache')
+      ]);
+      const [mData, hData, cData] = await Promise.all([mRes.json(), hRes.json(), cRes.json()]);
+
+      if (mData.success) renderMetrics(mData.metrics, mData.historical);
+      if (hData.success) renderHealth(hData);
+      if (cData.success) renderCache(cData.cache);
+
+      document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      document.getElementById('liveDot').style.color = '#28a745';
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => { document.getElementById('liveDot').style.color = '#dc3545'; }, 5000);
+    } catch (e) {
+      console.error('Failed to load metrics', e);
+    }
+  }
+
+  function renderMetrics(m, historical) {
+    document.getElementById('mUptime').textContent = m.uptime || '—';
+    document.getElementById('mReqPerHr').textContent = fmt(m.requestsPerHour);
+    document.getElementById('mAvgResp').textContent = m.avgResponseTime != null ? m.avgResponseTime.toFixed(1) : '—';
+    document.getElementById('mErrorRate').textContent = m.errorRate != null ? m.errorRate.toFixed(2) : '—';
+    document.getElementById('mTotalReq').textContent = fmt(m.totalRequests);
+    document.getElementById('mDbSize').textContent = fmtBytes(m.dbSize);
+
+    // Response time distribution
+    const dist = m.responseTimeDistribution || {};
+    const total = (dist.fast || 0) + (dist.medium || 0) + (dist.slow || 0) || 1;
+    const fp = ((dist.fast || 0) / total * 100).toFixed(1);
+    const mp = ((dist.medium || 0) / total * 100).toFixed(1);
+    const sp = ((dist.slow || 0) / total * 100).toFixed(1);
+    document.getElementById('rtFast').style.width = fp + '%';
+    document.getElementById('rtMed').style.width = mp + '%';
+    document.getElementById('rtSlow').style.width = sp + '%';
+    document.getElementById('rtFast').textContent = fp > 5 ? `${fp}%` : '';
+    document.getElementById('rtMed').textContent = mp > 5 ? `${mp}%` : '';
+    document.getElementById('rtSlow').textContent = sp > 5 ? `${sp}%` : '';
+    document.getElementById('rtFastPct').textContent = fp;
+    document.getElementById('rtMedPct').textContent = mp;
+    document.getElementById('rtSlowPct').textContent = sp;
+
+    // Memory
+    const mem = m.memory || {};
+    const used = mem.heapUsed || 0;
+    const tot = mem.heapTotal || 1;
+    const ext = mem.external || 0;
+    const pct = Math.min(100, (used / tot * 100)).toFixed(1);
+    const memColor = pct > 85 ? '#dc3545' : pct > 65 ? '#ffc107' : '#28a745';
+    document.getElementById('memDetails').innerHTML = `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+          <span>Heap Used</span><span>${fmtBytes(used)} / ${fmtBytes(tot)} (${pct}%)</span>
+        </div>
+        <div class="mem-bar-wrap"><div class="mem-bar" style="width:${pct}%;background:${memColor}"></div></div>
+      </div>
+      <div style="font-size:.83rem;color:var(--text-muted)">External: ${fmtBytes(ext)} &nbsp;|&nbsp; CPU: ${m.cpuUsage != null ? m.cpuUsage.toFixed(1) + '%' : '—'}</div>
+    `;
+
+    // Top errors
+    const errs = m.topErrors || [];
+    if (errs.length === 0) {
+      document.getElementById('topErrors').innerHTML = '<p style="color:var(--text-muted)">No errors recorded.</p>';
+    } else {
+      document.getElementById('topErrors').innerHTML = errs.map(e =>
+        `<div class="error-item"><span class="error-path">${escH(e.path || e.error || String(e))}</span><span class="error-count">${e.count || ''}</span></div>`
+      ).join('');
+    }
+
+    // Historical bar chart
+    if (historical && historical.length > 0) {
+      const maxVal = Math.max(...historical.map(h => h.count || 0), 1);
+      document.getElementById('barChart').innerHTML = historical.map(h => {
+        const pct = ((h.count || 0) / maxVal * 100).toFixed(1);
+        return `<div class="col" style="height:${pct}%" title="${escH(h.hour || h.bucket || '')}: ${h.count || 0} req"></div>`;
+      }).join('');
+    } else {
+      document.getElementById('barChart').innerHTML = '<p style="color:var(--text-muted)">No historical data available.</p>';
+    }
+  }
+
+  function renderHealth(h) {
+    const comps = h.components || {};
+    const statusDot = status => `<span class="health-dot ${status === true || status === 'healthy' ? 'healthy' : 'degraded'}"></span>`;
+    document.getElementById('healthStatus').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:.9rem">
+        <div>${statusDot(h.status === 'healthy')} Overall: <strong>${h.status || '—'}</strong></div>
+        ${Object.entries(comps).map(([name, c]) => `
+          <div>${statusDot(c.healthy)} ${escH(name)}: <strong>${c.healthy ? 'Healthy' : 'Degraded'}</strong>
+            ${c.status ? `<span style="color:var(--text-muted);font-size:.8rem;margin-left:6px">${escH(JSON.stringify(c.status))}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  function renderCache(cache) {
+    document.getElementById('cacheStats').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;font-size:.88rem">
+        <div><div style="font-weight:700;font-size:1.4rem">${fmt(cache.size || 0)}</div><div style="color:var(--text-muted)">Entries</div></div>
+        <div><div style="font-weight:700;font-size:1.4rem">${fmt(cache.hits || 0)}</div><div style="color:var(--text-muted)">Cache Hits</div></div>
+        <div><div style="font-weight:700;font-size:1.4rem">${fmt(cache.misses || 0)}</div><div style="color:var(--text-muted)">Cache Misses</div></div>
+        <div><div style="font-weight:700;font-size:1.4rem">${cache.hitRate != null ? Number(cache.hitRate).toFixed(1) : '—'}%</div><div style="color:var(--text-muted)">Hit Rate</div></div>
+        <div><div style="font-weight:700;font-size:1.4rem">${fmt(cache.maxSize || 0)}</div><div style="color:var(--text-muted)">Max Size</div></div>
+      </div>`;
+  }
+
+  function fmt(n) { if (n == null) return '—'; return Number(n).toLocaleString(); }
+
+  function fmtBytes(b) {
+    if (b == null || b === 0) return '0 B';
+    const units = ['B','KB','MB','GB'];
+    let i = 0;
+    while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+    return b.toFixed(1) + ' ' + units[i];
+  }
+
+  function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  loadMetrics();
+  // Auto-refresh every 30 seconds
+  setInterval(loadMetrics, 30000);
+</script>
+</body>
+</html>

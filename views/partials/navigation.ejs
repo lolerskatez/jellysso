@@ -251,7 +251,7 @@
 
       <!-- Developer group -->
       <div class="nav-item">
-        <button class="nav-group-btn <%= ['admin-api-keys'].includes(currentPage) ? 'active' : '' %>"
+        <button class="nav-group-btn <%= ['admin-api-keys','admin-webhooks'].includes(currentPage) ? 'active' : '' %>"
                 data-toggle="devSubnav"
                 aria-expanded="false"
                 aria-label="Toggle Developer section">
@@ -266,12 +266,18 @@
               API Keys
             </a>
           </div>
+          <div class="nav-item">
+            <a href="/admin/webhooks" class="nav-link <%= currentPage === 'admin-webhooks' ? 'active' : '' %>">
+              <i class="fas fa-plug"></i>
+              Webhooks
+            </a>
+          </div>
         </div>
       </div>
 
       <!-- System group -->
       <div class="nav-item">
-        <button class="nav-group-btn <%= ['admin-settings','admin-audit-logs','admin-backups','admin-plugins','admin-troubleshoot','admin-playback-sessions','admin-system'].includes(currentPage) ? 'active' : '' %>"
+        <button class="nav-group-btn <%= ['admin-settings','admin-audit-logs','admin-backups','admin-plugins','admin-troubleshoot','admin-playback-sessions','admin-system','admin-monitoring','admin-activity-log','admin-policy-audit','admin-device-whitelist'].includes(currentPage) ? 'active' : '' %>"
                 data-toggle="systemSubnav"
                 aria-expanded="false"
                 aria-label="Toggle System section">
@@ -322,6 +328,30 @@
               System Info
             </a>
           </div>
+          <div class="nav-item">
+            <a href="/admin/monitoring" class="nav-link <%= currentPage === 'admin-monitoring' ? 'active' : '' %>">
+              <i class="fas fa-tachometer-alt"></i>
+              Performance
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/activity-log" class="nav-link <%= currentPage === 'admin-activity-log' ? 'active' : '' %>">
+              <i class="fas fa-list-alt"></i>
+              Activity Log
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/policy-audit" class="nav-link <%= currentPage === 'admin-policy-audit' ? 'active' : '' %>">
+              <i class="fas fa-clipboard-list"></i>
+              Policy Audit
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/device-whitelist" class="nav-link <%= currentPage === 'admin-device-whitelist' ? 'active' : '' %>">
+              <i class="fas fa-laptop"></i>
+              Device Whitelist
+            </a>
+          </div>
         </div>
       </div>
     <% } %>
@@ -342,8 +372,8 @@
       usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry', 'admin-labels'],
       commsSubnav:    ['admin-notifications', 'admin-message-templates', 'admin-announcements'],
       securitySubnav: ['admin-policy', 'admin-oidc', 'admin-lockouts', 'admin-security-alerts'],
-      devSubnav:      ['admin-api-keys'],
-      systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions', 'admin-system']
+      devSubnav:      ['admin-api-keys', 'admin-webhooks'],
+      systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions', 'admin-system', 'admin-monitoring', 'admin-activity-log', 'admin-policy-audit', 'admin-device-whitelist']
     };
     var currentPage = '<%= currentPage %>';
 

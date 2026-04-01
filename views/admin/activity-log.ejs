@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity Log - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
+    .filter-row select, .filter-row input { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 16px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:8px 16px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
+    table { width:100%; border-collapse:collapse; }
+    th { text-align:left; padding:10px 12px; background:var(--bg-secondary); color:var(--text-muted); font-size:.82rem; text-transform:uppercase; letter-spacing:.5px; border-bottom:2px solid var(--border-color); }
+    td { padding:10px 12px; border-bottom:1px solid var(--border-color); font-size:.88rem; vertical-align:middle; }
+    tr:hover td { background:var(--bg-secondary); }
+    .type-badge { display:inline-block; padding:2px 9px; border-radius:12px; font-size:.76rem; font-weight:700; background:var(--bg-secondary); border:1px solid var(--border-color); }
+    .severity-col { min-width:100px; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
+    .pagination { display:flex; gap:8px; align-items:center; margin-top:var(--spacing-xl); justify-content:center; }
+    .pagination button { padding:6px 14px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); cursor:pointer; }
+    .pagination button:disabled { opacity:.4; cursor:default; }
+    .pagination .page-info { color:var(--text-muted); font-size:.85rem; }
+    #spinner { display:none; text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-activity-log' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-list-alt"></i> Jellyfin Activity Log</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Browse server-side activity events from Jellyfin.</p>
+      </div>
+      <button class="btn-secondary" onclick="loadActivity(true)"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+
+    <div class="filter-row">
+      <input type="text" id="filterSearch" placeholder="Filter by user or type…" oninput="filterRows()" style="flex:1;min-width:180px">
+      <select id="perPage" onchange="onPerPageChange()">
+        <option value="25">25 per page</option>
+        <option value="50" selected>50 per page</option>
+        <option value="100">100 per page</option>
+      </select>
+    </div>
+
+    <div id="spinner"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+
+    <div id="tableWrap" style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>User</th>
+            <th>Client</th>
+            <th>Device</th>
+            <th>Severity</th>
+          </tr>
+        </thead>
+        <tbody id="activityTbody">
+          <tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button id="prevBtn" onclick="prevPage()" disabled><i class="fas fa-chevron-left"></i> Prev</button>
+      <span class="page-info" id="pageInfo">Page 1</span>
+      <button id="nextBtn" onclick="nextPage()"><i class="fas fa-chevron-right"></i> Next</button>
+    </div>
+  </div>
+</div>
+
+<script nonce="<%= nonce %>">
+  let allItems = [];
+  let startIndex = 0;
+  let hasMore = true;
+
+  function getLimit() { return parseInt(document.getElementById('perPage').value) || 50; }
+
+  async function loadActivity(reset) {
+    if (reset) { startIndex = 0; allItems = []; hasMore = true; }
+    if (!hasMore) return;
+
+    document.getElementById('spinner').style.display = '';
+    try {
+      const limit = getLimit();
+      const r = await fetch(`/api/activity?startIndex=${startIndex}&limit=${limit}`);
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'Failed to load activity');
+
+      const items = d.items || d.data || [];
+      allItems = allItems.concat(items);
+      hasMore = items.length >= limit;
+      renderRows();
+      updatePagination();
+    } catch (e) {
+      document.getElementById('activityTbody').innerHTML =
+        `<tr><td colspan="6" style="color:#dc3545;text-align:center;padding:20px">${escH(e.message)}</td></tr>`;
+    } finally {
+      document.getElementById('spinner').style.display = 'none';
+    }
+  }
+
+  function renderRows() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    let rows = allItems;
+    if (search) {
+      rows = rows.filter(r =>
+        (r.Name || '').toLowerCase().includes(search) ||
+        (r.Type || '').toLowerCase().includes(search) ||
+        (r.UserName || '').toLowerCase().includes(search) ||
+        (r.Client || '').toLowerCase().includes(search)
+      );
+    }
+
+    const tbody = document.getElementById('activityTbody');
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-list-alt"></i><br>No activity found</div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const sev = r.Severity || '';
+      const sevColor = sev === 'Error' ? '#dc3545' : sev === 'Warning' ? '#ffc107' : 'var(--text-muted)';
+      return `
+        <tr>
+          <td style="white-space:nowrap;font-size:.82rem">${formatDate(r.Date || r.ActivityDate)}</td>
+          <td><span class="type-badge">${escH(r.Type || r.Name || '—')}</span></td>
+          <td>${escH(r.UserName || r.UserId || '—')}</td>
+          <td>${escH(r.Client || '—')}</td>
+          <td>${escH(r.DeviceName || '—')}</td>
+          <td class="severity-col" style="color:${sevColor}">${escH(sev || 'Info')}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function filterRows() { renderRows(); }
+
+  function onPerPageChange() { loadActivity(true); }
+
+  function updatePagination() {
+    document.getElementById('prevBtn').disabled = startIndex === 0;
+    document.getElementById('nextBtn').disabled = !hasMore;
+    const page = Math.floor(startIndex / getLimit()) + 1;
+    document.getElementById('pageInfo').textContent = `Loaded ${allItems.length} entries`;
+  }
+
+  async function nextPage() {
+    startIndex += getLimit();
+    await loadActivity(false);
+  }
+
+  function prevPage() {
+    startIndex = Math.max(0, startIndex - getLimit());
+    renderRows();
+    updatePagination();
+  }
+
+  function formatDate(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleString();
+  }
+
+  function escH(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadActivity(true);
+</script>
+</body>
+</html>

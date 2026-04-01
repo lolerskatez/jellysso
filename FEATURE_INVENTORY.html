@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JellySSO Feature Inventory</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --bg2: #1a1d25;
+      --bg3: #22263a;
+      --border: #2e3347;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --primary: #6c8ef5;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --gray: #6b7280;
+      --orange: #fb923c;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .page { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+    h1 { font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+    .subtitle { color: var(--muted); margin-bottom: 40px; font-size: .95rem; }
+    h2 { font-size: 1.15rem; font-weight: 700; color: var(--text); margin: 40px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 1rem; font-weight: 600; color: var(--muted); margin: 28px 0 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-bottom: 8px; }
+    th { background: var(--bg3); color: var(--muted); text-align: left; padding: 8px 12px; font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: var(--bg2); }
+    code { font-family: 'Consolas', 'Fira Code', monospace; font-size: .82rem; background: var(--bg3); padding: 1px 5px; border-radius: 4px; color: #a5b4fc; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+    .ok   { background: #14532d; color: #86efac; }
+    .warn { background: #451a03; color: #fdba74; }
+    .miss { background: #450a0a; color: #fca5a5; }
+    .na   { background: #1e2533; color: #6b7280; }
+    .future { background: #1e1b4b; color: #a5b4fc; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 20px 0 40px; }
+    .summary-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+    .summary-card .val { font-size: 2.2rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .summary-card .lbl { font-size: .82rem; color: var(--muted); }
+    .val-green  { color: var(--green); }
+    .val-yellow { color: var(--yellow); }
+    .val-red    { color: var(--red); }
+    .val-gray   { color: var(--gray); }
+
+    .gap-table td:first-child { font-weight: 600; }
+    .pri { font-size: .75rem; font-weight: 700; }
+    .pri-high   { color: #ef4444; }
+    .pri-med    { color: #fb923c; }
+    .pri-low    { color: #6b7280; }
+    .pri-future { color: #a5b4fc; }
+
+    .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 24px; }
+    .toc a { font-size: .875rem; color: var(--muted); display: block; padding: 2px 0; }
+    .toc a:hover { color: var(--primary); }
+    .toc-title { grid-column: 1 / -1; font-weight: 700; color: var(--text); margin-bottom: 10px; font-size: .9rem; }
+
+    .generated { color: var(--muted); font-size: .8rem; margin-top: 60px; border-top: 1px solid var(--border); padding-top: 16px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>JellySSO Feature Inventory</h1>
+  <p class="subtitle">Generated April 1, 2026 &mdash; complete audit of all features, UI status, and gaps.</p>
+
+  <!-- Summary stats -->
+  <div class="summary-grid">
+    <div class="summary-card"><div class="val val-green">42</div><div class="lbl">✅ UI exists and complete</div></div>
+    <div class="summary-card"><div class="val val-yellow">8</div><div class="lbl">⚠️ UI partial / incomplete</div></div>
+    <div class="summary-card"><div class="val val-red">3</div><div class="lbl">❌ UI missing (feature exists)</div></div>
+    <div class="summary-card"><div class="val val-gray">3</div><div class="lbl">⚫ Not implemented at all</div></div>
+  </div>
+
+  <!-- Table of contents -->
+  <div class="toc">
+    <div class="toc-title">Jump to section</div>
+    <a href="#auth">1. Authentication</a>
+    <a href="#users">2. User Management</a>
+    <a href="#invites">3. Invite System</a>
+    <a href="#policy">4. Policy Management</a>
+    <a href="#labels">5. Labels</a>
+    <a href="#announcements">6. Announcements</a>
+    <a href="#notifications">7. Notifications / Email</a>
+    <a href="#apikeys">8. API Keys</a>
+    <a href="#security">9. Security</a>
+    <a href="#system">10. System / Admin</a>
+    <a href="#plugins">11. Plugin System</a>
+    <a href="#playback">12. Playback</a>
+    <a href="#account">13. User Self-Service</a>
+    <a href="#other">14. Other / Infrastructure</a>
+    <a href="#gaps">🔴 Gaps Summary</a>
+    <a href="#files">Route &amp; Model Files</a>
+  </div>
+
+  <!-- 1. Auth -->
+  <h2 id="auth">1. Authentication</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Username / password login</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/login.ejs</code></td></tr>
+      <tr><td>OIDC / SSO login flow</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/login.ejs</code> — SSO button shown when enabled</td></tr>
+      <tr><td>OIDC provider config (admin)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/oidc.ejs</code></td></tr>
+      <tr><td>QuickConnect (TV/device PIN auth)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/quickconnect.ejs</code></td></tr>
+      <tr><td>Invite-required signup</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/signup.ejs</code></td></tr>
+      <tr><td>Password reset (forgot password)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/reset-password.ejs</code></td></tr>
+      <tr><td>App password / OTP for OIDC native clients</td><td>Yes</td><td><span class="badge warn">⚠️ partial</span></td><td>Embedded in <code>views/account.ejs</code> — no standalone dedicated page</td></tr>
+      <tr><td>Session rotation / idle timeout</td><td>No</td><td><span class="badge na">N/A</span></td><td>Server-side only — <code>sessionRotation.js</code>, <code>sessionTimeoutManager.js</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 2. Users -->
+  <h2 id="users">2. User Management</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>User list, search, filter (admin)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/users.ejs</code></td></tr>
+      <tr><td>Create / edit / delete users</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/users.ejs</code></td></tr>
+      <tr><td>Bulk enable / disable / delete / set-tier</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/users.ejs</code></td></tr>
+      <tr><td>User account expiry management</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/expiry.ejs</code></td></tr>
+      <tr><td>Password policy config</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/settings.ejs</code> — Security tab</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 3. Invites -->
+  <h2 id="invites">3. Invite System</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Admin invite CRUD (create, revoke, max-uses, expiry)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/invites.ejs</code></td></tr>
+      <tr><td>Signup profiles / permission templates</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/profiles.ejs</code></td></tr>
+      <tr><td>CAPTCHA on signup (admin config)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/settings.ejs</code></td></tr>
+      <tr><td>Referral invites — user-side view &amp; share link</td><td>Yes</td><td><span class="badge warn">⚠️ partial</span></td><td>Admin toggle exists in settings; users have <strong>no page</strong> to view or copy their personal referral link</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4. Policy -->
+  <h2 id="policy">4. Policy Management (Jellyfin Policy Sync)</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Policy tier CRUD (single / standard / unlimited / admin)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/policy.ejs</code></td></tr>
+      <tr><td>Assign tier to user, sync to Jellyfin</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/users.ejs</code></td></tr>
+      <tr><td>User policy view (user sees own tier / stream limit)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/policy.ejs</code></td></tr>
+      <tr><td>Session enforcement daemon config</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/settings.ejs</code> — Stream Enforcement tab</td></tr>
+      <tr><td>Device whitelist management per user</td><td>Optional</td><td><span class="badge warn">⚠️ partial</span></td><td><code>PolicyManager</code> has <code>deviceWhitelistEnabled</code> flag — <strong>no UI to list or add whitelisted devices</strong></td></tr>
+      <tr><td>Admin-wide policy audit log</td><td>Optional</td><td><span class="badge warn">⚠️ partial</span></td><td>User can view own policy audit via <code>GET /api/policy/user/audit-log</code> — <strong>no cross-user admin view</strong></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 5. Labels -->
+  <h2 id="labels">5. Labels / Tagging</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Label CRUD + bulk user assignment</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/labels.ejs</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 6. Announcements -->
+  <h2 id="announcements">6. Announcements</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Announcement management (admin)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/announcements.ejs</code></td></tr>
+      <tr><td>User-facing announcements display</td><td>Optional</td><td><span class="badge warn">⚠️ partial</span></td><td>Rendered inline via API on user pages — <strong>no standalone user-facing announcements page</strong></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 7. Notifications -->
+  <h2 id="notifications">7. Notifications / Email</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Multi-channel notification config (SMTP, Discord, Telegram, Matrix)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/notifications.ejs</code></td></tr>
+      <tr><td>Message templates CRUD</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/message-templates.ejs</code></td></tr>
+      <tr><td>User notification preferences</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code> — notifications section</td></tr>
+      <tr><td>Contact methods add &amp; verify (Discord / Telegram / Matrix handles)</td><td>Yes</td><td><span class="badge warn">⚠️ partial</span></td><td>Backend <code>ContactMethodManager</code> + routes complete — account page shows verified count but <strong>add/verify flow UI needs review</strong></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 8. API Keys -->
+  <h2 id="apikeys">8. API Keys</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Admin API key management (create, revoke, delete, scopes, expiry)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/api-keys.ejs</code></td></tr>
+      <tr><td>Companion plugin API key regeneration</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/plugin.ejs</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 9. Security -->
+  <h2 id="security">9. Security</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Account lockout management (view locked accounts, unlock, history)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/lockouts.ejs</code></td></tr>
+      <tr><td>Security alerts viewer (severity filter, mark read, dismiss)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/security-alerts.ejs</code></td></tr>
+      <tr><td>Audit log viewer (filter, export, cleanup)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/audit-logs.ejs</code></td></tr>
+      <tr><td>Jellyfin activity log (admin, dedicated page)</td><td>Optional</td><td><span class="badge warn">⚠️ partial</span></td><td><code>GET /api/activity</code> proxies Jellyfin — <strong>no standalone admin page</strong></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 10. System -->
+  <h2 id="system">10. System / Admin</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Admin dashboard (stats, recent events, health)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/dashboard.ejs</code></td></tr>
+      <tr><td>All settings tabs (App, Jellyfin, Security, Streams, Jellyseerr, Ombi, Referrals, Logging, Maintenance)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/settings.ejs</code></td></tr>
+      <tr><td>System info / active sessions / cache / plugins</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/system.ejs</code></td></tr>
+      <tr><td>Database backup &amp; restore</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/backups.ejs</code></td></tr>
+      <tr><td>Troubleshooting / diagnostics</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/troubleshoot.ejs</code></td></tr>
+      <tr><td>Performance monitoring dashboard</td><td>Optional</td><td><span class="badge miss">❌ missing</span></td><td><code>PerformanceMonitor.js</code> + <code>src/routes/monitoring.js</code> are API-only — <strong>no admin UI page exists</strong></td></tr>
+      <tr><td>Jellyseerr integration config &amp; user sync</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/settings.ejs</code> — Jellyseerr tab</td></tr>
+      <tr><td>Ombi integration config &amp; user sync</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/settings.ejs</code> — Ombi tab</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 11. Plugins -->
+  <h2 id="plugins">11. Plugin System</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Jellyfin companion plugin download &amp; install instructions</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/plugin.ejs</code></td></tr>
+      <tr><td>Plugin admin config page</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/plugins.ejs</code></td></tr>
+      <tr><td>Server-side Node.js plugin list (hook-based extension system)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin/system.ejs</code> — Plugins tab</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 12. Playback -->
+  <h2 id="playback">12. Playback Sessions</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>User playback controls (view own streams, pause, stop)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/playback.ejs</code></td></tr>
+      <tr><td>Admin playback control (all users, force-stop)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/admin-playback-sessions.ejs</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 13. Account -->
+  <h2 id="account">13. User Self-Service (Account Page)</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Profile edit (display name, email, Jellyfin username)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+      <tr><td>Password change</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+      <tr><td>Active JellySSO sessions + terminate</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+      <tr><td>Login history</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+      <tr><td>Data export (GDPR)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+      <tr><td>Membership / expiry info</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+      <tr><td>Notification preferences</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/account.ejs</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- 14. Other -->
+  <h2 id="other">14. Other / Infrastructure</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>UI Needed</th><th>Status</th><th>View / Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Setup wizard (first-run)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/setup.ejs</code></td></tr>
+      <tr><td>Swagger / OpenAPI docs</td><td>No</td><td><span class="badge ok">✅ exists</span></td><td>Auto-generated UI at <code>/api/swagger/docs</code></td></tr>
+      <tr><td>Client guide (user how-to for Jellyfin apps)</td><td>Yes</td><td><span class="badge ok">✅ exists</span></td><td><code>views/client-guide.ejs</code></td></tr>
+      <tr><td><strong>Webhook management</strong></td><td>Yes</td><td><span class="badge miss">❌ missing</span></td><td><code>WebhookManager.js</code> fully implemented with DB schema &amp; delivery tracking — <strong>zero admin routes or UI</strong></td></tr>
+      <tr><td><strong>TOTP / Authenticator-app MFA</strong></td><td>Yes</td><td><span class="badge future">⚫ not built</span></td><td>Not implemented anywhere in the codebase</td></tr>
+      <tr><td><strong>Multiple simultaneous OIDC providers</strong></td><td>Yes</td><td><span class="badge future">⚫ not built</span></td><td>Only one external IdP configurable at a time</td></tr>
+      <tr><td>CSRF protection middleware</td><td>No</td><td><span class="badge na">N/A</span></td><td><code>src/middleware/csrf.js</code></td></tr>
+      <tr><td>Rate limiting (per-route tiers)</td><td>No</td><td><span class="badge na">N/A</span></td><td><code>src/middleware/rate-limit.js</code></td></tr>
+      <tr><td>Input sanitization / XSS prevention</td><td>No</td><td><span class="badge na">N/A</span></td><td><code>src/middleware/validation.js</code>, <code>src/utils/sanitizer.js</code></td></tr>
+      <tr><td>HTTPS redirect / TLS termination</td><td>No</td><td><span class="badge na">N/A</span></td><td><code>src/https.js</code>, <code>src/utils/securityConfig.js</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- Gaps -->
+  <h2 id="gaps">🔴 Gaps Summary — Features Needing Work</h2>
+  <table class="gap-table">
+    <thead><tr><th>Priority</th><th>Feature</th><th>Gap Description</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="pri pri-high">🔴 HIGH</span></td>
+        <td>Webhook Management</td>
+        <td><code>WebhookManager.js</code> model is fully built with DB schema and delivery tracking. There are <strong>no admin routes and no UI</strong> — this feature is completely dead/unreachable.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-high">🔴 HIGH</span></td>
+        <td>Performance Monitoring Dashboard</td>
+        <td><code>PerformanceMonitor.js</code> and <code>src/routes/monitoring.js</code> expose health/metrics via API. <strong>No admin UI page exists</strong> to visualise request counts, error rates, response times, or DB health.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-med">🟡 MEDIUM</span></td>
+        <td>Referral Invite — User-side UI</td>
+        <td>Admin can enable referrals in Settings. Users cannot see or share their personal invite link anywhere — <strong>no user-facing referral page</strong>.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-med">🟡 MEDIUM</span></td>
+        <td>Contact Method Add / Verify (Discord, Telegram, Matrix)</td>
+        <td>Backend <code>ContactMethodManager</code> + <code>src/routes/contact-methods.js</code> are complete. The account page shows a verified count, but the <strong>full add/verify flow UI should be confirmed</strong>.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-med">🟡 MEDIUM</span></td>
+        <td>Device Whitelist Management</td>
+        <td>Jellyfin policy supports <code>deviceWhitelistEnabled</code> per user. <strong>No UI exists</strong> to view or add whitelisted device IDs for a specific user.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-med">🟡 MEDIUM</span></td>
+        <td>Admin-wide Policy Audit Log</td>
+        <td>Users can view their own policy audit via <code>GET /api/policy/user/audit-log</code>. <strong>No admin view</strong> for cross-user policy changes.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-med">🟡 MEDIUM</span></td>
+        <td>Jellyfin Activity Log (dedicated page)</td>
+        <td><code>GET /api/activity</code> proxies the Jellyfin activity feed. <strong>No standalone admin page</strong> to browse or filter it.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-low">🟠 LOW</span></td>
+        <td>User Announcements Page</td>
+        <td>Active announcements rendered inline on some pages via API. <strong>No dedicated</strong> user-facing announcements list page.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-future">⚫ FUTURE</span></td>
+        <td>TOTP / Authenticator MFA</td>
+        <td>Not implemented. No TOTP, HOTP, or WebAuthn/passkey support exists in the codebase.</td>
+      </tr>
+      <tr>
+        <td><span class="pri pri-future">⚫ FUTURE</span></td>
+        <td>Multiple OIDC Providers</td>
+        <td>Only one external IdP configurable at a time. Multi-provider (e.g. "Login with Google" + "Login with Authentik") is not implemented.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- File reference -->
+  <h2 id="files">Route &amp; Model File Reference</h2>
+
+  <h3>Route Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Mount Point</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/routes/auth.js</code></td><td><code>/api/auth</code></td><td>Login, logout, signup, OIDC initiation</td></tr>
+      <tr><td><code>src/routes/oidc-auth.js</code></td><td><code>/oidc-auth</code></td><td>OIDC callback, code exchange, session setup</td></tr>
+      <tr><td><code>src/routes/users.js</code></td><td><code>/api/users</code></td><td>Jellyfin user CRUD API</td></tr>
+      <tr><td><code>src/routes/bulk-operations.js</code></td><td><code>/api/users</code></td><td>Bulk enable/disable/delete/set-tier</td></tr>
+      <tr><td><code>src/routes/user-expiry.js</code></td><td><code>/api/users/expiry</code></td><td>Account expiry management</td></tr>
+      <tr><td><code>src/routes/invites.js</code></td><td><code>/api/invites</code></td><td>Invite creation, stats, redemption</td></tr>
+      <tr><td><code>src/routes/signup-profiles.js</code></td><td><code>/api/signup-profiles</code></td><td>Signup profile permission templates</td></tr>
+      <tr><td><code>src/routes/policy.js</code></td><td><code>/api/policy</code></td><td>Policy tiers, device whitelist, sync</td></tr>
+      <tr><td><code>src/routes/user-policy.js</code></td><td><code>/policy</code></td><td>Renders user policy view page</td></tr>
+      <tr><td><code>src/routes/labels.js</code></td><td><code>/api/labels</code></td><td>Label CRUD, bulk user assignment</td></tr>
+      <tr><td><code>src/routes/announcements.js</code></td><td><code>/api/announcements</code></td><td>Announcement CRUD</td></tr>
+      <tr><td><code>src/routes/admin-notifications.js</code></td><td><code>/api/admin/notifications</code></td><td>Notification queue stats, resend</td></tr>
+      <tr><td><code>src/routes/admin-templates.js</code></td><td><code>/api/admin/templates</code></td><td>Message template CRUD</td></tr>
+      <tr><td><code>src/routes/contact-methods.js</code></td><td><code>/api/contact-methods</code></td><td>User Discord/Telegram/Matrix contacts</td></tr>
+      <tr><td><code>src/routes/admin-api-keys.js</code></td><td><code>/admin/api/api-keys</code></td><td>Admin API key management</td></tr>
+      <tr><td><code>src/routes/admin-lockouts.js</code></td><td><code>/admin/api/lockouts</code></td><td>Account lockout view &amp; unlock</td></tr>
+      <tr><td><code>src/routes/admin-security-alerts.js</code></td><td><code>/admin/api/security-alerts</code></td><td>Security alert management</td></tr>
+      <tr><td><code>src/routes/audit.js</code></td><td><code>/api/audit</code></td><td>Audit log query and cleanup</td></tr>
+      <tr><td><code>src/routes/activity.js</code></td><td><code>/api/activity</code></td><td>Proxies Jellyfin activity log</td></tr>
+      <tr><td><code>src/routes/me.js</code></td><td><code>/api/me</code></td><td>Self-service profile, password, sessions, history, export</td></tr>
+      <tr><td><code>src/routes/user-account.js</code></td><td><code>/api/user</code></td><td>Account status, expiry info, referral</td></tr>
+      <tr><td><code>src/routes/playback.js</code></td><td><code>/api/playback</code></td><td>User playback sessions, pause/stop own</td></tr>
+      <tr><td><code>src/routes/admin-playback.js</code></td><td><code>/api/admin/playback</code></td><td>Admin view of all sessions, force-stop</td></tr>
+      <tr><td><code>src/routes/quickconnect.js</code></td><td><code>/api/quickconnect</code></td><td>QuickConnect TV/device auth</td></tr>
+      <tr><td><code>src/routes/password-reset.js</code></td><td><code>/api/auth</code></td><td>Forgot-password email token flow</td></tr>
+      <tr><td><code>src/routes/settings.js</code></td><td><code>/api/settings</code></td><td>System / companion settings API</td></tr>
+      <tr><td><code>src/routes/monitoring.js</code></td><td><code>/api/monitoring</code></td><td>Health, DB, cache, maintenance status</td></tr>
+      <tr><td><code>src/routes/plugin.js</code></td><td><code>/api/plugin</code></td><td>Plugin DLL download, API key regen</td></tr>
+      <tr><td><code>src/routes/system.js</code></td><td><code>/admin</code></td><td>Session stats/cleanup, cache flush, plugin list</td></tr>
+      <tr><td><code>src/routes/admin.js</code></td><td><code>/admin</code></td><td>Dashboard, users, settings, OIDC config, backups, audit UI, policy, invites</td></tr>
+      <tr><td><code>src/routes/setup.js</code></td><td><code>/setup</code></td><td>Multi-step first-run setup wizard</td></tr>
+      <tr><td><code>src/routes/swagger.js</code></td><td><code>/api/swagger</code></td><td>OpenAPI spec + Swagger UI</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Model Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>AccountLockoutManager.js</code></td><td>Tracks failed logins, progressive lockout (5/10/15 attempts), unlock</td></tr>
+      <tr><td><code>AnnouncementsManager.js</code></td><td>Active/expired announcements CRUD and priority</td></tr>
+      <tr><td><code>APIKeyManager.js</code></td><td>Create, validate, revoke API keys with scope + expiry</td></tr>
+      <tr><td><code>AuditLogger.js</code></td><td>Structured audit event logging to SQLite</td></tr>
+      <tr><td><code>CacheManager.js</code></td><td>In-memory LRU cache</td></tr>
+      <tr><td><code>ContactMethodManager.js</code></td><td>Discord/Telegram/Matrix contact registration and OTP verification</td></tr>
+      <tr><td><code>DatabaseManager.js</code></td><td>SQLite DB + settings key/value store</td></tr>
+      <tr><td><code>DatabaseRecovery.js</code></td><td>WAL checkpoint, integrity check, health reporting</td></tr>
+      <tr><td><code>InviteManager.js</code></td><td>Invite CRUD, usage tracking, expiry, max uses</td></tr>
+      <tr><td><code>JellyfinAPI.js</code></td><td>Full Jellyfin API client (users, policies, sessions, system)</td></tr>
+      <tr><td><code>JellyseerrManager.js</code></td><td>Jellyseerr user sync on create/delete</td></tr>
+      <tr><td><code>LabelManager.js</code></td><td>Label CRUD, user assignment, bulk ops</td></tr>
+      <tr><td><code>MaintenanceScheduler.js</code></td><td>Scheduled task runner for cleanup jobs</td></tr>
+      <tr><td><code>MessageTemplateManager.js</code></td><td>Notification template CRUD with variable substitution</td></tr>
+      <tr><td><code>NotificationManager.js</code></td><td>Multi-channel dispatch (SMTP, Discord, Telegram, Matrix)</td></tr>
+      <tr><td><code>OmbiManager.js</code></td><td>Ombi user sync on create/delete</td></tr>
+      <tr><td><code>OTPManager.js</code></td><td>Generates/stores Jellyfin app passwords for OIDC users</td></tr>
+      <tr><td><code>PasswordPolicyManager.js</code></td><td>Password complexity rule enforcement</td></tr>
+      <tr><td><code>PasswordResetManager.js</code></td><td>Token-based forgot-password flow</td></tr>
+      <tr><td><code>PerformanceMonitor.js</code></td><td>Request count, response times, error tracking</td></tr>
+      <tr><td><code>PluginManager.js</code></td><td>Node.js plugin discovery from <code>plugins/</code> dir, hook system</td></tr>
+      <tr><td><code>PolicyManager.js</code></td><td>Tiers, stream limits, device whitelist, access schedule, Jellyfin sync</td></tr>
+      <tr><td><code>SecurityAlertManager.js</code></td><td>Create/query/dismiss security alerts by type and severity</td></tr>
+      <tr><td><code>SessionActivityManager.js</code></td><td>Per-user session history and login event tracking</td></tr>
+      <tr><td><code>SignupProfileManager.js</code></td><td>Signup profiles with default Jellyfin permissions</td></tr>
+      <tr><td><code>UserExpiryManager.js</code></td><td>Account expiry, auto-disable, warning notifications</td></tr>
+      <tr><td><code>UserProfileManager.js</code></td><td>Local profile (name, email) stored alongside Jellyfin user</td></tr>
+      <tr><td><code>WebhookManager.js</code></td><td>Webhook event schema and delivery tracking — <strong>⚠️ no routes or UI</strong></td></tr>
+    </tbody>
+  </table>
+
+  <p class="generated">Generated by GitHub Copilot &mdash; April 1, 2026</p>
+</div>
+</body>
+</html>

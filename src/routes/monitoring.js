@@ -9,6 +9,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const DatabaseRecovery = require('../models/DatabaseRecovery');
 const { getInstance: getStateManager } = require('../services/StateManager');
 const { getInstance: getCleanupTasks } = require('../models/ScheduledCleanupTasks');
+const performanceMonitor = require('../models/PerformanceMonitor');
 const logger = require('../utils/logger');
 
 /**
@@ -260,6 +261,31 @@ router.post('/database/recover', requireAuth, requireAdmin, async (req, res) => 
         code: 'DATABASE_RECOVERY_FAILED',
         message: error.message
       }
+    });
+  }
+});
+
+/**
+ * GET /api/monitoring/metrics
+ * Performance metrics from PerformanceMonitor singleton
+ */
+router.get('/metrics', requireAuth, requireAdmin, (req, res) => {
+  try {
+    const hours = Math.min(168, Math.max(1, parseInt(req.query.hours) || 24));
+    const metrics = performanceMonitor.getMetrics();
+    const historical = performanceMonitor.getHistoricalMetrics(hours);
+
+    res.json({
+      success: true,
+      metrics,
+      historical,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Metrics retrieval failed', { error: error.message });
+    res.status(500).json({
+      success: false,
+      error: { code: 'METRICS_FAILED', message: error.message }
     });
   }
 });

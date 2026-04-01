@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <title>Webhooks - JellySSO Admin</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
+    .stats-row { display:flex; gap:var(--spacing-lg); margin-bottom:var(--spacing-xl); flex-wrap:wrap; }
+    .stat-card { flex:1; min-width:130px; padding:var(--spacing-lg); background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); }
+    .stat-card .val { font-size:2rem; font-weight:700; }
+    .stat-card .lbl { color:var(--text-muted); font-size:.85rem; }
+    .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
+    .filter-row select, .filter-row input { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:10px 20px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
+    .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 16px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
+    .btn-danger { background:#dc3545; color:white; padding:7px 14px; border:none; border-radius:var(--border-radius); cursor:pointer; }
+    .btn-sm { padding:4px 10px; font-size:.82rem; }
+    .badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:.76rem; font-weight:700; }
+    .badge-active { background:#d4edda; color:#155724; }
+    .badge-inactive { background:#f8d7da; color:#721c24; }
+    .badge-event { background:#cce5ff; color:#004085; margin:1px 2px; }
+    table { width:100%; border-collapse:collapse; }
+    th { text-align:left; padding:10px 12px; background:var(--bg-secondary); color:var(--text-muted); font-size:.82rem; text-transform:uppercase; letter-spacing:.5px; border-bottom:2px solid var(--border-color); }
+    td { padding:10px 12px; border-bottom:1px solid var(--border-color); font-size:.9rem; vertical-align:top; }
+    tr:hover td { background:var(--bg-secondary); }
+    .url-cell { font-family:monospace; font-size:.82rem; word-break:break-all; max-width:220px; }
+    .actions-cell { display:flex; gap:6px; flex-wrap:wrap; }
+    .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
+    .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); padding:var(--spacing-2xl); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
+    .modal h2 { margin:0 0 var(--spacing-xl); }
+    .form-group { margin-bottom:var(--spacing-lg); }
+    .form-group label { display:block; margin-bottom:6px; font-size:.88rem; font-weight:600; }
+    .form-group input, .form-group select, .form-group textarea { width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; box-sizing:border-box; }
+    .form-group textarea { resize:vertical; min-height:70px; }
+    .events-grid { display:flex; flex-wrap:wrap; gap:6px; padding:10px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); }
+    .events-grid label { display:flex; align-items:center; gap:5px; font-size:.82rem; font-weight:400; cursor:pointer; }
+    .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:var(--spacing-xl); }
+    /* Events drawer */
+    .drawer-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:1000; }
+    .drawer-overlay.open { display:block; }
+    .drawer { position:fixed; right:0; top:0; bottom:0; width:520px; max-width:95vw; background:var(--bg-primary); border-left:1px solid var(--border-color); z-index:1001; overflow-y:auto; padding:var(--spacing-2xl); box-sizing:border-box; transform:translateX(100%); transition:transform .25s; }
+    .drawer.open { transform:translateX(0); }
+    .drawer-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-xl); }
+    .status-delivered { color:#28a745; }
+    .status-failed { color:#dc3545; }
+    .status-pending { color:#ffc107; }
+    #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
+    #toastMsg.show { opacity:1; }
+    #toastMsg.success { background:#28a745; }
+    #toastMsg.error { background:#dc3545; }
+  </style>
+</head>
+<body>
+<%- include('../partials/navigation', { user, currentPage: 'admin-webhooks' }) %>
+<div class="main-content">
+  <div class="content-wrapper">
+    <div class="page-header">
+      <div>
+        <h1><i class="fas fa-plug"></i> Webhooks</h1>
+        <p style="color:var(--text-muted);margin:4px 0 0 0">Manage outbound webhooks for event-driven integrations.</p>
+      </div>
+      <button class="btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> New Webhook</button>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total</div></div>
+      <div class="stat-card"><div class="val" style="color:#28a745" id="statActive">—</div><div class="lbl">Active</div></div>
+      <div class="stat-card"><div class="val" style="color:#dc3545" id="statFailed">—</div><div class="lbl">Failed Deliveries</div></div>
+    </div>
+
+    <div class="filter-row">
+      <input type="text" id="filterSearch" placeholder="Filter by URL or user ID…" oninput="renderTable()" style="flex:1;min-width:180px">
+      <select id="filterStatus" onchange="renderTable()">
+        <option value="">All Status</option>
+        <option value="1">Active Only</option>
+        <option value="0">Inactive Only</option>
+      </select>
+      <button class="btn-secondary" onclick="loadWebhooks()"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+
+    <div id="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>URL</th>
+            <th>User ID</th>
+            <th>Events</th>
+            <th>Status</th>
+            <th>Deliveries</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="webhookTbody">
+          <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal-overlay" id="webhookModal">
+  <div class="modal">
+    <h2 id="modalTitle">New Webhook</h2>
+    <input type="hidden" id="editId">
+
+    <div class="form-group">
+      <label>User ID</label>
+      <input type="text" id="wUserId" placeholder="Jellyfin user ID (required)">
+    </div>
+    <div class="form-group">
+      <label>Endpoint URL</label>
+      <input type="url" id="wUrl" placeholder="https://example.com/hook">
+    </div>
+    <div class="form-group">
+      <label>Events to subscribe</label>
+      <div class="events-grid" id="eventsGrid">
+        <label><input type="checkbox" value="user.login"> user.login</label>
+        <label><input type="checkbox" value="user.logout"> user.logout</label>
+        <label><input type="checkbox" value="user.created"> user.created</label>
+        <label><input type="checkbox" value="user.deleted"> user.deleted</label>
+        <label><input type="checkbox" value="user.updated"> user.updated</label>
+        <label><input type="checkbox" value="policy.changed"> policy.changed</label>
+        <label><input type="checkbox" value="invite.used"> invite.used</label>
+        <label><input type="checkbox" value="account.locked"> account.locked</label>
+        <label><input type="checkbox" value="account.unlocked"> account.unlocked</label>
+        <label><input type="checkbox" value="test.ping"> test.ping</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Secret (HMAC signing key, optional)</label>
+      <input type="text" id="wSecret" placeholder="Leave blank for no signature">
+    </div>
+    <div class="form-group" style="display:flex;gap:16px">
+      <div style="flex:1">
+        <label>Retry Count (0–10)</label>
+        <input type="number" id="wRetry" min="0" max="10" value="3">
+      </div>
+      <div style="flex:1">
+        <label>Timeout (5–120s)</label>
+        <input type="number" id="wTimeout" min="5" max="120" value="30">
+      </div>
+    </div>
+    <div id="modalError" style="color:#dc3545;margin-bottom:12px;display:none;"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="modalSaveBtn" onclick="saveWebhook()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Events Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="eventsDrawer">
+  <div class="drawer-header">
+    <h3 id="drawerTitle">Delivery History</h3>
+    <button class="btn-secondary btn-sm" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
+  </div>
+  <div id="drawerContent"><p style="color:var(--text-muted)">Loading…</p></div>
+</div>
+
+<div id="toastMsg"></div>
+
+<script nonce="<%= nonce %>">
+  const csrf = document.querySelector('meta[name="csrf-token"]').content;
+  let allWebhooks = [];
+
+  async function loadWebhooks() {
+    try {
+      const r = await fetch('/admin/api/webhooks');
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      allWebhooks = d.webhooks;
+      renderStats();
+      renderTable();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  function renderStats() {
+    document.getElementById('statTotal').textContent = allWebhooks.length;
+    document.getElementById('statActive').textContent = allWebhooks.filter(w => w.active).length;
+    document.getElementById('statFailed').textContent = allWebhooks.reduce((s, w) => s + (w.failed_count || 0), 0);
+  }
+
+  function renderTable() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    const tbody = document.getElementById('webhookTbody');
+
+    let rows = allWebhooks;
+    if (search) rows = rows.filter(w => w.url.toLowerCase().includes(search) || (w.user_id || '').toLowerCase().includes(search));
+    if (status !== '') rows = rows.filter(w => String(w.active ? 1 : 0) === status);
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-plug"></i><br>No webhooks found</div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(w => `
+      <tr>
+        <td>${w.id}</td>
+        <td class="url-cell" title="${escHtml(w.url)}">${escHtml(w.url.length > 50 ? w.url.substring(0, 47) + '…' : w.url)}</td>
+        <td style="font-family:monospace;font-size:.8rem">${escHtml(w.user_id || '—')}</td>
+        <td>${(w.events||[]).map(e => `<span class="badge badge-event">${escHtml(e)}</span>`).join('')}</td>
+        <td><span class="badge ${w.active ? 'badge-active' : 'badge-inactive'}">${w.active ? 'Active' : 'Inactive'}</span></td>
+        <td>${w.event_count || 0} total${w.failed_count ? ` / <span style="color:#dc3545">${w.failed_count} failed</span>` : ''}</td>
+        <td style="font-size:.82rem;white-space:nowrap">${formatDate(w.created_at)}</td>
+        <td class="actions-cell">
+          <button class="btn-secondary btn-sm" onclick="openEditModal(${w.id})" title="Edit"><i class="fas fa-edit"></i></button>
+          <button class="btn-secondary btn-sm" onclick="toggleWebhook(${w.id},${w.active?0:1})" title="${w.active?'Disable':'Enable'}"><i class="fas fa-power-off"></i></button>
+          <button class="btn-secondary btn-sm" onclick="sendTest(${w.id})" title="Send test"><i class="fas fa-vial"></i></button>
+          <button class="btn-secondary btn-sm" onclick="openDrawer(${w.id},'${escHtml(w.url).replace(/'/g,"\\'")}')"><i class="fas fa-history"></i></button>
+          <button class="btn-danger btn-sm" onclick="deleteWebhook(${w.id})"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'New Webhook';
+    document.getElementById('editId').value = '';
+    document.getElementById('wUserId').value = '';
+    document.getElementById('wUrl').value = '';
+    document.getElementById('wSecret').value = '';
+    document.getElementById('wRetry').value = 3;
+    document.getElementById('wTimeout').value = 30;
+    document.getElementById('wUserId').disabled = false;
+    document.querySelectorAll('#eventsGrid input').forEach(cb => cb.checked = false);
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('webhookModal').classList.add('open');
+  }
+
+  function openEditModal(id) {
+    const w = allWebhooks.find(x => x.id === id);
+    if (!w) return;
+    document.getElementById('modalTitle').textContent = 'Edit Webhook';
+    document.getElementById('editId').value = id;
+    document.getElementById('wUserId').value = w.user_id;
+    document.getElementById('wUserId').disabled = true;
+    document.getElementById('wUrl').value = w.url;
+    document.getElementById('wSecret').value = w.secret || '';
+    document.getElementById('wRetry').value = w.retry_count ?? 3;
+    document.getElementById('wTimeout').value = w.timeout_seconds ?? 30;
+    document.querySelectorAll('#eventsGrid input').forEach(cb => {
+      cb.checked = (w.events || []).includes(cb.value);
+    });
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('webhookModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('webhookModal').classList.remove('open');
+  }
+
+  async function saveWebhook() {
+    const btn = document.getElementById('modalSaveBtn');
+    const errEl = document.getElementById('modalError');
+    const editId = document.getElementById('editId').value;
+    const url = document.getElementById('wUrl').value.trim();
+    const userId = document.getElementById('wUserId').value.trim();
+    const secret = document.getElementById('wSecret').value.trim();
+    const retryCount = parseInt(document.getElementById('wRetry').value) || 3;
+    const timeoutSeconds = parseInt(document.getElementById('wTimeout').value) || 30;
+    const events = Array.from(document.querySelectorAll('#eventsGrid input:checked')).map(cb => cb.value);
+
+    errEl.style.display = 'none';
+    if (!url) { errEl.textContent = 'URL is required.'; errEl.style.display = ''; return; }
+    if (!editId && !userId) { errEl.textContent = 'User ID is required.'; errEl.style.display = ''; return; }
+    if (events.length === 0) { errEl.textContent = 'Select at least one event.'; errEl.style.display = ''; return; }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      let r, d;
+      if (editId) {
+        r = await fetch(`/admin/api/webhooks/${editId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body: JSON.stringify({ url, events, secret: secret || null, retryCount, timeoutSeconds })
+        });
+      } else {
+        r = await fetch('/admin/api/webhooks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body: JSON.stringify({ userId, url, events, secret: secret || null, retryCount, timeoutSeconds })
+        });
+      }
+      d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      closeModal();
+      showToast(editId ? 'Webhook updated' : 'Webhook created', 'success');
+      await loadWebhooks();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = '';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save';
+    }
+  }
+
+  async function toggleWebhook(id, newActive) {
+    try {
+      const r = await fetch(`/admin/api/webhooks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify({ active: !!newActive })
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      showToast(newActive ? 'Webhook enabled' : 'Webhook disabled', 'success');
+      await loadWebhooks();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function sendTest(id) {
+    try {
+      const r = await fetch(`/admin/api/webhooks/${id}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      showToast('Test event sent', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function deleteWebhook(id) {
+    if (!confirm('Delete this webhook and all its delivery history?')) return;
+    try {
+      const r = await fetch(`/admin/api/webhooks/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrf }
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      showToast('Webhook deleted', 'success');
+      await loadWebhooks();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function openDrawer(id, url) {
+    document.getElementById('drawerTitle').textContent = `Delivery History — #${id}`;
+    document.getElementById('drawerContent').innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.getElementById('eventsDrawer').classList.add('open');
+    try {
+      const r = await fetch(`/admin/api/webhooks/${id}/events?limit=100`);
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      if (d.events.length === 0) {
+        document.getElementById('drawerContent').innerHTML = '<p style="color:var(--text-muted)">No deliveries yet.</p>';
+        return;
+      }
+      document.getElementById('drawerContent').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color)">Type</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color)">Status</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color)">Code</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color)">Attempts</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color)">Date</th>
+          </tr></thead>
+          <tbody>
+            ${d.events.map(e => `
+              <tr>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--border-color)">${escHtml(e.event_type)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--border-color)"><span class="status-${e.status}">${e.status}</span></td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--border-color)">${e.response_code || '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--border-color)">${e.attempts}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--border-color);white-space:nowrap">${formatDate(e.created_at)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    } catch (e) {
+      document.getElementById('drawerContent').innerHTML = `<p style="color:#dc3545">${escHtml(e.message)}</p>`;
+    }
+  }
+
+  function closeDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.getElementById('eventsDrawer').classList.remove('open');
+  }
+
+  function formatDate(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleString();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg, type) {
+    const el = document.getElementById('toastMsg');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  // Close modal on overlay click
+  document.getElementById('webhookModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('webhookModal')) closeModal();
+  });
+
+  loadWebhooks();
+</script>
+</body>
+</html>

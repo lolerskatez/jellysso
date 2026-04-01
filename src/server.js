@@ -660,6 +660,15 @@ app.get('/membership', requireWebAuth, (req, res) => {
   res.redirect('/account#membership');
 });
 
+// User-facing announcements page
+app.get('/announcements', requireWebAuth, csrfProtection, (req, res) => {
+  res.render('announcements', {
+    user: req.session.user,
+    csrfToken: res.locals.csrfToken,
+    nonce: res.locals.nonce
+  });
+});
+
 app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) => {
   // Verify user is admin
   if (!req.session.user?.Policy?.IsAdministrator) {
@@ -675,6 +684,7 @@ app.get('/admin/playback-sessions', requireWebAuth, csrfProtection, (req, res) =
 app.use('/admin/api/api-keys',       require('./routes/admin-api-keys'));
 app.use('/admin/api/lockouts',       require('./routes/admin-lockouts'));
 app.use('/admin/api/security-alerts', require('./routes/admin-security-alerts'));
+app.use('/admin/api/webhooks',       require('./routes/admin-webhooks'));
 
 // Admin dashboard routes
 app.use('/admin', require('./routes/admin'));

@@ -305,6 +305,7 @@
           <button class="settings-tab-btn" data-tab="security"><i class="fas fa-shield-alt"></i> Security</button>
           <button class="settings-tab-btn" data-tab="jellyseerr"><i class="fas fa-film"></i> Jellyseerr</button>
           <button class="settings-tab-btn" data-tab="ombi"><i class="fas fa-ticket-alt"></i> Ombi</button>
+          <button class="settings-tab-btn" data-tab="sessionEnforcement"><i class="fas fa-users-slash"></i> Stream Enforcement</button>
           <button class="settings-tab-btn" data-tab="referrals"><i class="fas fa-share-alt"></i> Referrals</button>
           <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
           <button class="settings-tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Maintenance</button>
@@ -668,6 +669,43 @@
             <div class="button-group">
               <button type="button" class="btn btn-primary" data-action="save" data-section="ombi"><i class="fas fa-save"></i> Save Changes</button>
               <button type="button" class="btn btn-secondary" data-action="reset" data-section="ombi"><i class="fas fa-undo"></i> Reset to Defaults</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Session Enforcement Settings -->
+        <div id="sessionEnforcement" class="settings-panel">
+          <form id="sessionEnforcementForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-users-slash"></i> Stream Enforcement</h3>
+              <p style="color:var(--text-secondary);font-size:.875rem;margin-top:0;">
+                Automatically stop playback when a user exceeds their tier's concurrent stream limit. Checks active Jellyfin sessions on a configurable interval.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Enable Stream Enforcement</div>
+                  <div class="setting-description">Periodically check and enforce concurrent stream limits defined by user tiers</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.sessionEnforcementEnabled ? 'active' : '' %>" data-name="sessionEnforcementEnabled"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Check Interval (seconds)</div>
+                  <div class="setting-description">How often to poll Jellyfin for active sessions (minimum 30 seconds)</div>
+                </div>
+                <div>
+                  <input type="number" name="sessionEnforcementInterval" value="<%= settings.sessionEnforcementInterval || 60 %>" min="30" max="3600" style="width:90px;">
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="sessionEnforcement"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="sessionEnforcement"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
           </form>
         </div>

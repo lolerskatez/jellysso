@@ -547,7 +547,7 @@
   </main>
 </div><!-- /app-container -->
 
-<script>window._MEMBERSHIP_CONFIG = { isOidc: <%- JSON.stringify(isOidc) %>, userId: '<%- user.Id %>', currentUsername: '<%- user.Name %>' };</script>
+<script nonce="<%= nonce %>">window._MEMBERSHIP_CONFIG = { isOidc: <%- JSON.stringify(isOidc) %>, userId: '<%- user.Id %>', currentUsername: '<%- user.Name %>' };</script>
 <script src="/js/membership.js"></script>
 </body>
 </html>

@@ -447,7 +447,7 @@
     </main>
   </div>
   <% if (renewalEnabled) { %>
-  <script>window._renewalConfig = { windowDays: <%= renewalWindowDays %>, csrfToken: '<%= csrfToken %>' };</script>
+  <script nonce="<%= nonce %>">window._renewalConfig = { windowDays: <%= renewalWindowDays %>, csrfToken: '<%= csrfToken %>' };</script>
   <% } %>
 </body>
 </html>

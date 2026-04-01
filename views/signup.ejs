@@ -288,7 +288,7 @@
     </div>
   </div>
 
-  <script>window.CAPTCHA_CONFIG = { enabled: <%- JSON.stringify(captchaEnabled) %>, provider: <%- JSON.stringify(captchaProvider || "") %> };</script>
+  <script nonce="<%= nonce %>">window.CAPTCHA_CONFIG = { enabled: <%- JSON.stringify(captchaEnabled) %>, provider: <%- JSON.stringify(captchaProvider || "") %> };</script>
 <script src="/js/signup.js"></script>
 </body>
 </html>

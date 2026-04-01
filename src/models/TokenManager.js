@@ -4,13 +4,24 @@ const logger = require('../utils/logger');
 
 class TokenManager {
   constructor() {
-    if (!process.env.JWT_SECRET) {
-      throw new Error('JWT_SECRET environment variable is required. Run the server once to auto-generate secrets.');
-    }
-    this.jwtSecret = process.env.JWT_SECRET;
+    this._jwtSecret = null; // validated lazily on first use
     this.refreshTokens = new Map(); // In-memory store for refresh tokens (use Redis in production)
     this.tokenExpiry = 3600; // 1 hour in seconds
     this.refreshTokenExpiry = 2592000; // 30 days in seconds
+  }
+
+  /**
+   * Lazily-validated JWT secret. Throws on first use if JWT_SECRET is not set
+   * so that require() and new TokenManager() never crash at import time.
+   */
+  get jwtSecret() {
+    if (!this._jwtSecret) {
+      if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET environment variable is required. Run the server once to auto-generate secrets.');
+      }
+      this._jwtSecret = process.env.JWT_SECRET;
+    }
+    return this._jwtSecret;
   }
 
   /**

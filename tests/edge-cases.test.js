@@ -91,6 +91,10 @@ describe('Edge Cases - Concurrent Sessions', () => {
 });
 
 describe('Edge Cases - Token Expiration & Refresh', () => {
+  beforeAll(() => {
+    if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'test-jwt-secret-for-edge-cases';
+  });
+
   test('should handle token expiration', () => {
     const user = { Id: 'user1', Name: 'Test User' };
     // generateAccessToken uses the default tokenExpiry; we just verify it produces a valid token

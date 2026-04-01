@@ -9,12 +9,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--spacing-2xl);
-    }
     .btn-primary {
       background: linear-gradient(135deg, var(--primary), #0066cc);
       color: white;
@@ -93,22 +87,62 @@
     .modal {
       display: none;
       position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
+      z-index: 500;
+      top: 0; left: 0;
+      width: 100% !important; height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible !important;
+      animation: none !important;
+      background: rgba(0,0,0,0.5) !important;
+    }
+    .modal.show {
+      display: flex;
       align-items: center;
       justify-content: center;
     }
-    .modal.show { display: flex; }
     .modal-content {
       background: var(--bg-primary);
       border-radius: var(--border-radius);
-      padding: var(--spacing-2xl);
-      width: 90%;
+      box-shadow: var(--shadow-lg);
       max-width: 560px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      width: 92%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: var(--spacing-lg);
+      border: 1px solid var(--border-color);
     }
-    .modal-content h3 { margin: 0 0 var(--spacing-lg) 0; }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--border-color);
+    }
+    .modal-header h2 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      width: 32px; height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      border-radius: var(--border-radius-sm);
+    }
+    .modal-close:hover { color: var(--text-primary); background: var(--bg-secondary); }
     .form-group { margin-bottom: var(--spacing-lg); }
     .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
     .form-group input, .form-group textarea, .form-group select {
@@ -122,7 +156,14 @@
       box-sizing: border-box;
     }
     .form-group textarea { min-height: 100px; resize: vertical; }
-    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: var(--spacing-lg); }
+    .modal-actions {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
     #toastMsg {
       position: fixed;
       bottom: 20px;
@@ -141,34 +182,46 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-announcements' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-bullhorn"></i> Announcements</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Broadcast messages shown to all users on the login and dashboard pages.</p>
-      </div>
-      <button class="btn-primary" onclick="openCreate()"><i class="fas fa-plus"></i> New Announcement</button>
-    </div>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-announcements' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-bullhorn" style="margin-right:8px;color:var(--primary)"></i>Announcements
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" id="newAnnouncementBtn"><i class="fas fa-plus"></i> New Announcement</button>
+        </div>
+      </header>
 
-    <div id="announcementsList">
-      <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading announcements…</p></div>
-    </div>
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Broadcast messages shown to all users on the login and dashboard pages.</p>
+        <div id="announcementsList">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading announcements…</p></div>
+        </div>
+      </div>
+    </main>
   </div>
-</div>
 
 <!-- Create/Edit Modal -->
 <div class="modal" id="announcementModal">
   <div class="modal-content">
-    <h3 id="modalTitle">New Announcement</h3>
+    <div class="modal-header">
+      <h2 id="modalTitle"><i class="fas fa-bullhorn" style="margin-right:8px;color:var(--primary)"></i>New Announcement</h2>
+      <button class="modal-close" id="closeAnnouncementModalBtn">&times;</button>
+    </div>
     <input type="hidden" id="editId">
     <div class="form-group">
-      <label for="annTitle">Title <span style="color:#dc3545">*</span></label>
+      <label for="annTitle">Title <span style="color:var(--danger)">*</span></label>
       <input type="text" id="annTitle" placeholder="Announcement title" maxlength="200">
     </div>
     <div class="form-group">
-      <label for="annMessage">Message <span style="color:#dc3545">*</span></label>
+      <label for="annMessage">Message <span style="color:var(--danger)">*</span></label>
       <textarea id="annMessage" placeholder="Announcement body…"></textarea>
     </div>
     <div class="form-group" style="display:flex;gap:var(--spacing-lg)">
@@ -188,9 +241,9 @@
         Active (visible to users)
       </label>
     </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveAnnouncement()">Save</button>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelAnnouncementBtn">Cancel</button>
+      <button class="btn-primary" id="saveAnnouncementBtn"><i class="fas fa-save"></i> Save</button>
     </div>
   </div>
 </div>

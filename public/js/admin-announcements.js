@@ -1,4 +1,5 @@
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+let announcementsCache = [];
 
 async function loadAnnouncements() {
   const list = document.getElementById('announcementsList');
@@ -9,6 +10,7 @@ async function loadAnnouncements() {
       list.innerHTML = '<div class="empty-state"><i class="fas fa-bullhorn"></i><p>No announcements yet. Create one to get started.</p></div>';
       return;
     }
+    announcementsCache = data.announcements;
     list.innerHTML = data.announcements.map(a => {
       const expired = a.expires_at && new Date(a.expires_at) < new Date();
       const badgeClass = expired ? 'badge-expired' : (a.is_active ? 'badge-active' : 'badge-inactive');
@@ -27,11 +29,11 @@ async function loadAnnouncements() {
               </div>
             </div>
             <div class="announcement-actions">
-              <button class="btn-secondary" onclick="openEdit(${JSON.stringify(a).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i></button>
-              <button class="btn-secondary" onclick="toggleAnnouncement(${a.id}, ${a.is_active})">
+              <button class="btn-secondary" data-edit-id="${a.id}"><i class="fas fa-edit"></i></button>
+              <button class="btn-secondary" data-toggle-id="${a.id}" data-toggle-active="${a.is_active ? '1' : '0'}">
                 <i class="fas ${a.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i>
               </button>
-              <button class="btn-danger" onclick="deleteAnnouncement(${a.id}, '${escHtml(a.title)}')"><i class="fas fa-trash"></i></button>
+              <button class="btn-danger" data-delete-id="${a.id}" data-delete-title="${escHtml(a.title)}"><i class="fas fa-trash"></i></button>
             </div>
           </div>
           <p class="announcement-body">${escHtml(a.message)}</p>
@@ -47,7 +49,8 @@ function escHtml(str) {
 }
 
 function openCreate() {
-  document.getElementById('modalTitle').textContent = 'New Announcement';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'New Announcement';
   document.getElementById('editId').value = '';
   document.getElementById('annTitle').value = '';
   document.getElementById('annMessage').value = '';
@@ -58,7 +61,8 @@ function openCreate() {
 }
 
 function openEdit(ann) {
-  document.getElementById('modalTitle').textContent = 'Edit Announcement';
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Edit Announcement';
   document.getElementById('editId').value = ann.id;
   document.getElementById('annTitle').value = ann.title;
   document.getElementById('annMessage').value = ann.message;
@@ -144,6 +148,31 @@ function showToast(msg, type) {
 // Close modal on backdrop click
 document.getElementById('announcementModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
+});
+
+// Static button wiring
+document.getElementById('newAnnouncementBtn')?.addEventListener('click', openCreate);
+document.getElementById('cancelAnnouncementBtn')?.addEventListener('click', closeModal);
+document.getElementById('closeAnnouncementModalBtn')?.addEventListener('click', closeModal);
+document.getElementById('saveAnnouncementBtn')?.addEventListener('click', saveAnnouncement);
+
+// Event delegation for dynamic card buttons
+document.getElementById('announcementsList').addEventListener('click', function(e) {
+  const editBtn = e.target.closest('[data-edit-id]');
+  if (editBtn) {
+    const ann = announcementsCache.find(a => String(a.id) === editBtn.dataset.editId);
+    if (ann) openEdit(ann);
+    return;
+  }
+  const toggleBtn = e.target.closest('[data-toggle-id]');
+  if (toggleBtn) {
+    toggleAnnouncement(toggleBtn.dataset.toggleId, toggleBtn.dataset.toggleActive === '1');
+    return;
+  }
+  const deleteBtn = e.target.closest('[data-delete-id]');
+  if (deleteBtn) {
+    deleteAnnouncement(deleteBtn.dataset.deleteId, deleteBtn.dataset.deleteTitle);
+  }
 });
 
 loadAnnouncements();

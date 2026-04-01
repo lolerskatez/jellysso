@@ -22,6 +22,7 @@ const { criticalLimiter, adminLimiter, apiLimiter, publicLimiter } = require('./
 const { sanitizationMiddleware } = require('./utils/sanitizer');
 const SessionTimeoutManager = require('./utils/sessionTimeoutManager');
 const { AccountLockoutManager } = require('./models/AccountLockoutManager');
+const SecurityAlertManager = require('./models/SecurityAlertManager');
 const CONSTANTS = require('./config/constants');
 const crypto = require('crypto');
 require('dotenv').config();
@@ -276,6 +277,14 @@ try {
   logger.info('Scheduled cleanup tasks initialized');
 } catch (err) {
   logger.warn('Could not initialize cleanup tasks', { error: err.message });
+}
+
+// Initialize SecurityAlertManager to ensure the security_alerts table exists
+try {
+  SecurityAlertManager.getInstance();
+  logger.info('SecurityAlertManager initialized');
+} catch (err) {
+  logger.warn('Could not initialize SecurityAlertManager', { error: err.message });
 }
 
 // Setup check middleware - redirect to setup if not configured

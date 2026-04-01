@@ -9,12 +9,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--spacing-2xl);
-    }
     .btn-primary {
       background: linear-gradient(135deg, var(--primary), #0066cc);
       color: white;
@@ -180,24 +174,33 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-labels' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-tags"></i> Labels</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Organise users with colour-coded labels for easy filtering and bulk operations.</p>
-      </div>
-      <button class="btn-primary" id="newLabelBtn"><i class="fas fa-plus"></i> New Label</button>
-    </div>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-labels' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-tags" style="margin-right:8px;color:var(--primary)"></i>Labels
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" id="newLabelBtn"><i class="fas fa-plus"></i> New Label</button>
+        </div>
+      </header>
 
-    <div id="labelsGrid" class="labels-grid">
-      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
-        <i class="fas fa-spinner fa-spin" style="font-size:2rem"></i>
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Organise users with colour-coded labels for easy filtering and bulk operations.</p>
+        <div id="labelsGrid" class="labels-grid">
+          <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+            <i class="fas fa-spinner fa-spin" style="font-size:2rem"></i>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
-</div>
 
 <!-- Create/Edit modal -->
 <div class="modal" id="labelModal">

@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
     .stats-row { display:flex; gap:var(--spacing-lg); margin-bottom:var(--spacing-xl); flex-wrap:wrap; }
     .stat-card { flex:1; min-width:140px; padding:var(--spacing-lg); background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); }
     .stat-card .val { font-size:2rem; font-weight:700; }
@@ -52,62 +51,69 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-security-alerts' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-shield-alt"></i> Security Alerts</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">System-wide security events and suspicious activity log.</p>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-security-alerts' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-shield-alt" style="margin-right:8px;color:var(--primary)"></i>Security Alerts
+          </h1>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">System-wide security events and suspicious activity log.</p>
+
+        <div class="stats-row" id="statsRow">
+          <div class="stat-card"><div class="val sev-critical" id="stat-critical">—</div><div class="lbl">Critical</div></div>
+          <div class="stat-card"><div class="val sev-high" id="stat-high">—</div><div class="lbl">High</div></div>
+          <div class="stat-card"><div class="val sev-medium" id="stat-medium">—</div><div class="lbl">Medium</div></div>
+          <div class="stat-card"><div class="val sev-low" id="stat-low">—</div><div class="lbl">Low</div></div>
+          <div class="stat-card"><div class="val" id="stat-unread">—</div><div class="lbl">Unread</div></div>
+        </div>
+
+        <div class="filter-row">
+          <select id="filterSeverity">
+            <option value="">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select id="filterType">
+            <option value="">All Types</option>
+            <option value="failed_login">Failed Login</option>
+            <option value="new_device">New Device</option>
+            <option value="policy_change">Policy Change</option>
+            <option value="password_change">Password Change</option>
+            <option value="account_locked">Account Locked</option>
+            <option value="suspicious_activity">Suspicious Activity</option>
+            <option value="permission_change">Permission Change</option>
+            <option value="api_key_created">API Key Created</option>
+            <option value="api_key_revoked">API Key Revoked</option>
+          </select>
+          <select id="filterRead">
+            <option value="">All</option>
+            <option value="1">Unread Only</option>
+          </select>
+          <button class="btn-secondary" id="refreshAlertsBtn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn-secondary" id="markAllReadBtn"><i class="fas fa-check-double"></i> Mark All Read</button>
+          <button class="btn-danger" id="clearAlertsBtn"><i class="fas fa-trash"></i> Clear All</button>
+        </div>
+
+        <div id="alertsList">
+          <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
+        </div>
       </div>
-    </div>
-
-    <div class="stats-row" id="statsRow">
-      <div class="stat-card"><div class="val sev-critical" id="stat-critical">—</div><div class="lbl">Critical</div></div>
-      <div class="stat-card"><div class="val sev-high" id="stat-high">—</div><div class="lbl">High</div></div>
-      <div class="stat-card"><div class="val sev-medium" id="stat-medium">—</div><div class="lbl">Medium</div></div>
-      <div class="stat-card"><div class="val sev-low" id="stat-low">—</div><div class="lbl">Low</div></div>
-      <div class="stat-card"><div class="val" id="stat-unread">—</div><div class="lbl">Unread</div></div>
-    </div>
-
-    <div class="filter-row">
-      <select id="filterSeverity" onchange="loadAlerts()">
-        <option value="">All Severities</option>
-        <option value="critical">Critical</option>
-        <option value="high">High</option>
-        <option value="medium">Medium</option>
-        <option value="low">Low</option>
-      </select>
-      <select id="filterType" onchange="loadAlerts()">
-        <option value="">All Types</option>
-        <option value="failed_login">Failed Login</option>
-        <option value="new_device">New Device</option>
-        <option value="policy_change">Policy Change</option>
-        <option value="password_change">Password Change</option>
-        <option value="account_locked">Account Locked</option>
-        <option value="suspicious_activity">Suspicious Activity</option>
-        <option value="permission_change">Permission Change</option>
-        <option value="api_key_created">API Key Created</option>
-        <option value="api_key_revoked">API Key Revoked</option>
-      </select>
-      <select id="filterRead" onchange="loadAlerts()">
-        <option value="">All</option>
-        <option value="1">Unread Only</option>
-      </select>
-      <button class="btn-secondary" onclick="loadAlerts()"><i class="fas fa-sync"></i> Refresh</button>
-    </div>
-
-    <div class="toolbar">
-      <button class="btn-secondary" onclick="markAllRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
-      <button class="btn-danger" onclick="clearAlerts()"><i class="fas fa-trash"></i> Clear All</button>
-    </div>
-
-    <div id="alertsList">
-      <div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin" style="font-size:2rem"></i></div>
-    </div>
-
+    </main>
   </div>
-</div>
 
 <div id="toastMsg"></div>
 

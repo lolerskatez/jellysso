@@ -71,8 +71,8 @@ async function loadAlerts() {
           </div>
         </div>
         <div class="alert-actions">
-          ${!a.read ? `<button class="btn-secondary btn-sm" onclick="markRead(${a.id})" title="Mark read"><i class="fas fa-check"></i></button>` : ''}
-          <button class="btn-danger btn-sm" onclick="deleteAlert(${a.id})" title="Dismiss"><i class="fas fa-times"></i></button>
+          ${!a.read ? `<button class="btn-secondary btn-sm" data-mark-read="${a.id}" title="Mark read"><i class="fas fa-check"></i></button>` : ''}
+          <button class="btn-danger btn-sm" data-delete-alert="${a.id}" title="Dismiss"><i class="fas fa-times"></i></button>
         </div>
       </div>`;
     }).join('')}</div>`;
@@ -92,7 +92,7 @@ async function markRead(id) {
     const el = document.getElementById(`alert-${id}`);
     if (el) {
       el.classList.add('read');
-      const btn = el.querySelector('[onclick*="markRead"]');
+      const btn = el.querySelector('[data-mark-read]');
       if (btn) btn.remove();
     }
     loadStats();
@@ -150,6 +150,24 @@ function showToast(msg, type) {
   t.className = `show ${type}`;
   setTimeout(() => t.className = '', 3500);
 }
+
+// Filter select wiring
+['filterSeverity', 'filterType', 'filterRead'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', loadAlerts);
+});
+
+// Static button wiring
+document.getElementById('refreshAlertsBtn')?.addEventListener('click', loadAlerts);
+document.getElementById('markAllReadBtn')?.addEventListener('click', markAllRead);
+document.getElementById('clearAlertsBtn')?.addEventListener('click', clearAlerts);
+
+// Event delegation for dynamic alert action buttons
+document.getElementById('alertsList').addEventListener('click', function(e) {
+  const markBtn = e.target.closest('[data-mark-read]');
+  if (markBtn) { markRead(markBtn.dataset.markRead); return; }
+  const deleteBtn = e.target.closest('[data-delete-alert]');
+  if (deleteBtn) { deleteAlert(deleteBtn.dataset.deleteAlert); }
+});
 
 loadStats();
 loadAlerts();

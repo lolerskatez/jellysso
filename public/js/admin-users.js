@@ -207,10 +207,10 @@ const renderTable = (window.renderTable = function(users) {
       '<td>' + expiryCell + '</td>' +
       '<td>' +
         '<div class="row-actions">' +
-          '<button class="btn-icon" title="Edit user" data-uid="' + uid + '" onclick="openEditModal(this.dataset.uid)">' +
+          '<button class="btn-icon" title="Edit user" data-action="edit" data-uid="' + uid + '">' +
             '<i class="fas fa-edit"></i>' +
           '</button>' +
-          '<button class="btn-icon danger" title="Delete user" data-uid="' + uid + '" data-uname="' + escapeHtml(u.username || '') + '" onclick="openDeleteModal(this.dataset.uid, this.dataset.uname)">' +
+          '<button class="btn-icon danger" title="Delete user" data-action="delete" data-uid="' + uid + '" data-uname="' + escapeHtml(u.username || '') + '">' +
             '<i class="fas fa-trash"></i>' +
           '</button>' +
         '</div>' +
@@ -737,6 +737,19 @@ function initPage() {
   document.getElementById('deleteModalClose')?.addEventListener('click', () => closeModal('deleteModal'));
   document.getElementById('deleteModalCancel')?.addEventListener('click', () => closeModal('deleteModal'));
   document.getElementById('deleteConfirmBtn')?.addEventListener('click', confirmDelete);
+
+  // Table row action delegation
+  var usersTableBody = document.getElementById('usersTableBody');
+  if (usersTableBody) {
+    usersTableBody.addEventListener('click', function(e) {
+      var btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      var action = btn.dataset.action;
+      var uid = btn.dataset.uid;
+      if (action === 'edit') openEditModal(uid);
+      else if (action === 'delete') openDeleteModal(uid, btn.dataset.uname);
+    });
+  }
 
   // Backdrop click closes modals
   ['addModal', 'editModal', 'deleteModal'].forEach(function(id) {

@@ -190,6 +190,29 @@ function copyToClipboard(text) {
   });
 }
 
+function showSignupUrlDialog(urlText, multi = false) {
+  const dialog = document.createElement('div');
+  dialog.id = 'urlDialog';
+  dialog.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999';
+  dialog.innerHTML = `
+    <div style="background:var(--bg-primary);border-radius:var(--border-radius);padding:var(--spacing-xl);max-width:560px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+      <h3 style="margin:0 0 var(--spacing-md);color:var(--text-primary)">${multi ? 'Signup URLs Created' : 'Signup URL Created'}</h3>
+      <p style="color:var(--text-secondary);margin:0 0 var(--spacing-md);font-size:0.875rem">Share ${multi ? 'these links' : 'this link'} with your invitee${multi ? 's' : ''}:</p>
+      <textarea id="urlDialogText" style="width:100%;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--border-radius-sm);padding:var(--spacing-sm);font-family:monospace;font-size:0.8rem;resize:vertical;min-height:${multi ? '120px' : '48px'}" readonly>${urlText}</textarea>
+      <div style="display:flex;gap:var(--spacing-sm);margin-top:var(--spacing-md);justify-content:flex-end">
+        <button id="urlDialogCopy" class="btn-primary" style="padding:8px 16px"><i class="fas fa-copy"></i> Copy</button>
+        <button id="urlDialogClose" class="btn-secondary" style="padding:8px 16px">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(dialog);
+  document.getElementById('urlDialogCopy').addEventListener('click', () => {
+    navigator.clipboard.writeText(urlText).then(() => showAlert('Copied to clipboard!', 'success'));
+  });
+  document.getElementById('urlDialogClose').addEventListener('click', () => dialog.remove());
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.remove(); });
+}
+
 function showAlert(message, type) {
   const container = document.getElementById('alertContainer');
   const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
@@ -212,6 +235,8 @@ document.getElementById('closeCreateModalBtn')?.addEventListener('click', closeM
 document.getElementById('invitesTableBody')?.addEventListener('click', (e) => {
   const copyEl = e.target.closest('[data-copy]');
   if (copyEl) { copyToClipboard(copyEl.dataset.copy); return; }
+  const copyUrlEl = e.target.closest('[data-copy-url]');
+  if (copyUrlEl) { showSignupUrlDialog(`${window.location.origin}/signup?invite=${copyUrlEl.dataset.copyUrl}`); return; }
   const revokeEl = e.target.closest('[data-revoke]');
   if (revokeEl) { revokeInvite(revokeEl.dataset.revoke); return; }
 });

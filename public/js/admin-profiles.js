@@ -14,7 +14,7 @@ async function loadTiersForModal() {
   }
   const select = document.getElementById('tierInput');
   select.innerHTML = tiersData.length
-    ? tiersData.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+    : tiersData.map(t => `<option value="${t.id}">${t.displayName}</option>`).join('')
     : '<option value="">No tiers configured</option>';
   return tiersData;
 }

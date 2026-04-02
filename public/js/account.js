@@ -28,6 +28,7 @@ const AccountManager = {
     // Load initial data
     await this.loadSessions();
     await this.loadNotificationPreferences();
+    await this.loadReferral();
   },
 
   /**
@@ -993,6 +994,36 @@ const AccountManager = {
       'matrix': 'Receive notifications via Matrix client'
     };
     return descriptions[channel] || '';
+  },
+
+  /**
+   * Load and display the referral invite link.
+   * Shows referralCard only if referrals_enabled setting is true on the server.
+   */
+  async loadReferral() {
+    try {
+      const response = await fetch('/api/me/referral', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (!data.success) return;
+
+      const referralCard = document.getElementById('referralCard');
+      const referralLink = document.getElementById('referralLink');
+      const referralCode = document.getElementById('referralCode');
+      const referralCount = document.getElementById('referralCount');
+
+      if (referralCard) referralCard.style.display = 'block';
+      if (referralLink) referralLink.value = data.referralUrl || '';
+      if (referralCode) referralCode.value = data.referralCode || '';
+      if (referralCount) referralCount.textContent = data.usageCount || 0;
+    } catch (err) {
+      console.debug('Referral link not available:', err.message);
+    }
   },
 
   /**

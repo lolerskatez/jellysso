@@ -682,6 +682,83 @@ class InviteManager {
   }
 
   /**
+   * Get or create a referral invite for a user.
+   * Users may have at most one active referral at a time.
+   * Referrals use the first available signup profile, expire in 30 days, and allow multiple uses.
+   * @param {string} userId - The user whose referral link to fetch/create
+   * @returns {Promise<Object>} Invite object (or existing pending referral)
+   */
+  async getOrCreateReferralInvite(userId) {
+    return new Promise((resolve, reject) => {
+      try {
+        // Look for an existing active referral created by this user
+        this.db.get(
+          `SELECT * FROM invites 
+           WHERE createdBy = ? AND status = 'pending' AND json_extract(metadata, '$.isReferral') = 1
+           ORDER BY createdAt DESC LIMIT 1`,
+          [userId],
+          async (err, existing) => {
+            if (err) return reject(new Error('Database error: ' + err.message));
+
+            // Return existing valid referral if it hasn't expired
+            if (existing) {
+              if (!existing.expiresAt || new Date(existing.expiresAt) > new Date()) {
+                return resolve(existing);
+              }
+            }
+
+            // Create a new referral — use the first available signup profile
+            this.db.get(
+              'SELECT id FROM signup_profiles ORDER BY createdAt ASC LIMIT 1',
+              [],
+              async (profileErr, profile) => {
+                if (profileErr || !profile) {
+                  return reject(new Error('No signup profiles available for referral'));
+                }
+
+                const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+                try {
+                  const invite = await this.createInvite(
+                    profile.id,
+                    userId,
+                    expiresAt,
+                    { isReferral: true, referredBy: userId },
+                    10 // allow up to 10 referral signups
+                  );
+                  resolve(invite);
+                } catch (createErr) {
+                  reject(createErr);
+                }
+              }
+            );
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Get usage count for referral invites created by a specific user
+   * @param {string} userId
+   * @returns {Promise<number>}
+   */
+  async getReferralCount(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT COALESCE(SUM(usageCount), 0) as total FROM invites
+         WHERE createdBy = ? AND json_extract(metadata, '$.isReferral') = 1`,
+        [userId],
+        (err, row) => {
+          if (err) return reject(err);
+          resolve(row ? Number(row.total) : 0);
+        }
+      );
+    });
+  }
+
+  /**
    * List invites by label
    * @param {string} label - Label to filter by
    * @returns {Promise<Array>} Array of invites with matching label

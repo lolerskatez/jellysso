@@ -955,6 +955,26 @@ router.post('/reset-password', criticalLimiter, async (req, res) => {
 // SELF-SERVICE SIGNUP VIA INVITE CODE
 // ============================================================================
 
+// GET /api/auth/password-policy — return the server's password requirements (public)
+router.get('/password-policy', async (req, res) => {
+  try {
+    const [minLen, upper, nums, special] = await Promise.all([
+      DatabaseManager.getSetting('password_min_length'),
+      DatabaseManager.getSetting('password_require_uppercase'),
+      DatabaseManager.getSetting('password_require_numbers'),
+      DatabaseManager.getSetting('password_require_special')
+    ]);
+    res.json({
+      minLength:        parseInt(minLen) || 8,
+      requireUppercase: upper   === 'true',
+      requireNumbers:   nums    === 'true',
+      requireSpecial:   special === 'true'
+    });
+  } catch (_) {
+    res.json({ minLength: 8, requireUppercase: false, requireNumbers: false, requireSpecial: false });
+  }
+});
+
 // POST /api/auth/signup — create Jellyfin account via invite
 // Public endpoint; protected by invite code validation + optional CAPTCHA + rate limit.
 // No CSRF required (CSRF middleware exempts this path in server.js).
@@ -974,6 +994,27 @@ router.post('/signup', criticalLimiter, async (req, res) => {
 
     if (String(password).length < 8) {
       return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+    }
+
+    // Enforce configurable password policy
+    const [policyMinLen, policyUpper, policyNums, policySpecial] = await Promise.all([
+      DatabaseManager.getSetting('password_min_length'),
+      DatabaseManager.getSetting('password_require_uppercase'),
+      DatabaseManager.getSetting('password_require_numbers'),
+      DatabaseManager.getSetting('password_require_special')
+    ]);
+    const minLen = Math.max(8, parseInt(policyMinLen) || 8);
+    if (String(password).length < minLen) {
+      return res.status(400).json({ success: false, error: `Password must be at least ${minLen} characters` });
+    }
+    if (policyUpper === 'true' && !/[A-Z]/.test(password)) {
+      return res.status(400).json({ success: false, error: 'Password must contain at least one uppercase letter' });
+    }
+    if (policyNums === 'true' && !/[0-9]/.test(password)) {
+      return res.status(400).json({ success: false, error: 'Password must contain at least one number' });
+    }
+    if (policySpecial === 'true' && !/[^A-Za-z0-9]/.test(password)) {
+      return res.status(400).json({ success: false, error: 'Password must contain at least one special character' });
     }
 
     // CAPTCHA verification (if enabled)

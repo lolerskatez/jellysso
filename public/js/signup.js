@@ -1,5 +1,8 @@
 const inviteCode = new URLSearchParams(window.location.search).get('invite');
 
+// Password policy fetched from server on load
+let passwordPolicy = { minLength: 8, requireUppercase: false, requireNumbers: false, requireSpecial: false };
+
 if (!inviteCode) {
   showAlert('error', 'This link is incomplete. Please use the full signup link from your invite.');
   document.getElementById('signupForm').style.display = 'none';

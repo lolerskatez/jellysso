@@ -307,6 +307,8 @@
           <button class="settings-tab-btn" data-tab="ombi"><i class="fas fa-ticket-alt"></i> Ombi</button>
           <button class="settings-tab-btn" data-tab="sessionEnforcement"><i class="fas fa-users-slash"></i> Stream Enforcement</button>
           <button class="settings-tab-btn" data-tab="referrals"><i class="fas fa-share-alt"></i> Referrals</button>
+          <button class="settings-tab-btn" data-tab="branding"><i class="fas fa-paint-brush"></i> Branding</button>
+          <button class="settings-tab-btn" data-tab="passwordPolicy"><i class="fas fa-key"></i> Password Policy</button>
           <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
           <button class="settings-tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Maintenance</button>
         </div>
@@ -745,6 +747,110 @@
             <div class="button-group">
               <button type="button" class="btn btn-primary" data-action="save" data-section="referral"><i class="fas fa-save"></i> Save Changes</button>
               <button type="button" class="btn btn-secondary" data-action="reset" data-section="referral"><i class="fas fa-undo"></i> Reset to Defaults</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Branding Settings -->
+        <div id="branding" class="settings-panel">
+          <form id="brandingForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-paint-brush"></i> Invite Page Branding</h3>
+              <p style="color:var(--text-secondary);font-size:.875rem;margin-top:0;">
+                Customize the appearance of the signup page visitors see when they use an invite link.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Welcome Message</div>
+                  <div class="setting-description">Displayed at the top of the signup page (plain text)</div>
+                </div>
+                <div>
+                  <input type="text" name="signupWelcomeMessage" value="<%= settings.signupWelcomeMessage %>" placeholder="Welcome! You've been invited to join.">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Logo URL</div>
+                  <div class="setting-description">Public URL of a logo image to display above the signup form</div>
+                </div>
+                <div>
+                  <input type="url" name="signupLogoUrl" value="<%= settings.signupLogoUrl %>" placeholder="https://example.com/logo.png">
+                </div>
+              </div>
+
+              <div class="setting-row" style="align-items:flex-start;">
+                <div>
+                  <div class="setting-label">Custom HTML Block</div>
+                  <div class="setting-description">Raw HTML injected below the logo/welcome message. Keep it short and safe.</div>
+                </div>
+                <div>
+                  <textarea name="signupCustomHtml" rows="4" placeholder="<p>Contact us at support@example.com</p>" style="width:100%;font-family:monospace;font-size:0.85rem;"><%= settings.signupCustomHtml %></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="branding"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="branding"><i class="fas fa-undo"></i> Reset to Defaults</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Password Policy Settings -->
+        <div id="passwordPolicy" class="settings-panel">
+          <form id="passwordPolicyForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-key"></i> Password Policy</h3>
+              <p style="color:var(--text-secondary);font-size:.875rem;margin-top:0;">
+                Enforce complexity requirements for new accounts created via invite signup.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Minimum Length</div>
+                  <div class="setting-description">Passwords shorter than this many characters are rejected (minimum 8)</div>
+                </div>
+                <div>
+                  <input type="number" name="passwordMinLength" value="<%= settings.passwordMinLength %>" min="8" max="128" style="width:90px;">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require Uppercase Letter</div>
+                  <div class="setting-description">Password must contain at least one A–Z character</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.passwordRequireUppercase ? 'active' : '' %>" data-name="passwordRequireUppercase"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require Number</div>
+                  <div class="setting-description">Password must contain at least one digit (0–9)</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.passwordRequireNumbers ? 'active' : '' %>" data-name="passwordRequireNumbers"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require Special Character</div>
+                  <div class="setting-description">Password must contain at least one non-alphanumeric character</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.passwordRequireSpecial ? 'active' : '' %>" data-name="passwordRequireSpecial"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="passwordPolicy"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="passwordPolicy"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
           </form>
         </div>

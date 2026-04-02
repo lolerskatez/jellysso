@@ -208,6 +208,17 @@
   <div class="signup-page-wrapper">
     <div class="signup-card">
       <div class="signup-body">
+        <% if (signupLogoUrl) { %>
+        <div style="text-align:center;margin-bottom:var(--spacing-lg);">
+          <img src="<%= signupLogoUrl %>" alt="Logo" style="max-height:80px;max-width:100%;object-fit:contain;">
+        </div>
+        <% } %>
+        <% if (signupWelcomeMessage) { %>
+        <p style="text-align:center;color:var(--text-secondary);margin-bottom:var(--spacing-lg);"><%= signupWelcomeMessage %></p>
+        <% } %>
+        <% if (signupCustomHtml) { %>
+        <div class="signup-custom-html"><%- signupCustomHtml %></div>
+        <% } %>
         <div id="alertContainer"></div>
 
         <form id="signupForm" style="display: none;">

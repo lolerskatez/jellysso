@@ -5,6 +5,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const SetupManager = require('../models/SetupManager');
 const UserProfileManager = require('../models/UserProfileManager');
 const ContactMethodManager = require('../models/ContactMethodManager');
+const InviteManager = require('../models/InviteManager');
 const OTPManager = require('../models/OTPManager');
 const AuditLogger = require('../models/AuditLogger');
 const NotificationManager = require('../models/NotificationManager');
@@ -494,6 +495,40 @@ router.post('/export', requireAuth, csrfProtection, async (req, res) => {
     await AuditLogger.log('GDPR_EXPORT_ERROR', req.session.user?.Id, 'user:export',
       { error: err.message }, 'failure', req.ip);
     res.status(500).json({ success: false, message: 'Failed to export user data.' });
+  }
+});
+
+/**
+ * GET /api/me/referral
+ * Get or create the user's referral invite link.
+ * Only available when referrals_enabled setting is true.
+ */
+router.get('/referral', requireAuth, async (req, res) => {
+  try {
+    const referralsEnabled = await DatabaseManager.getSetting('referrals_enabled').catch(() => null);
+    if (referralsEnabled !== 'true') {
+      return res.status(403).json({ success: false, message: 'Referrals are not enabled on this server.' });
+    }
+
+    const userId = req.session.user.Id;
+    const inviteManager = InviteManager.getInstance();
+    const invite = await inviteManager.getOrCreateReferralInvite(userId);
+    const usageCount = await inviteManager.getReferralCount(userId);
+
+    const config = SetupManager.getConfig();
+    const baseUrl = config.webAppPublicUrl || '';
+    const referralUrl = `${baseUrl}/signup?invite=${encodeURIComponent(invite.code)}`;
+
+    res.json({
+      success: true,
+      referralCode: invite.code,
+      referralUrl,
+      usageCount,
+      expiresAt: invite.expiresAt
+    });
+  } catch (err) {
+    logger.error('Referral link error:', err.message);
+    res.status(500).json({ success: false, message: err.message || 'Failed to get referral link.' });
   }
 });
 

@@ -631,6 +631,15 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       // Referrals
       referralsEnabled:     rawSettings.referrals_enabled       === 'true',
       maxReferralsPerUser:  parseInt(rawSettings.max_referrals_per_user) || 5,
+      // Branding
+      signupWelcomeMessage: rawSettings.signup_welcome_message || '',
+      signupLogoUrl:        rawSettings.signup_logo_url        || '',
+      signupCustomHtml:     rawSettings.signup_custom_html     || '',
+      // Password policy
+      passwordMinLength:        parseInt(rawSettings.password_min_length) || 8,
+      passwordRequireUppercase: rawSettings.password_require_uppercase === 'true',
+      passwordRequireNumbers:   rawSettings.password_require_numbers   === 'true',
+      passwordRequireSpecial:   rawSettings.password_require_special   === 'true',
       // Logging
       logLevel:          rawSettings.log_level          || 'info',
       logToFile:         rawSettings.log_to_file        !== 'false',
@@ -1688,6 +1697,17 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
     } else if (section === 'referral') {
       if (s.referralsEnabled      !== undefined) await DatabaseManager.setSetting('referrals_enabled',       String(s.referralsEnabled));
       if (s.maxReferralsPerUser   !== undefined) await DatabaseManager.setSetting('max_referrals_per_user', String(Math.max(1, parseInt(s.maxReferralsPerUser) || 5)));
+
+    } else if (section === 'branding') {
+      if (s.signupWelcomeMessage !== undefined) await DatabaseManager.setSetting('signup_welcome_message', String(s.signupWelcomeMessage));
+      if (s.signupLogoUrl        !== undefined) await DatabaseManager.setSetting('signup_logo_url',        String(s.signupLogoUrl).trim());
+      if (s.signupCustomHtml     !== undefined) await DatabaseManager.setSetting('signup_custom_html',     String(s.signupCustomHtml));
+
+    } else if (section === 'passwordPolicy') {
+      if (s.passwordMinLength        !== undefined) await DatabaseManager.setSetting('password_min_length',        String(Math.max(8, parseInt(s.passwordMinLength) || 8)));
+      if (s.passwordRequireUppercase !== undefined) await DatabaseManager.setSetting('password_require_uppercase', String(s.passwordRequireUppercase));
+      if (s.passwordRequireNumbers   !== undefined) await DatabaseManager.setSetting('password_require_numbers',   String(s.passwordRequireNumbers));
+      if (s.passwordRequireSpecial   !== undefined) await DatabaseManager.setSetting('password_require_special',   String(s.passwordRequireSpecial));
 
     } else if (section === 'maintenance') {
       // Parse HH:MM time strings into hour integers

@@ -600,16 +600,25 @@ app.get('/signup', csrfProtection, async (req, res) => {
   let captchaEnabled = false;
   let captchaProvider = 'hcaptcha';
   let captchaSiteKey = '';
+  let signupWelcomeMessage = '';
+  let signupLogoUrl = '';
+  let signupCustomHtml = '';
   try {
     const DatabaseManager = require('./models/DatabaseManager');
-    const [enabledVal, providerVal, siteKeyVal] = await Promise.all([
+    const [enabledVal, providerVal, siteKeyVal, welcomeVal, logoVal, customHtmlVal] = await Promise.all([
       DatabaseManager.getSetting('captcha_enabled'),
       DatabaseManager.getSetting('captcha_provider'),
-      DatabaseManager.getSetting('captcha_site_key')
+      DatabaseManager.getSetting('captcha_site_key'),
+      DatabaseManager.getSetting('signup_welcome_message'),
+      DatabaseManager.getSetting('signup_logo_url'),
+      DatabaseManager.getSetting('signup_custom_html')
     ]);
     captchaEnabled = enabledVal === 'true' && !!siteKeyVal;
     captchaProvider = providerVal || 'hcaptcha';
     captchaSiteKey = siteKeyVal || '';
+    signupWelcomeMessage = welcomeVal || '';
+    signupLogoUrl = logoVal || '';
+    signupCustomHtml = customHtmlVal || '';
   } catch (_) { /* ignore — CAPTCHA disabled */ }
 
   // Render signup page with public invite validation
@@ -618,6 +627,9 @@ app.get('/signup', csrfProtection, async (req, res) => {
     captchaEnabled,
     captchaProvider,
     captchaSiteKey,
+    signupWelcomeMessage,
+    signupLogoUrl,
+    signupCustomHtml,
     csrfToken: res.locals.csrfToken
   });
 });

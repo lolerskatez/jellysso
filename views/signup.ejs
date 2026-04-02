@@ -3,8 +3,313 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up - JellySSO</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <title>Sign Up - <%= appName %></title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <style nonce="<%= nonce %>">
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .signup-page-wrapper {
+      width: 100%;
+      max-width: 480px;
+      padding: var(--spacing-md);
+    }
+
+    .signup-header {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+      color: white;
+    }
+
+    .signup-logo {
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .signup-logo i {
+      font-size: 2rem;
+      color: white;
+    }
+
+    .signup-header h1 {
+      margin-bottom: var(--spacing-xs);
+      color: white;
+      font-size: 2rem;
+    }
+
+    .signup-header p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9375rem;
+    }
+
+    .signup-card {
+      background: var(--bg-primary);
+      border-radius: var(--border-radius-lg);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .signup-body {
+      padding: var(--spacing-xl);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: var(--spacing-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      font-family: inherit;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      box-sizing: border-box;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .form-control::placeholder { color: var(--text-muted); }
+
+    .profile-info {
+      background: var(--bg-secondary);
+      border-left: 4px solid var(--primary);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.875rem;
+    }
+
+    .profile-info h3 {
+      margin: 0 0 var(--spacing-sm) 0;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .profile-info-item { color: var(--text-secondary); margin: 4px 0; }
+
+    .strength-indicator {
+      margin-top: 6px;
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .strength-bar { height: 100%; width: 0%; transition: width 0.2s, background-color 0.2s; }
+    .strength-text { font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
+
+    .error-message {
+      color: var(--danger);
+      font-size: 0.8125rem;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .signup-btn {
+      width: 100%;
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: linear-gradient(135deg, var(--primary), #0066cc);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+    }
+
+    .signup-btn:hover { opacity: 0.9; }
+    .signup-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .captcha-wrapper { margin-bottom: var(--spacing-md); }
+
+    .signin-link {
+      text-align: center;
+      margin-top: var(--spacing-lg);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .signin-link a { color: var(--primary); text-decoration: none; font-weight: 600; }
+    .signin-link a:hover { text-decoration: underline; }
+
+    .alert {
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.875rem;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border-left: 4px solid var(--danger);
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: #d97706;
+      border-left: 4px solid #d97706;
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: var(--spacing-xl) 0;
+    }
+
+    .loading-state .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto var(--spacing-md);
+    }
+
+    .loading-state p { color: var(--text-secondary); margin: 0; }
+  </style>
+  <% if (captchaEnabled) { %>
+    <% if (captchaProvider === 'recaptcha') { %>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <% } else { %>
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <% } %>
+  <% } %>
+</head>
+<body>
+  <div class="signup-page-wrapper">
+    <div class="signup-header">
+      <div class="signup-logo">
+        <i class="fas fa-user-plus"></i>
+      </div>
+      <h1><%= appName %></h1>
+      <p>Create your account</p>
+    </div>
+
+    <div class="signup-card">
+      <div class="signup-body">
+        <div id="alertContainer"></div>
+
+        <form id="signupForm" style="display: none;">
+          <div class="profile-info">
+            <h3>Your Account Details</h3>
+            <div id="profileDetails"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control" required placeholder="Choose a username">
+            <div class="error-message" id="usernameError"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email <span style="color:var(--text-muted);font-weight:400">(Optional)</span></label>
+            <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com">
+            <div class="error-message" id="emailError"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required placeholder="Min. 8 characters">
+            <div class="strength-indicator">
+              <div class="strength-bar" id="strengthBar"></div>
+            </div>
+            <div class="strength-text" id="strengthText">Weak</div>
+            <div class="error-message" id="passwordError"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required placeholder="Confirm password">
+            <div class="error-message" id="confirmPasswordError"></div>
+          </div>
+
+          <% if (captchaEnabled) { %>
+          <div class="captcha-wrapper">
+            <% if (captchaProvider === 'recaptcha') { %>
+            <div class="g-recaptcha" data-sitekey="<%= captchaSiteKey %>"></div>
+            <% } else { %>
+            <div class="h-captcha" data-sitekey="<%= captchaSiteKey %>"></div>
+            <% } %>
+          </div>
+          <% } %>
+
+          <button type="submit" class="signup-btn" id="submitBtn">
+            <i class="fas fa-user-plus"></i> Create Account
+          </button>
+
+          <div class="signin-link">
+            Already have an account? <a href="/login">Sign in</a>
+          </div>
+        </form>
+
+        <div id="loadingContainer" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Validating your invite&hellip;</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="<%= nonce %>">window.CAPTCHA_CONFIG = { enabled: <%- JSON.stringify(captchaEnabled) %>, provider: <%- JSON.stringify(captchaProvider || "") %> };</script>
+  <script src="/js/signup.js"></script>
+</body>
+</html>
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

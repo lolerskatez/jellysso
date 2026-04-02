@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
   <meta name="description" content="Policy Management - JellySSO Admin">
   <title>Policy Management - JellySSO Admin</title>
   <link rel="stylesheet" href="/css/theme.css">
@@ -395,7 +396,7 @@
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #e0e0e0;
+      background-color: var(--border-color);
       transition: background-color var(--transition);
       border-radius: 26px;
       box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
@@ -432,45 +433,43 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, #0088aa 100%);
+      background: linear-gradient(135deg, var(--primary), #0066cc);
       color: white;
       padding: 10px var(--spacing-lg);
       border: none;
-      border-radius: var(--border-radius-sm);
+      border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
       font-size: 0.9375rem;
-      transition: all var(--transition);
-      box-shadow: 0 2px 4px rgba(0,164,220,0.2);
+      transition: opacity 0.2s;
     }
 
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,164,220,0.3); }
-    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:hover { opacity: 0.9; }
 
     .btn-secondary {
       background: var(--bg-secondary);
       color: var(--text-primary);
       padding: 10px var(--spacing-lg);
       border: 1px solid var(--border-color);
-      border-radius: var(--border-radius-sm);
+      border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
       font-size: 0.9375rem;
-      transition: all var(--transition);
+      transition: background 0.2s;
     }
 
-    .btn-secondary:hover { background: var(--bg-tertiary); border-color: var(--text-secondary); }
+    .btn-secondary:hover { background: var(--bg-tertiary); }
 
     .btn-danger-solid {
       background: var(--danger);
       color: white;
       padding: 10px var(--spacing-lg);
       border: none;
-      border-radius: var(--border-radius-sm);
+      border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
       font-size: 0.9375rem;
-      transition: all var(--transition);
+      transition: opacity 0.2s;
     }
 
     .btn-danger-solid:hover { opacity: 0.88; }
@@ -521,7 +520,7 @@
         </h1>
       </div>
       <div class="header-right">
-        <button class="btn btn-primary btn-sm" id="btnOpenCreateModal">
+        <button class="btn-primary" style="padding:8px 16px" id="btnOpenCreateModal">
           <i class="fas fa-plus"></i> Add Tier
         </button>
       </div>

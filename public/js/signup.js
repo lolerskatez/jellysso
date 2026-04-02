@@ -12,12 +12,36 @@ if (!inviteCode) {
 // Validate invite on page load
 async function validateInvite() {
   try {
-    const response = await fetch(`/api/invites/${inviteCode}`);
-    const data = await response.json();
+    // Fetch password policy in parallel with invite validation
+    const [inviteResponse, policyResponse] = await Promise.all([
+      fetch(`/api/invites/${inviteCode}`),
+      fetch('/api/auth/password-policy')
+    ]);
+    const data = await inviteResponse.json();
 
     if (!data.success) {
       showAlert('error', data.error || 'Invalid invite code');
       return;
+    }
+
+    // Store the policy globally
+    if (policyResponse.ok) {
+      passwordPolicy = await policyResponse.json();
+    }
+
+    // Render policy requirements hint
+    const policyHints = [];
+    if (passwordPolicy.minLength > 8) policyHints.push(`At least ${passwordPolicy.minLength} characters`);
+    if (passwordPolicy.requireUppercase) policyHints.push('One uppercase letter (A–Z)');
+    if (passwordPolicy.requireNumbers)   policyHints.push('One number (0–9)');
+    if (passwordPolicy.requireSpecial)   policyHints.push('One special character');
+    if (policyHints.length) {
+      const el = document.getElementById('passwordError');
+      if (el) {
+        el.textContent = 'Requirements: ' + policyHints.join(' · ');
+        el.style.color = 'var(--text-muted)';
+        el.style.display = 'block';
+      }
     }
 
     // Load signup profile

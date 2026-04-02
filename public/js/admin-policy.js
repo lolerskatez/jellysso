@@ -111,11 +111,11 @@ const renderTierGrid = (window.renderTierGrid = function(tiers) {
           </div>
         </div>
         <div class="tier-card-actions">
-          <button class="btn-tier-edit" onclick="openEditModal('${escapeHtml(tier.id)}')">
+          <button class="btn-tier-edit" data-tier-id="${escapeHtml(tier.id)}">
             <i class="fas fa-edit"></i> Edit
           </button>
           <button class="btn-tier-delete"
-            onclick="openDeleteModal('${escapeHtml(tier.id)}')"
+            data-tier-id="${escapeHtml(tier.id)}"
             ${tier.userCount > 0 ? 'disabled title="Cannot delete: users are assigned to this tier"' : ''}>
             <i class="fas fa-trash"></i> Delete
           </button>
@@ -126,7 +126,7 @@ const renderTierGrid = (window.renderTierGrid = function(tiers) {
 
   // "Add tier" placeholder card
   html += `
-    <div class="tier-card-add" onclick="openCreateModal()">
+    <div class="tier-card-add" id="tierCardAdd">
       <i class="fas fa-plus-circle"></i>
       <span>Add New Tier</span>
     </div>
@@ -360,4 +360,23 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('closeDeleteModalBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('deleteModal'));
   document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => window.closeModal && window.closeModal('deleteModal'));
   document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => window.confirmDeleteTier && window.confirmDeleteTier());
+
+  // Event delegation for dynamically rendered tier cards
+  document.getElementById('tierGrid')?.addEventListener('click', function(e) {
+    const editBtn = e.target.closest('.btn-tier-edit');
+    if (editBtn) {
+      const id = editBtn.dataset.tierId;
+      if (id && window.openEditModal) window.openEditModal(id);
+      return;
+    }
+    const deleteBtn = e.target.closest('.btn-tier-delete');
+    if (deleteBtn && !deleteBtn.disabled) {
+      const id = deleteBtn.dataset.tierId;
+      if (id && window.openDeleteModal) window.openDeleteModal(id);
+      return;
+    }
+    if (e.target.closest('#tierCardAdd')) {
+      if (window.openCreateModal) window.openCreateModal();
+    }
+  });
 });

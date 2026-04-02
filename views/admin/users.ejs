@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
   <title>User Management - JellySSO Admin</title>
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/layout.css">
@@ -276,7 +277,6 @@
       padding-top: var(--spacing-lg);
       border-top: 1px solid var(--border-color);
     }
-    }
 
     .modal-content.modal-wide { max-width: 640px; }
 
@@ -437,42 +437,39 @@
 
     /* Buttons */
     .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, #0088aa 100%);
+      background: linear-gradient(135deg, var(--primary), #0066cc);
       color: white;
-      padding: 10px var(--spacing-lg);
+      padding: 10px 20px;
       border: none;
-      border-radius: var(--border-radius-sm);
+      border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
-      font-size: 0.9375rem;
-      transition: all var(--transition);
-      box-shadow: 0 2px 4px rgba(0,164,220,0.2);
+      transition: opacity 0.2s;
     }
 
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,164,220,0.3); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .btn-secondary {
       background: var(--bg-secondary);
       color: var(--text-primary);
-      padding: 10px var(--spacing-lg);
+      padding: 10px 20px;
       border: 1px solid var(--border-color);
-      border-radius: var(--border-radius-sm);
+      border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
-      font-size: 0.9375rem;
-      transition: all var(--transition);
+      transition: background 0.2s;
     }
 
-    .btn-secondary:hover { background: var(--bg-tertiary, var(--bg-secondary)); border-color: var(--text-secondary); }
+    .btn-secondary:hover { background: var(--bg-tertiary); }
     .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .btn-danger-solid {
       background: var(--danger);
       color: white;
-      padding: 10px var(--spacing-lg);
+      padding: 10px 20px;
       border: none;
-      border-radius: var(--border-radius-sm);
+      border-radius: var(--border-radius);
       cursor: pointer;
       font-weight: 600;
       font-size: 0.9375rem;
@@ -553,10 +550,10 @@
         </h1>
       </div>
       <div class="header-right">
-        <button class="btn btn-primary btn-sm" id="addUserBtn">
+        <button class="btn-primary" id="addUserBtn" style="padding:8px 16px">
           <i class="fas fa-user-plus"></i> Add User
         </button>
-        <button class="btn btn-secondary btn-sm" id="refreshBtn">
+        <button class="btn-secondary" id="refreshBtn" style="padding:8px 16px">
           <i class="fas fa-sync-alt"></i> Refresh
         </button>
       </div>

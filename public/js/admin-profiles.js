@@ -1,5 +1,29 @@
 let profiles = [];
 let editingProfileId = null;
+let tiersData = [];
+
+async function loadTiersForModal() {
+  if (!tiersData.length) {
+    try {
+      const res = await fetch('/api/policy/admin/tiers');
+      const data = await res.json();
+      if (data.success) tiersData = data.tiers || [];
+    } catch (e) {
+      console.error('Failed to load tiers', e);
+    }
+  }
+  const select = document.getElementById('tierInput');
+  select.innerHTML = tiersData.length
+    ? tiersData.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+    : '<option value="">No tiers configured</option>';
+  return tiersData;
+}
+
+function syncStreamsFromTier() {
+  const tierId = document.getElementById('tierInput').value;
+  const tier = tiersData.find(t => t.id === tierId);
+  if (tier) document.getElementById('streamsInput').value = tier.maxConcurrentStreams;
+}
 
 async function loadProfiles() {
   try {
@@ -74,19 +98,21 @@ function renderProfiles() {
   });
 }
 
-function openCreateModal() {
+async function openCreateModal() {
   editingProfileId = null;
   const titleEl = document.getElementById('modalTitle');
   if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Create Profile';
   document.getElementById('profileForm').reset();
   document.getElementById('profileModal').classList.add('show');
+  await loadTiersForModal();
+  syncStreamsFromTier();
 }
 
 function closeModal() {
   document.getElementById('profileModal').classList.remove('show');
 }
 
-function editProfile(profileId) {
+async function editProfile(profileId) {
   const profile = profiles.find(p => p.id === profileId);
   if (!profile) return;
 
@@ -95,10 +121,11 @@ function editProfile(profileId) {
   if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Edit Profile';
   document.getElementById('nameInput').value = profile.name;
   document.getElementById('descInput').value = profile.description || '';
-  document.getElementById('tierInput').value = profile.jellyfinTier || 'basic';
-  document.getElementById('streamsInput').value = profile.jellyfinPlaybackLimits?.maxConcurrentStreams || 1;
   document.getElementById('bitrateInput').value = profile.jellyfinPlaybackLimits?.maxBitrate || '1080p';
   document.getElementById('profileModal').classList.add('show');
+  await loadTiersForModal();
+  document.getElementById('tierInput').value = profile.jellyfinTier || tiersData[0]?.id || '';
+  syncStreamsFromTier();
 }
 
 async function handleSaveProfile(event) {
@@ -211,6 +238,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('openCreateProfileBtn')?.addEventListener('click', openCreateModal);
+document.getElementById('tierInput')?.addEventListener('change', syncStreamsFromTier);
 document.getElementById('profileForm')?.addEventListener('submit', handleSaveProfile);
 document.getElementById('cancelProfileModalBtn')?.addEventListener('click', closeModal);
 document.getElementById('closeProfileModalBtn')?.addEventListener('click', closeModal);

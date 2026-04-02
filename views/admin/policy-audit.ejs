@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
     .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
     .filter-row select, .filter-row input { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
     .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 16px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
@@ -31,38 +30,47 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-policy-audit' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-clipboard-list"></i> Policy Audit Log</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Cross-user record of all policy enforcement actions.</p>
-      </div>
-      <button class="btn-secondary" onclick="loadLogs(true)"><i class="fas fa-sync"></i> Refresh</button>
-    </div>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-policy-audit' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-clipboard-list" style="margin-right:8px;color:var(--primary)"></i>Policy Audit Log
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-secondary" id="refreshLogsBtn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+      </header>
 
-    <div class="filter-row">
-      <input type="text" id="filterUserId" placeholder="Filter by User ID…" oninput="debounceLoad()" style="flex:1;min-width:180px">
-      <select id="filterAction" onchange="loadLogs(true)">
-        <option value="">All Actions</option>
-        <option value="allow">Allow</option>
-        <option value="deny">Deny</option>
-        <option value="warn">Warn</option>
-        <option value="account_locked">Account Locked</option>
-        <option value="account_enabled">Account Enabled</option>
-        <option value="account_disabled">Account Disabled</option>
-        <option value="tier_changed">Tier Changed</option>
-        <option value="policy_updated">Policy Updated</option>
-        <option value="device_whitelisted">Device Whitelisted</option>
-        <option value="device_removed">Device Removed</option>
-      </select>
-      <select id="perPage" onchange="loadLogs(true)">
-        <option value="50">50 / page</option>
-        <option value="100" selected>100 / page</option>
-        <option value="200">200 / page</option>
-      </select>
-    </div>
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Cross-user record of all policy enforcement actions.</p>
+
+        <div class="filter-row">
+          <input type="text" id="filterUserId" placeholder="Filter by User ID…" style="flex:1;min-width:180px">
+          <select id="filterAction">
+            <option value="">All Actions</option>
+            <option value="allow">Allow</option>
+            <option value="deny">Deny</option>
+            <option value="warn">Warn</option>
+            <option value="account_locked">Account Locked</option>
+            <option value="account_enabled">Account Enabled</option>
+            <option value="account_disabled">Account Disabled</option>
+            <option value="tier_changed">Tier Changed</option>
+            <option value="policy_updated">Policy Updated</option>
+            <option value="device_whitelisted">Device Whitelisted</option>
+            <option value="device_removed">Device Removed</option>
+          </select>
+          <select id="perPage">
+            <option value="50">50 / page</option>
+            <option value="100" selected>100 / page</option>
+            <option value="200">200 / page</option>
+          </select>
+        </div>
 
     <div id="tableWrap" style="overflow-x:auto">
       <table>
@@ -83,13 +91,14 @@
       </table>
     </div>
 
-    <div class="pagination">
-      <button id="prevBtn" onclick="prevPage()" disabled><i class="fas fa-chevron-left"></i> Prev</button>
-      <span style="color:var(--text-muted);font-size:.85rem" id="pageInfo">—</span>
-      <button id="nextBtn" onclick="nextPage()" disabled><i class="fas fa-chevron-right"></i> Next</button>
-    </div>
+        <div class="pagination">
+          <button id="prevBtn" disabled><i class="fas fa-chevron-left"></i> Prev</button>
+          <span style="color:var(--text-muted);font-size:.85rem" id="pageInfo">—</span>
+          <button id="nextBtn" disabled><i class="fas fa-chevron-right"></i> Next</button>
+        </div>
+      </div>
+    </main>
   </div>
-</div>
 
 <script src="/js/mobile-nav.js"></script>
 <script src="/js/admin-policy-audit.js"></script>

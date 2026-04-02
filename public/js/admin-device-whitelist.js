@@ -30,7 +30,7 @@ function renderTable() {
       <td>${escH(d.deviceType || '—')}</td>
       <td style="white-space:nowrap;font-size:.82rem">${formatDate(d.addedAt)}</td>
       <td>
-        <button class="btn-danger btn-sm" onclick="removeDevice('${escH(d.userId)}','${escH(d.deviceId)}')">
+        <button class="btn-danger btn-sm" data-remove-user="${escH(d.userId)}" data-remove-device="${escH(d.deviceId)}">
           <i class="fas fa-trash"></i> Remove
         </button>
       </td>
@@ -112,8 +112,22 @@ function showToast(msg, type) {
   el._t = setTimeout(() => { el.className = ''; }, 3000);
 }
 
-document.getElementById('addModal').addEventListener('click', e => {
+document.getElementById('addModal')?.addEventListener('click', e => {
   if (e.target === document.getElementById('addModal')) closeModal();
 });
+
+// Event delegation for dynamic table buttons
+document.getElementById('deviceTbody')?.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-remove-user]');
+  if (btn) removeDevice(btn.dataset.removeUser, btn.dataset.removeDevice);
+});
+
+// Button wiring
+document.getElementById('addDeviceBtn')?.addEventListener('click', openAddModal);
+document.getElementById('refreshDevicesBtn')?.addEventListener('click', loadDevices);
+document.getElementById('filterUserId')?.addEventListener('input', debounceLoad);
+document.getElementById('cancelAddBtn')?.addEventListener('click', closeModal);
+document.getElementById('closeAddModalBtn')?.addEventListener('click', closeModal);
+document.getElementById('addSaveBtn')?.addEventListener('click', saveDevice);
 
 loadDevices();

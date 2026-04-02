@@ -91,4 +91,11 @@ function escH(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// Button wiring
+document.getElementById('refreshActivityBtn')?.addEventListener('click', () => loadActivity(true));
+document.getElementById('filterSearch')?.addEventListener('input', filterRows);
+document.getElementById('perPage')?.addEventListener('change', onPerPageChange);
+document.getElementById('prevBtn')?.addEventListener('click', prevPage);
+document.getElementById('nextBtn')?.addEventListener('click', nextPage);
+
 loadActivity(true);

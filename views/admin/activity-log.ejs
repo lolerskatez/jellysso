@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
     .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
     .filter-row select, .filter-row input { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
     .btn-secondary { background:var(--bg-secondary); color:var(--text-primary); padding:8px 16px; border:1px solid var(--border-color); border-radius:var(--border-radius); cursor:pointer; }
@@ -29,20 +28,29 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-activity-log' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-list-alt"></i> Jellyfin Activity Log</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Browse server-side activity events from Jellyfin.</p>
-      </div>
-      <button class="btn-secondary" onclick="loadActivity(true)"><i class="fas fa-sync"></i> Refresh</button>
-    </div>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-activity-log' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-list-alt" style="margin-right:8px;color:var(--primary)"></i>Jellyfin Activity Log
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-secondary" id="refreshActivityBtn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+      </header>
 
-    <div class="filter-row">
-      <input type="text" id="filterSearch" placeholder="Filter by user or type…" oninput="filterRows()" style="flex:1;min-width:180px">
-      <select id="perPage" onchange="onPerPageChange()">
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Browse server-side activity events from Jellyfin.</p>
+
+        <div class="filter-row">
+          <input type="text" id="filterSearch" placeholder="Filter by user or type…" style="flex:1;min-width:180px">
+          <select id="perPage">
         <option value="25">25 per page</option>
         <option value="50" selected>50 per page</option>
         <option value="100">100 per page</option>
@@ -69,13 +77,14 @@
       </table>
     </div>
 
-    <div class="pagination">
-      <button id="prevBtn" onclick="prevPage()" disabled><i class="fas fa-chevron-left"></i> Prev</button>
-      <span class="page-info" id="pageInfo">Page 1</span>
-      <button id="nextBtn" onclick="nextPage()"><i class="fas fa-chevron-right"></i> Next</button>
-    </div>
+        <div class="pagination">
+          <button id="prevBtn" disabled><i class="fas fa-chevron-left"></i> Prev</button>
+          <span class="page-info" id="pageInfo">Page 1</span>
+          <button id="nextBtn"><i class="fas fa-chevron-right"></i> Next</button>
+        </div>
+      </div>
+    </main>
   </div>
-</div>
 
 <script src="/js/mobile-nav.js"></script>
 <script src="/js/admin-activity-log.js"></script>

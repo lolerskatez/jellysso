@@ -71,6 +71,7 @@ const AccountManager = {
       }
     });
     document.getElementById('changePasswordBtn')?.addEventListener('click', () => this.changePassword());
+    document.getElementById('passwordForm')?.addEventListener('submit', e => e.preventDefault());
 
     // Email change
     document.getElementById('email')?.addEventListener('change', () => {

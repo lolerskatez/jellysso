@@ -246,7 +246,7 @@ function showToast(msg, type) {
   el._t = setTimeout(() => { el.className = ''; }, 3000);
 }
 
-document.getElementById('webhookModal').addEventListener('click', e => {
+document.getElementById('webhookModal')?.addEventListener('click', e => {
   if (e.target === document.getElementById('webhookModal')) closeModal();
 });
 

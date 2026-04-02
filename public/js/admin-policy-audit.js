@@ -64,4 +64,12 @@ function nextPage() { offset += getLimit(); loadLogs(false); }
 function formatDate(s) { if (!s) return '—'; return new Date(s).toLocaleString(); }
 function escH(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+// Button wiring
+document.getElementById('refreshLogsBtn')?.addEventListener('click', () => loadLogs(true));
+document.getElementById('filterUserId')?.addEventListener('input', debounceLoad);
+document.getElementById('filterAction')?.addEventListener('change', () => loadLogs(true));
+document.getElementById('perPage')?.addEventListener('change', () => loadLogs(true));
+document.getElementById('prevBtn')?.addEventListener('click', prevPage);
+document.getElementById('nextBtn')?.addEventListener('click', nextPage);
+
 loadLogs(true);

@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/fontawesome.css">
   <style>
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-2xl); }
     .filter-row { display:flex; gap:10px; margin-bottom:var(--spacing-xl); align-items:center; flex-wrap:wrap; }
     .filter-row input, .filter-row select { padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; }
     .btn-primary { background:linear-gradient(135deg,var(--primary),#0066cc); color:white; padding:9px 18px; border:none; border-radius:var(--border-radius); cursor:pointer; font-weight:600; }
@@ -24,14 +23,17 @@
     .empty-state { text-align:center; padding:var(--spacing-2xl); color:var(--text-muted); }
     .empty-state i { font-size:3rem; margin-bottom:var(--spacing-md); display:block; }
     /* Modal */
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; }
-    .modal-overlay.open { display:flex; }
-    .modal { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); padding:var(--spacing-2xl); width:100%; max-width:480px; }
-    .modal h2 { margin:0 0 var(--spacing-xl); }
+    .modal-overlay { display:none; position:fixed; z-index:500; top:0; left:0; width:100% !important; height:100% !important; max-width:none !important; background:rgba(0,0,0,.55) !important; }
+    .modal-overlay.open { display:flex; align-items:center; justify-content:center; }
+    .modal { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--border-radius); box-shadow:var(--shadow-lg); padding:var(--spacing-lg); width:100%; max-width:480px; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--spacing-lg); padding-bottom:var(--spacing-lg); border-bottom:2px solid var(--border-color); }
+    .modal-header h2 { margin:0; color:var(--text-primary); font-size:1.25rem; font-weight:700; letter-spacing:-0.3px; }
+    .modal-close { background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-secondary); width:32px; height:32px; display:flex; align-items:center; justify-content:center; transition:all var(--transition); border-radius:var(--border-radius-sm); }
+    .modal-close:hover { color:var(--text-primary); background:var(--bg-secondary); }
+    .modal-actions { display:flex; gap:var(--spacing-md); justify-content:flex-end; margin-top:var(--spacing-xl); padding-top:var(--spacing-lg); border-top:1px solid var(--border-color); }
     .form-group { margin-bottom:var(--spacing-lg); }
     .form-group label { display:block; margin-bottom:6px; font-size:.88rem; font-weight:600; }
     .form-group input { width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--border-radius); background:var(--bg-secondary); color:var(--text-primary); font-size:.9rem; box-sizing:border-box; }
-    .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:var(--spacing-xl); }
     #toastMsg { position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:var(--border-radius); color:white; font-weight:600; z-index:2000; opacity:0; transition:opacity .3s; }
     #toastMsg.show { opacity:1; }
     #toastMsg.success { background:#28a745; }
@@ -39,46 +41,59 @@
   </style>
 </head>
 <body>
-<%- include('../partials/navigation', { user, currentPage: 'admin-device-whitelist' }) %>
-<div class="main-content">
-  <div class="content-wrapper">
-    <div class="page-header">
-      <div>
-        <h1><i class="fas fa-laptop"></i> Device Whitelist</h1>
-        <p style="color:var(--text-muted);margin:4px 0 0 0">Manage trusted devices for policy-restricted users.</p>
+  <div class="app-container">
+    <%- include('../partials/navigation', { user, currentPage: 'admin-device-whitelist' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-laptop" style="margin-right:8px;color:var(--primary)"></i>Device Whitelist
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" id="addDeviceBtn"><i class="fas fa-plus"></i> Add Device</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Manage trusted devices for policy-restricted users.</p>
+
+        <div class="filter-row">
+          <input type="text" id="filterUserId" placeholder="Filter by User ID…" style="flex:1;min-width:180px">
+          <button class="btn-secondary" id="refreshDevicesBtn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+
+        <div id="tableWrap" style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Device ID</th>
+                <th>Device Name</th>
+                <th>Type</th>
+                <th>Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="deviceTbody">
+              <tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <button class="btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Add Device</button>
-    </div>
-
-    <div class="filter-row">
-      <input type="text" id="filterUserId" placeholder="Filter by User ID…" oninput="debounceLoad()" style="flex:1;min-width:180px">
-      <button class="btn-secondary" onclick="loadDevices()"><i class="fas fa-sync"></i> Refresh</button>
-    </div>
-
-    <div id="tableWrap" style="overflow-x:auto">
-      <table>
-        <thead>
-          <tr>
-            <th>User ID</th>
-            <th>Device ID</th>
-            <th>Device Name</th>
-            <th>Type</th>
-            <th>Added</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="deviceTbody">
-          <tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div></td></tr>
-        </tbody>
-      </table>
-    </div>
+    </main>
   </div>
-</div>
 
 <!-- Add Device Modal -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
-    <h2>Add Device to Whitelist</h2>
+    <div class="modal-header">
+      <h2><i class="fas fa-laptop" style="margin-right:8px;color:var(--primary)"></i>Add Device to Whitelist</h2>
+      <button class="modal-close" id="closeAddModalBtn">&times;</button>
+    </div>
     <div class="form-group">
       <label>User ID</label>
       <input type="text" id="mUserId" placeholder="Jellyfin user ID">
@@ -96,9 +111,9 @@
       <input type="text" id="mDeviceType" placeholder="e.g. SmartTV, Mobile">
     </div>
     <div id="addModalError" style="color:#dc3545;margin-bottom:10px;display:none;font-size:.875rem;"></div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" id="addSaveBtn" onclick="saveDevice()">Add Device</button>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelAddBtn">Cancel</button>
+      <button class="btn-primary" id="addSaveBtn">Add Device</button>
     </div>
   </div>
 </div>

@@ -123,6 +123,10 @@ function fmtBytes(b) {
 
 function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// Button wiring
+document.getElementById('hoursSelect')?.addEventListener('change', loadMetrics);
+document.getElementById('refreshMetricsBtn')?.addEventListener('click', loadMetrics);
+
 loadMetrics();
 // Auto-refresh every 30 seconds
 setInterval(loadMetrics, 30000);

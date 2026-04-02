@@ -333,12 +333,6 @@ async function testOmbiConnection() {
     btn.disabled = false;
   }
 }
-    if (el('lastOptimizeHistory')) el('lastOptimizeHistory').textContent = data.history.lastOptimize;
-    if (el('lastBackupHistory'))   el('lastBackupHistory').textContent   = data.history.lastBackup;
-  } catch (e) {
-    console.error('Failed to load maintenance history:', e);
-  }
-}
 
 // Load live audit log statistics into the logging tab summary box
 async function loadAuditLogStats() {

@@ -208,6 +208,15 @@ class JellyfinAPI {
     }
   }
 
+  async getMediaFolders() {
+    try {
+      const response = await this.client.get('/Library/MediaFolders');
+      return response.data?.Items || [];
+    } catch (error) {
+      throw new Error(`Failed to get media folders: ${error.message}`);
+    }
+  }
+
   async updateUserPolicy(userId, policyData) {
     try {
       // The Jellyfin API /Users/{userId}/Policy endpoint requires a complete Policy object

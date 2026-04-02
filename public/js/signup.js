@@ -91,6 +91,13 @@ async function loadSignupProfile(profileId) {
     // Store profile in session for later
     window.signupProfile = profile;
 
+    // Show contact verification section if required
+    if (profile.requireContactVerification) {
+      const section = document.getElementById('contactVerificationSection');
+      if (section) section.style.display = 'block';
+      window.contactVerificationRequired = true;
+    }
+
   } catch (error) {
     showAlert('error', 'Failed to load profile information');
   }
@@ -117,6 +124,69 @@ document.getElementById('password').addEventListener('input', function () {
   bar.style.backgroundColor = strengthColors[strength - 1];
   document.getElementById('strengthText').textContent = strengthTexts[strength - 1];
   document.getElementById('strengthText').style.color = strengthColors[strength - 1];
+});
+
+// Contact verification button handler
+document.getElementById('sendVerificationBtn')?.addEventListener('click', async () => {
+  const method = document.getElementById('contactMethodSelect')?.value;
+  const contactId = document.getElementById('contactIdInput')?.value.trim();
+  if (!contactId) { showAlert('error', 'Please enter your contact ID'); return; }
+
+  const btn = document.getElementById('sendVerificationBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/auth/signup/verify-contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method, contactId })
+    });
+    const d = await r.json();
+    if (!d.success) { showAlert('error', d.error || 'Failed to send code'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Verification Code'; return; }
+    window.pendingVerificationId = d.verificationId;
+    document.getElementById('verificationCodeSection').style.display = 'block';
+    btn.textContent = 'Resend Code';
+    btn.disabled = false;
+  } catch (_) {
+    showAlert('error', 'Failed to send verification code. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Verification Code';
+  }
+});
+
+document.getElementById('confirmVerificationBtn')?.addEventListener('click', async () => {
+  const code = document.getElementById('verificationCodeInput')?.value.trim();
+  const verificationId = window.pendingVerificationId;
+  if (!code || !verificationId) return;
+
+  const btn = document.getElementById('confirmVerificationBtn');
+  btn.disabled = true;
+  btn.textContent = 'Verifying…';
+  try {
+    const r = await fetch('/api/auth/signup/confirm-contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verificationId, code })
+    });
+    const d = await r.json();
+    if (!d.success) {
+      document.getElementById('verificationError').textContent = d.error || 'Invalid code';
+      document.getElementById('verificationError').style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Confirm Code';
+      return;
+    }
+    window.contactVerified = true;
+    document.getElementById('contactVerificationSection').style.display = 'none';
+    document.getElementById('verificationSuccessBadge').style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Confirm Code';
+  } catch (_) {
+    document.getElementById('verificationError').textContent = 'Verification failed. Please try again.';
+    document.getElementById('verificationError').style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Confirm Code';
+  }
 });
 
 // Form submission
@@ -156,6 +226,12 @@ document.getElementById('signupForm').addEventListener('submit', async function 
   }
 
   if (hasError) return;
+
+  // Check contact verification if required by profile
+  if (window.contactVerificationRequired && !window.contactVerified) {
+    showAlert('error', 'Please verify your contact method before creating your account.');
+    return;
+  }
 
   // Collect CAPTCHA token if enabled
   let captchaToken = null;

@@ -493,7 +493,7 @@ class PolicyManager {
       );
 
       // Sync to Jellyfin
-      await JellyfinAPI.updateUserPolicy(userId, {
+      await JellyfinAPI.getAdminInstance().updateUserPolicy(userId, {
         IsAdministrator: isAdmin ? true : false
       });
 
@@ -516,7 +516,7 @@ class PolicyManager {
       );
 
       // Sync to Jellyfin
-      await JellyfinAPI.updateUserPolicy(userId, {
+      await JellyfinAPI.getAdminInstance().updateUserPolicy(userId, {
         EnableContentDownloading: allowed ? true : false
       });
 

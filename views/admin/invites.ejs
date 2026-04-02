@@ -30,6 +30,18 @@
     .btn-primary:hover { opacity: 0.9; }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: 10px 20px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: var(--bg-tertiary); }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

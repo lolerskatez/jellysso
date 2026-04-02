@@ -8,45 +8,22 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/fontawesome.css">
     <style>
-        .admin-playback-container {
-            padding: 20px;
-        }
-
-        .playback-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .playback-header h1 {
-            margin: 0;
-            font-size: 28px;
-        }
-
-        .header-controls {
-            display: flex;
-            gap: 10px;
-        }
-
         .btn-refresh {
             padding: 8px 16px;
-            background: var(--primary-color);
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: var(--border-radius);
             cursor: pointer;
             font-size: 14px;
             display: flex;
             align-items: center;
             gap: 5px;
-            transition: background 0.3s;
+            transition: background var(--transition);
         }
 
         .btn-refresh:hover {
-            background: var(--primary-dark);
+            background: var(--primary-dark, #0056b3);
         }
 
         .btn-refresh.loading {
@@ -499,23 +476,27 @@
     </style>
 </head>
 <body>
+  <div class="app-container">
     <%- include('partials/navigation', { user, currentPage: 'admin-playback-sessions' }) %>
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">
+            <i class="fas fa-play-circle" style="margin-right:8px;color:var(--primary)"></i>Playback Administration
+          </h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-refresh" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+      </header>
 
-    <div class="app-container">
-        <main class="main-content">
-            <div class="admin-playback-container">
-                <!-- Header -->
-                <div class="playback-header">
-                    <div>
-                        <h1><i class="fas fa-play-circle"></i> Playback Administration</h1>
-                        <p style="margin: 5px 0 0 0; color: var(--text-secondary); font-size: 14px;">Monitor and control all active playback sessions</p>
-                    </div>
-                    <div class="header-controls">
-                        <button class="btn-refresh" id="refreshBtn">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                    </div>
-                </div>
+      <div class="page-content">
+        <p style="color:var(--text-muted);margin:0 0 var(--spacing-lg) 0">Monitor and control all active playback sessions.</p>
 
                 <!-- Statistics -->
                 <div class="stats-grid" id="statsGrid">
@@ -578,9 +559,9 @@
                         <p>Loading sessions...</p>
                     </div>
                 </div>
-            </div>
-        </main>
-    </div>
+      </div>
+    </main>
+  </div>
 
     <script src="/js/mobile-nav.js"></script>
     <script nonce="<%= nonce %>">window._csrfToken='<%= csrfToken %>';</script>

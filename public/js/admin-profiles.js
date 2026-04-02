@@ -22,7 +22,11 @@ async function loadTiersForModal() {
 function syncStreamsFromTier() {
   const tierId = document.getElementById('tierInput').value;
   const tier = tiersData.find(t => t.id === tierId);
-  if (tier) document.getElementById('streamsInput').value = tier.maxConcurrentStreams;
+  if (tier) {
+    const streamsEl = document.getElementById('streamsInput');
+    streamsEl.type = tier.maxConcurrentStreams >= 999 ? 'text' : 'number';
+    streamsEl.value = tier.maxConcurrentStreams >= 999 ? 'Unlimited' : tier.maxConcurrentStreams;
+  }
 }
 
 async function loadProfiles() {
@@ -136,7 +140,7 @@ async function handleSaveProfile(event) {
     description: document.getElementById('descInput').value,
     jellyfinTier: document.getElementById('tierInput').value,
     jellyfinPlaybackLimits: {
-      maxConcurrentStreams: parseInt(document.getElementById('streamsInput').value),
+      maxConcurrentStreams: document.getElementById('streamsInput').value === 'Unlimited' ? 999 : parseInt(document.getElementById('streamsInput').value),
       maxBitrate: document.getElementById('bitrateInput').value
     }
   };

@@ -492,10 +492,14 @@ class PolicyManager {
         [isAdmin ? 1 : 0, userId]
       );
 
-      // Sync to Jellyfin
-      await JellyfinAPI.getAdminInstance().updateUserPolicy(userId, {
-        IsAdministrator: isAdmin ? true : false
-      });
+      // Sync to Jellyfin (non-fatal — DB is authoritative)
+      try {
+        await JellyfinAPI.getAdminInstance().updateUserPolicy(userId, {
+          IsAdministrator: isAdmin ? true : false
+        });
+      } catch (jellyfinErr) {
+        logger.error('Warning: Could not sync admin status to Jellyfin:', jellyfinErr.message);
+      }
 
       await this.logPolicyAudit(userId, 'ADMIN_STATUS', isAdmin ? 'GRANTED' : 'REVOKED');
       logger.info(`User ${userId} admin status: ${isAdmin}`);
@@ -515,10 +519,14 @@ class PolicyManager {
         [allowed ? 1 : 0, userId]
       );
 
-      // Sync to Jellyfin
-      await JellyfinAPI.getAdminInstance().updateUserPolicy(userId, {
-        EnableContentDownloading: allowed ? true : false
-      });
+      // Sync to Jellyfin (non-fatal — DB is authoritative)
+      try {
+        await JellyfinAPI.getAdminInstance().updateUserPolicy(userId, {
+          EnableContentDownloading: allowed ? true : false
+        });
+      } catch (jellyfinErr) {
+        logger.error('Warning: Could not sync downloads permission to Jellyfin:', jellyfinErr.message);
+      }
 
       await this.logPolicyAudit(userId, 'DOWNLOADS', allowed ? 'ENABLED' : 'DISABLED');
       logger.info(`User ${userId} downloads: ${allowed}`);

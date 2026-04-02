@@ -131,6 +131,25 @@ const MIGRATIONS = [
       'CREATE INDEX IF NOT EXISTS idx_signup_profiles_name ON signup_profiles(name)',
       'CREATE INDEX IF NOT EXISTS idx_signup_profiles_active ON signup_profiles(isActive)'
     ]
+  },
+  {
+    version: 11,
+    name: 'create_invite_requests',
+    sqls: [
+      `CREATE TABLE IF NOT EXISTS invite_requests (
+         id TEXT PRIMARY KEY,
+         name TEXT NOT NULL,
+         email TEXT,
+         reason TEXT,
+         status TEXT DEFAULT 'pending',
+         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+         reviewedAt DATETIME,
+         reviewedBy TEXT,
+         reviewNote TEXT,
+         inviteId TEXT
+       )`,
+      'CREATE INDEX IF NOT EXISTS idx_invite_requests_status ON invite_requests(status)'
+    ]
   }
 ];
 

@@ -137,7 +137,7 @@
 
       <!-- Users group -->
       <div class="nav-item">
-        <button class="nav-group-btn <%= ['admin-users','admin-invites','admin-profiles','admin-expiry','admin-policy'].includes(currentPage) ? 'active' : '' %>"
+        <button class="nav-group-btn <%= ['admin-users','admin-invites','admin-invite-requests','admin-profiles','admin-expiry','admin-policy'].includes(currentPage) ? 'active' : '' %>"
                 data-toggle="usersSubnav"
                 aria-expanded="false"
                 aria-label="Toggle Users section">
@@ -156,6 +156,12 @@
             <a href="/admin/invites" class="nav-link <%= currentPage === 'admin-invites' ? 'active' : '' %>">
               <i class="fas fa-envelope"></i>
               Invites
+            </a>
+          </div>
+          <div class="nav-item">
+            <a href="/admin/invite-requests" class="nav-link <%= currentPage === 'admin-invite-requests' ? 'active' : '' %>">
+              <i class="fas fa-inbox"></i>
+              Invite Requests
             </a>
           </div>
           <div class="nav-item">

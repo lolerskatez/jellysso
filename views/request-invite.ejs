@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request an Invite - <%= appName %></title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/fontawesome.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <style nonce="<%= nonce %>">
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page-wrapper {
+      width: 100%;
+      max-width: 480px;
+      padding: var(--spacing-md);
+    }
+
+    .card {
+      background: var(--bg-primary);
+      border-radius: var(--border-radius-lg);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .card-body {
+      padding: var(--spacing-xl);
+    }
+
+    .card-title {
+      margin: 0 0 var(--spacing-xs) 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .card-subtitle {
+      margin: 0 0 var(--spacing-xl) 0;
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+
+    .form-label .optional {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: var(--spacing-md);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      box-sizing: border-box;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .form-control::placeholder {
+      color: var(--text-secondary);
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: linear-gradient(135deg, var(--primary), #0066cc);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity var(--transition);
+    }
+
+    .submit-btn:hover {
+      opacity: 0.9;
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .alert {
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.875rem;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border-left: 4px solid var(--danger);
+    }
+
+    .alert-success {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+      border-left: 4px solid #16a34a;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: var(--spacing-lg);
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .login-link a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="card">
+      <div class="card-body">
+        <h1 class="card-title">Request an Invite</h1>
+        <p class="card-subtitle">Fill in the form below and an admin will review your request.</p>
+
+        <div id="alertContainer"></div>
+
+        <form id="requestForm">
+          <div class="form-group">
+            <label class="form-label" for="name">Name</label>
+            <input type="text" id="name" class="form-control" required placeholder="Your name" autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">
+              Email <span class="optional">(optional — used to send you the invite link)</span>
+            </label>
+            <input type="email" id="email" class="form-control" placeholder="your@email.com" autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reason">
+              Why do you want to join? <span class="optional">(optional)</span>
+            </label>
+            <textarea id="reason" class="form-control" placeholder="Tell us a bit about yourself..."></textarea>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">Submit Request</button>
+        </form>
+
+        <div class="login-link">
+          Already have an account? <a href="/login">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="<%= nonce %>">
+    document.getElementById('requestForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const reason = document.getElementById('reason').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+      const alertContainer = document.getElementById('alertContainer');
+
+      alertContainer.innerHTML = '';
+
+      if (!name) {
+        alertContainer.innerHTML = '<div class="alert alert-error">Name is required.</div>';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading"></span> Submitting...';
+
+      try {
+        const res = await fetch('/api/invite-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email: email || null, reason: reason || null })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById('requestForm').style.display = 'none';
+          alertContainer.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+        } else {
+          alertContainer.innerHTML = '<div class="alert alert-error">' + (data.error || 'Failed to submit request.') + '</div>';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Request';
+        }
+      } catch (err) {
+        alertContainer.innerHTML = '<div class="alert alert-error">An error occurred. Please try again.</div>';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Request';
+      }
+    });
+  </script>
+</body>
+</html>

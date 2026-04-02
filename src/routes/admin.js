@@ -2133,6 +2133,18 @@ router.get('/invites', requireAuth, requireAdmin, (req, res) => {
   }
 });
 
+router.get('/invite-requests', csrfProtection, requireAuth, requireAdmin, (req, res) => {
+  try {
+    res.render('admin/invite-requests', {
+      user: req.session.user,
+      csrfToken: res.locals.csrfToken
+    });
+  } catch (error) {
+    appLogger.error('Invite requests page error:', error);
+    res.status(500).render('error', { message: 'Error loading invite requests page', code: 500 });
+  }
+});
+
 // Signup profiles management page
 router.get('/signup-profiles', csrfProtection, requireAuth, requireAdmin, (req, res) => {
   try {

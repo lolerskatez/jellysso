@@ -54,11 +54,13 @@ class ScheduledCleanupTasks {
       CONSTANTS.MAINTENANCE.SESSION_CLEANUP_INTERVAL
     );
 
-    // Database optimization
+    // Database optimization — skip immediate run; VACUUM cannot run while
+    // startup SQL statements (index creation etc.) are still in progress.
     this.scheduleTask(
       'optimize-database',
       () => this.optimizeDatabase(),
-      CONSTANTS.MAINTENANCE.DATABASE_OPTIMIZE_INTERVAL
+      CONSTANTS.MAINTENANCE.DATABASE_OPTIMIZE_INTERVAL,
+      false
     );
 
     logger.info('Scheduled cleanup tasks initialized');
@@ -69,12 +71,15 @@ class ScheduledCleanupTasks {
    * @param {string} taskName - Name of the task
    * @param {function} taskFn - Function to execute
    * @param {number} interval - Interval in milliseconds
+   * @param {boolean} [runImmediately=true] - Whether to run the task once on startup
    */
-  scheduleTask(taskName, taskFn, interval) {
-    // Run immediately on first schedule
-    taskFn().catch(err => {
-      logger.error(`Task ${taskName} failed on initial run`, { error: err.message });
-    });
+  scheduleTask(taskName, taskFn, interval, runImmediately = true) {
+    // Optionally run immediately on first schedule
+    if (runImmediately) {
+      taskFn().catch(err => {
+        logger.error(`Task ${taskName} failed on initial run`, { error: err.message });
+      });
+    }
 
     // Then schedule for regular intervals
     const timerId = setInterval(() => {

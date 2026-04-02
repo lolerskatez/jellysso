@@ -77,6 +77,60 @@ const MIGRATIONS = [
       'CREATE INDEX IF NOT EXISTS idx_message_templates_key ON message_templates(key)',
       'CREATE INDEX IF NOT EXISTS idx_message_templates_active ON message_templates(is_active)'
     ]
+  },
+  {
+    version: 9,
+    name: 'fix_invites_drop_invalid_fk_createdBy',
+    // createdBy stores a Jellyfin user ID not in the local users table — drop FK
+    sqls: [
+      `CREATE TABLE IF NOT EXISTS invites_new (
+         id TEXT PRIMARY KEY,
+         code TEXT UNIQUE NOT NULL,
+         signupProfileId TEXT NOT NULL,
+         createdBy TEXT NOT NULL,
+         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+         expiresAt DATETIME,
+         acceptedBy TEXT,
+         acceptedAt DATETIME,
+         status TEXT DEFAULT 'pending',
+         usageCount INTEGER DEFAULT 0,
+         lastUsedAt DATETIME,
+         metadata JSON,
+         maxUses INTEGER DEFAULT 1,
+         userExpiryDays INTEGER,
+         FOREIGN KEY (signupProfileId) REFERENCES signup_profiles(id)
+       )`,
+      'INSERT OR IGNORE INTO invites_new SELECT * FROM invites',
+      'DROP TABLE invites',
+      'ALTER TABLE invites_new RENAME TO invites',
+      'CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code)',
+      'CREATE INDEX IF NOT EXISTS idx_invites_status ON invites(status)'
+    ]
+  },
+  {
+    version: 10,
+    name: 'fix_signup_profiles_drop_invalid_fk_createdBy',
+    // createdBy stores a Jellyfin user ID not in the local users table — drop FK
+    sqls: [
+      `CREATE TABLE IF NOT EXISTS signup_profiles_new (
+         id TEXT PRIMARY KEY,
+         name TEXT NOT NULL UNIQUE,
+         description TEXT,
+         jellyfinTier TEXT,
+         jellyfinLibraryAccess JSON,
+         jellyfinPlaybackLimits JSON,
+         customFields JSON,
+         isActive BOOLEAN DEFAULT 1,
+         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+         createdBy TEXT
+       )`,
+      'INSERT OR IGNORE INTO signup_profiles_new SELECT * FROM signup_profiles',
+      'DROP TABLE signup_profiles',
+      'ALTER TABLE signup_profiles_new RENAME TO signup_profiles',
+      'CREATE INDEX IF NOT EXISTS idx_signup_profiles_name ON signup_profiles(name)',
+      'CREATE INDEX IF NOT EXISTS idx_signup_profiles_active ON signup_profiles(isActive)'
+    ]
   }
 ];
 

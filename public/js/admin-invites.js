@@ -1,4 +1,6 @@
 // Load data on page load
+let profilesMap = {}; // id -> name
+
 async function loadData() {
   try {
     // Load statistics
@@ -22,13 +24,18 @@ async function loadData() {
     const profilesResponse = await fetch('/api/signup-profiles');
     const profilesData = await profilesResponse.json();
     if (profilesData.success) {
+      profilesMap = {};
       const select = document.getElementById('profileSelect');
+      select.innerHTML = '<option value="">Select a profile</option>';
       profilesData.profiles.forEach(profile => {
+        profilesMap[profile.id] = profile.name;
         const option = document.createElement('option');
         option.value = profile.id;
         option.textContent = profile.name;
         select.appendChild(option);
       });
+      // Re-render table now that names are known
+      if (invitesData?.success) populateInvitesTable(invitesData.invites);
     }
 
     document.getElementById('loadingContainer').style.display = 'none';
@@ -64,7 +71,7 @@ function populateInvitesTable(invites) {
           ${invite.code}
         </span>
       </td>
-      <td>${invite.signupProfileId}</td>
+      <td>${profilesMap[invite.signupProfileId] || invite.signupProfileId}</td>
       <td>${invite.label ? `<span class="invite-label-badge">${invite.label}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td>
         <span class="status-badge status-${invite.status}">
@@ -76,6 +83,7 @@ function populateInvitesTable(invites) {
       <td>${expiresDate}</td>
       <td>
         ${invite.status === 'pending' ? `
+          <button class="btn-small btn-secondary" data-copy-url="${invite.code}" title="Copy signup URL"><i class="fas fa-link"></i></button>
           <button class="btn-small btn-danger" data-revoke="${invite.code}">Revoke</button>
         ` : '-'}
       </td>
@@ -132,9 +140,16 @@ async function handleCreateInvite(event) {
     const data = await response.json();
 
     if (data.success) {
-      showAlert(`Created ${data.count} invite(s)!`, 'success');
       closeModal();
-      loadData(); // Refresh table
+      loadData();
+      const base = window.location.origin;
+      if (data.invites.length === 1) {
+        const url = `${base}/signup?invite=${data.invites[0].code}`;
+        showSignupUrlDialog(url);
+      } else {
+        const urls = data.invites.map(inv => `${base}/signup?invite=${inv.code}`).join('\n');
+        showSignupUrlDialog(urls, true);
+      }
     } else {
       showAlert(data.error || 'Failed to create invites', 'error');
     }

@@ -21,7 +21,7 @@
       <!-- Header -->
       <header class="header">
         <div class="header-left">
-          <button class="btn btn-secondary" id="sidebarToggle" style="display: none;">
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
             <i class="fas fa-bars"></i>
           </button>
           <h1 class="page-title"><i class="fas fa-user"></i> My Account</h1>
@@ -450,5 +450,6 @@
   <% if (renewalEnabled) { %>
   <script nonce="<%= nonce %>">window._renewalConfig = { windowDays: <%= renewalWindowDays %>, csrfToken: '<%= csrfToken %>' };</script>
   <% } %>
+  <script src="/js/mobile-nav.js"></script>
 </body>
 </html>

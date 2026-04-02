@@ -160,6 +160,10 @@ async function handleSaveProfile(event) {
 
     const data = await response.json();
 
+    if (!response.ok) {
+      console.error('Profile save failed:', response.status, data);
+    }
+
     if (data.success) {
       showAlert(editingProfileId ? 'Profile updated' : 'Profile created', 'success');
       closeModal();

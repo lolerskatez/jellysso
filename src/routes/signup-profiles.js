@@ -78,8 +78,7 @@ router.post('/', csrfProtection, requireAuth, requireAdmin, async (req, res) => 
     }
 
     const profile = await profileManager.createProfile(name, {
-      ...config,
-      createdBy: req.session.user?.Id
+      ...config
     });
 
     auditLogger.log('info', 'PROFILE_CREATED', {

@@ -158,7 +158,7 @@ class SignupProfileManager {
           jellyfinPlaybackLimits = null,
           customFields = null,
           isActive = true,
-          createdBy = 'system'
+          createdBy = null
         } = config;
 
         // Check if name already exists

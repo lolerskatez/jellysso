@@ -5,6 +5,8 @@ const AuditLogger = require('../models/AuditLogger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const JellyfinAPI = require('../models/JellyfinAPI');
+const SetupManager = require('../models/SetupManager');
 
 // Initialize managers
 const profileManager = SignupProfileManager.getInstance();
@@ -209,6 +211,24 @@ router.get('/admin/with-stats', requireAuth, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to list profiles' });
+  }
+});
+
+/**
+ * GET /api/signup-profiles/admin/libraries
+ * Get available Jellyfin media libraries (admin only)
+ */
+router.get('/admin/libraries', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const config = SetupManager.getConfig();
+    const jellyfin = new JellyfinAPI(config.jellyfinUrl, config.apiKey);
+    const folders = await jellyfin.getMediaFolders();
+    res.json({
+      success: true,
+      libraries: folders.map(f => ({ id: f.Id, name: f.Name, type: f.CollectionType || 'unknown' }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

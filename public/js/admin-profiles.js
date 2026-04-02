@@ -1,6 +1,32 @@
 let profiles = [];
 let editingProfileId = null;
 let tiersData = [];
+let librariesData = [];
+
+async function loadLibrariesForModal(selectedIds = []) {
+  const list = document.getElementById('libraryAccessList');
+  if (!librariesData.length) {
+    try {
+      const res = await fetch('/api/signup-profiles/admin/libraries');
+      const data = await res.json();
+      if (data.success) librariesData = data.libraries || [];
+    } catch (e) {
+      console.error('Failed to load libraries', e);
+    }
+  }
+  if (!librariesData.length) {
+    list.innerHTML = '<span style="color:var(--text-secondary);font-size:0.85em;">No libraries found or Jellyfin unavailable.</span>';
+    return;
+  }
+  list.innerHTML = librariesData.map(lib => `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" name="libraryAccess" value="${lib.id}"
+        ${selectedIds.includes(lib.id) ? 'checked' : ''}>
+      <span>${lib.name}</span>
+      <span style="color:var(--text-secondary);font-size:0.8em;">(${lib.type})</span>
+    </label>
+  `).join('');
+}
 
 async function loadTiersForModal() {
   if (!tiersData.length) {
@@ -107,9 +133,11 @@ async function openCreateModal() {
   const titleEl = document.getElementById('modalTitle');
   if (titleEl) titleEl.childNodes[titleEl.childNodes.length - 1].textContent = 'Create Profile';
   document.getElementById('profileForm').reset();
+  document.getElementById('requireContactVerificationInput').checked = false;
   document.getElementById('profileModal').classList.add('show');
   await loadTiersForModal();
   syncStreamsFromTier();
+  await loadLibrariesForModal([]);
 }
 
 function closeModal() {
@@ -126,19 +154,30 @@ async function editProfile(profileId) {
   document.getElementById('nameInput').value = profile.name;
   document.getElementById('descInput').value = profile.description || '';
   document.getElementById('bitrateInput').value = profile.jellyfinPlaybackLimits?.maxBitrate || '1080p';
+  document.getElementById('requireContactVerificationInput').checked = !!profile.requireContactVerification;
   document.getElementById('profileModal').classList.add('show');
   await loadTiersForModal();
   document.getElementById('tierInput').value = profile.jellyfinTier || tiersData[0]?.id || '';
   syncStreamsFromTier();
+  const selectedLibraries = Array.isArray(profile.jellyfinLibraryAccess) && !profile.jellyfinLibraryAccess.includes('all')
+    ? profile.jellyfinLibraryAccess
+    : [];
+  await loadLibrariesForModal(selectedLibraries);
 }
 
 async function handleSaveProfile(event) {
   event.preventDefault();
 
+  const checkedLibraries = Array.from(
+    document.querySelectorAll('input[name="libraryAccess"]:checked')
+  ).map(cb => cb.value);
+
   const profile = {
     name: document.getElementById('nameInput').value,
     description: document.getElementById('descInput').value,
     jellyfinTier: document.getElementById('tierInput').value,
+    jellyfinLibraryAccess: checkedLibraries.length ? checkedLibraries : ['all'],
+    requireContactVerification: document.getElementById('requireContactVerificationInput').checked,
     jellyfinPlaybackLimits: {
       maxConcurrentStreams: document.getElementById('streamsInput').value === 'Unlimited' ? 999 : parseInt(document.getElementById('streamsInput').value),
       maxBitrate: document.getElementById('bitrateInput').value

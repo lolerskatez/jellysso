@@ -345,6 +345,22 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">Library Access</label>
+          <div id="libraryAccessList" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+            <span style="color:var(--text-secondary);font-size:0.85em;">Loading libraries…</span>
+          </div>
+          <small style="color:var(--text-secondary)">Leave all unchecked to grant access to all libraries.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="requireContactVerificationInput" style="margin-right:6px;">
+            Require Contact Verification at Signup
+          </label>
+          <small style="color:var(--text-secondary)">Users must verify their Discord, Telegram, or Matrix account before completing signup.</small>
+        </div>
+
         <div class="modal-actions">
           <button type="button" class="btn-secondary" id="cancelProfileModalBtn">Cancel</button>
           <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save</button>

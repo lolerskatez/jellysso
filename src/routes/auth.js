@@ -1123,18 +1123,20 @@ router.post('/signup', criticalLimiter, async (req, res) => {
       return res.status(400).json({ success: false, error: inviteErr.message });
     }
 
+    // Load signup profile (used for contact verification and library access)
+    const SignupProfileManager = require('../models/SignupProfileManager');
+    const signupProfile = invite.signupProfileId
+      ? await SignupProfileManager.getInstance().getProfile(invite.signupProfileId)
+      : null;
+
     // If the signup profile requires contact verification, enforce it
-    if (invite.signupProfileId) {
-      const SignupProfileManager = require('../models/SignupProfileManager');
-      const profile = await SignupProfileManager.getInstance().getProfile(invite.signupProfileId);
-      if (profile && profile.requireContactVerification) {
-        const verifiedId = req.session.signupContactVerified;
-        if (!verifiedId) {
-          return res.status(400).json({ success: false, error: 'This invite requires contact method verification before signup. Please verify your Discord, Telegram, or Matrix account first.' });
-        }
-        // Clear verified flag so it can't be reused
-        delete req.session.signupContactVerified;
+    if (signupProfile && signupProfile.requireContactVerification) {
+      const verifiedId = req.session.signupContactVerified;
+      if (!verifiedId) {
+        return res.status(400).json({ success: false, error: 'This invite requires contact method verification before signup. Please verify your Discord, Telegram, or Matrix account first.' });
       }
+      // Clear verified flag so it can't be reused
+      delete req.session.signupContactVerified;
     }
 
     // Create Jellyfin user with admin API key (no user session available)
@@ -1149,6 +1151,14 @@ router.post('/signup', criticalLimiter, async (req, res) => {
 
     // Create user with the password chosen by the registrant
     const newUser = await jellyfin.createUser({ Name: cleanUsername, Password: String(password) });
+
+    // Apply Jellyfin library access from signup profile (if restricted)
+    if (signupProfile && Array.isArray(signupProfile.jellyfinLibraryAccess) && !signupProfile.jellyfinLibraryAccess.includes('all')) {
+      jellyfin.updateUserPolicy(newUser.Id, {
+        EnableAllFolders: false,
+        EnabledFolders: signupProfile.jellyfinLibraryAccess
+      }).catch(e => logger.warn('Library access apply failed on signup:', e.message));
+    }
 
     // Sync the new user to Jellyseerr (if enabled) — fire-and-forget
     const JellyseerrManager = require('../models/JellyseerrManager');

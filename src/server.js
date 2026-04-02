@@ -352,7 +352,8 @@ app.use(async (req, res, next) => {
   // Always skip CSRF for these paths
   if (req.path.startsWith('/setup') ||
       (req.path === '/api/auth/logout' && req.method === 'POST') ||
-      (req.path === '/api/auth/signup' && req.method === 'POST')) {
+      (req.path === '/api/auth/signup' && req.method === 'POST') ||
+      (req.path === '/api/invite-requests' && req.method === 'POST')) {
     return next();
   }
 

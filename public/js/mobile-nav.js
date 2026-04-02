@@ -89,9 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Nav group toggle with auto-open for current page
   var groupMap = {
-    usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry', 'admin-labels'],
+    usersSubnav:    ['admin-users', 'admin-invites', 'admin-profiles', 'admin-expiry', 'admin-labels', 'admin-policy'],
     commsSubnav:    ['admin-notifications', 'admin-message-templates', 'admin-announcements'],
-    securitySubnav: ['admin-policy', 'admin-oidc', 'admin-lockouts', 'admin-security-alerts'],
+    securitySubnav: ['admin-oidc', 'admin-lockouts', 'admin-security-alerts'],
     devSubnav:      ['admin-api-keys', 'admin-webhooks'],
     systemSubnav:   ['admin-settings', 'admin-audit-logs', 'admin-backups', 'admin-plugins', 'admin-troubleshoot', 'admin-playback-sessions', 'admin-system', 'admin-monitoring', 'admin-activity-log', 'admin-policy-audit', 'admin-device-whitelist']
   };

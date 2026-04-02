@@ -165,9 +165,10 @@ document.getElementById('signupForm').addEventListener('submit', async function 
     }
 
     // Accept the invite
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     await fetch(`/api/invites/${inviteCode}/accept`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'CSRF-Token': csrfToken },
       body: JSON.stringify({ userId: data.user.id })
     });
 

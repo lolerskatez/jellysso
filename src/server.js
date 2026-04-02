@@ -580,7 +580,7 @@ app.get('/auth/reset-password', async (req, res) => {
   });
 });
 
-app.get('/signup', async (req, res) => {
+app.get('/signup', csrfProtection, async (req, res) => {
   // If already logged in, redirect to quickconnect
   if (req.session && req.session.user) {
     return res.redirect('/quickconnect');
@@ -607,7 +607,8 @@ app.get('/signup', async (req, res) => {
     appName: SetupManager.getConfig().appName || 'JellySSO',
     captchaEnabled,
     captchaProvider,
-    captchaSiteKey
+    captchaSiteKey,
+    csrfToken: res.locals.csrfToken
   });
 });
 

@@ -70,11 +70,11 @@ function renderProfiles() {
       <div class="profile-info">
         <div class="profile-info-item">
           <span>Tier:</span>
-          <strong>${profile.jellyfinTier || 'Basic'}</strong>
+          <strong>${(tiersData.find(t => t.id === profile.jellyfinTier)?.displayName) || profile.jellyfinTier || 'None'}</strong>
         </div>
         <div class="profile-info-item">
           <span>Max Streams:</span>
-          <strong>${profile.jellyfinPlaybackLimits?.maxConcurrentStreams || 'Unlimited'}</strong>
+          <strong>${(profile.jellyfinPlaybackLimits?.maxConcurrentStreams >= 999 || !profile.jellyfinPlaybackLimits?.maxConcurrentStreams) ? 'Unlimited' : profile.jellyfinPlaybackLimits.maxConcurrentStreams}</strong>
         </div>
         <div class="profile-info-item">
           <span>Users Created:</span>
@@ -239,7 +239,10 @@ function showAlert(message, type) {
   }, 5000);
 }
 
-window.addEventListener('DOMContentLoaded', loadProfiles);
+window.addEventListener('DOMContentLoaded', () => {
+  loadTiersForModal();
+  loadProfiles();
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeModal();

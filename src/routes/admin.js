@@ -2134,7 +2134,7 @@ router.get('/invites', requireAuth, requireAdmin, (req, res) => {
 });
 
 // Signup profiles management page
-router.get('/signup-profiles', requireAuth, requireAdmin, (req, res) => {
+router.get('/signup-profiles', csrfProtection, requireAuth, requireAdmin, (req, res) => {
   try {
     res.render('admin/profiles', {
       user: req.session.user,

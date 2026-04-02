@@ -168,7 +168,7 @@ document.getElementById('signupForm').addEventListener('submit', async function 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     await fetch(`/api/invites/${inviteCode}/accept`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'CSRF-Token': csrfToken },
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
       body: JSON.stringify({ userId: data.user.id })
     });
 
@@ -187,7 +187,7 @@ document.getElementById('signupForm').addEventListener('submit', async function 
 
 function showAlert(type, message) {
   const container = document.getElementById('alertContainer');
-  const alertClass = type === 'error' ? 'alert-error' : 'alert-warning';
+  const alertClass = type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-warning';
   container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
 }
 

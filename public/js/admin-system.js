@@ -21,9 +21,10 @@ async function refreshSessionStats() {
     const res = await fetch('/admin/api/sessions/stats');
     const data = await res.json();
     if (data.success) {
-      document.getElementById('totalSessions').textContent = data.sessions.total || 0;
-      document.getElementById('activeSessions').textContent = data.sessions.active || 0;
-      document.getElementById('expiredSessions').textContent = data.sessions.expired || 0;
+      const s = data.sessions || {};
+      document.getElementById('totalSessions').textContent = s.total || 0;
+      document.getElementById('activeSessions').textContent = s.active || 0;
+      document.getElementById('expiredSessions').textContent = s.expired || 0;
     }
   } catch (error) {
     showAlert('error', 'Failed to load session stats: ' + error.message);

@@ -57,14 +57,14 @@ function renderTable() {
     let actions = '';
     if (r.status === 'pending') {
       actions = `
-        <button class="btn-primary btn-sm" onclick="openApproveModal('${r.id}')">
+        <button class="btn-primary btn-sm" data-action="approve" data-id="${r.id}">
           <i class="fas fa-check"></i> Approve
         </button>
-        <button class="btn-danger btn-sm" onclick="openDenyModal('${r.id}')">
+        <button class="btn-danger btn-sm" data-action="deny" data-id="${r.id}">
           <i class="fas fa-times"></i> Deny
         </button>`;
     } else {
-      actions = `<button class="btn-secondary btn-sm" onclick="deleteRequest('${r.id}')">
+      actions = `<button class="btn-secondary btn-sm" data-action="delete" data-id="${r.id}">
           <i class="fas fa-trash"></i>
         </button>`;
     }
@@ -108,7 +108,7 @@ async function loadProfilesIntoSelect() {
   }
 }
 
-const openApproveModal = (window.openApproveModal = function(id) {
+function openApproveModal(id) {
   pendingRequestId = id;
   const req = allRequests.find(r => r.id === id);
   document.getElementById('approveRequesterInfo').innerHTML =
@@ -119,9 +119,7 @@ const openApproveModal = (window.openApproveModal = function(id) {
   document.getElementById('approveExpiry').value = '';
   loadProfilesIntoSelect();
   document.getElementById('approveModal').classList.add('show');
-});
-
-function closeApproveModal() {
+}
   document.getElementById('approveModal').classList.remove('show');
   pendingRequestId = null;
 }
@@ -171,7 +169,7 @@ document.getElementById('confirmApproveBtn').addEventListener('click', async () 
 
 // ── Deny Modal ───────────────────────────────────────────────────────────────
 
-const openDenyModal = (window.openDenyModal = function(id) {
+function openDenyModal(id) {
   pendingRequestId = id;
   const req = allRequests.find(r => r.id === id);
   document.getElementById('denyRequesterInfo').innerHTML =
@@ -180,7 +178,7 @@ const openDenyModal = (window.openDenyModal = function(id) {
     (req.reason ? `<p><i class="fas fa-comment"></i> ${escHtml(req.reason)}</p>` : '');
   document.getElementById('denyNote').value = '';
   document.getElementById('denyModal').classList.add('show');
-});
+}
 
 function closeDenyModal() {
   document.getElementById('denyModal').classList.remove('show');
@@ -217,7 +215,7 @@ document.getElementById('confirmDenyBtn').addEventListener('click', async () => 
 
 // ── Delete ───────────────────────────────────────────────────────────────────
 
-const deleteRequest = (window.deleteRequest = async function(id) {
+async function deleteRequest(id) {
   if (!confirm('Delete this request?')) return;
   try {
     const res = await fetch(`/api/invite-requests/${id}`, {
@@ -230,6 +228,17 @@ const deleteRequest = (window.deleteRequest = async function(id) {
   } catch (err) {
     showAlert('error', 'Failed to delete request: ' + err.message);
   }
+}
+
+// ── Table event delegation ────────────────────────────────────────────────────
+
+document.getElementById('requestsTableBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const { action, id } = btn.dataset;
+  if (action === 'approve') openApproveModal(id);
+  if (action === 'deny')    openDenyModal(id);
+  if (action === 'delete')  deleteRequest(id);
 });
 
 // ── URL Modal ────────────────────────────────────────────────────────────────

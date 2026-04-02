@@ -101,8 +101,8 @@ document.getElementById('password').addEventListener('input', function () {
   const password = this.value;
   let strength = 0;
 
-  if (password.length >= 8) strength++;
-  if (password.length >= 12) strength++;
+  if (password.length >= (passwordPolicy.minLength || 8)) strength++;
+  if (password.length >= Math.max((passwordPolicy.minLength || 8) + 4, 12)) strength++;
   if (/[A-Z]/.test(password)) strength++;
   if (/[0-9]/.test(password)) strength++;
   if (/[^A-Za-z0-9]/.test(password)) strength++;
@@ -136,8 +136,17 @@ document.getElementById('signupForm').addEventListener('submit', async function 
     hasError = true;
   }
 
-  if (password.length < 8) {
-    showFieldError('passwordError', 'Password must be at least 8 characters');
+  if (password.length < (passwordPolicy.minLength || 8)) {
+    showFieldError('passwordError', `Password must be at least ${passwordPolicy.minLength || 8} characters`);
+    hasError = true;
+  } else if (passwordPolicy.requireUppercase && !/[A-Z]/.test(password)) {
+    showFieldError('passwordError', 'Password must contain at least one uppercase letter');
+    hasError = true;
+  } else if (passwordPolicy.requireNumbers && !/[0-9]/.test(password)) {
+    showFieldError('passwordError', 'Password must contain at least one number');
+    hasError = true;
+  } else if (passwordPolicy.requireSpecial && !/[^A-Za-z0-9]/.test(password)) {
+    showFieldError('passwordError', 'Password must contain at least one special character');
     hasError = true;
   }
 

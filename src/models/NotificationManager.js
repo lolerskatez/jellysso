@@ -452,8 +452,16 @@ class NotificationManager {
     return await this.send(userId, 'user_account_disabled', { reason: reason || 'Unknown' });
   }
 
+  async notifyUserEnabled(userId) {
+    return await this.send(userId, 'user_account_enabled', { date: new Date().toLocaleDateString() });
+  }
+
   async notifyUserDeleted(userId) {
     return await this.send(userId, 'user_account_deleted', {});
+  }
+
+  async notifyPasswordChanged(userId) {
+    return await this.send(userId, 'user_password_changed', { date: new Date().toLocaleDateString() });
   }
 
   async notifyInviteAccepted(adminId, userData) {

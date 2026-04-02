@@ -60,6 +60,16 @@ class SignupProfileManager {
         }
       );
 
+      // Migration: add requireContactVerification column if not present
+      this.db.run(
+        `ALTER TABLE signup_profiles ADD COLUMN requireContactVerification BOOLEAN DEFAULT 0`,
+        (err) => {
+          if (err && !err.message.includes('duplicate column')) {
+            // Ignore — column already exists
+          }
+        }
+      );
+
       // Table to track profile usage
       this.db.run(`
         CREATE TABLE IF NOT EXISTS profile_usage (
@@ -158,6 +168,7 @@ class SignupProfileManager {
           jellyfinPlaybackLimits = null,
           customFields = null,
           isActive = true,
+          requireContactVerification = false,
           createdBy = null
         } = config;
 
@@ -178,8 +189,8 @@ class SignupProfileManager {
             // Insert profile
             this.db.run(
               `INSERT INTO signup_profiles 
-               (id, name, description, jellyfinTier, jellyfinLibraryAccess, jellyfinPlaybackLimits, customFields, isActive, createdAt, updatedAt, createdBy)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+               (id, name, description, jellyfinTier, jellyfinLibraryAccess, jellyfinPlaybackLimits, customFields, isActive, requireContactVerification, createdAt, updatedAt, createdBy)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 id,
                 name,
@@ -189,6 +200,7 @@ class SignupProfileManager {
                 JSON.stringify(jellyfinPlaybackLimits),
                 JSON.stringify(customFields),
                 isActive ? 1 : 0,
+                requireContactVerification ? 1 : 0,
                 now.toISOString(),
                 now.toISOString(),
                 createdBy
@@ -210,6 +222,7 @@ class SignupProfileManager {
                   jellyfinPlaybackLimits,
                   customFields,
                   isActive,
+                  requireContactVerification,
                   createdAt: now,
                   updatedAt: now
                 });
@@ -242,6 +255,7 @@ class SignupProfileManager {
               row.jellyfinLibraryAccess = JSON.parse(row.jellyfinLibraryAccess || 'null');
               row.jellyfinPlaybackLimits = JSON.parse(row.jellyfinPlaybackLimits || 'null');
               row.customFields = JSON.parse(row.customFields || 'null');
+              row.requireContactVerification = !!row.requireContactVerification;
               resolve(row);
             } else {
               resolve(null);
@@ -272,6 +286,7 @@ class SignupProfileManager {
               row.jellyfinLibraryAccess = JSON.parse(row.jellyfinLibraryAccess || 'null');
               row.jellyfinPlaybackLimits = JSON.parse(row.jellyfinPlaybackLimits || 'null');
               row.customFields = JSON.parse(row.customFields || 'null');
+              row.requireContactVerification = !!row.requireContactVerification;
               resolve(row);
             } else {
               resolve(null);
@@ -310,7 +325,8 @@ class SignupProfileManager {
               ...row,
               jellyfinLibraryAccess: JSON.parse(row.jellyfinLibraryAccess || 'null'),
               jellyfinPlaybackLimits: JSON.parse(row.jellyfinPlaybackLimits || 'null'),
-              customFields: JSON.parse(row.customFields || 'null')
+              customFields: JSON.parse(row.customFields || 'null'),
+              requireContactVerification: !!row.requireContactVerification
             }));
             resolve(profiles);
           }
@@ -352,14 +368,15 @@ class SignupProfileManager {
               jellyfinLibraryAccess = JSON.parse(current.jellyfinLibraryAccess || 'null'),
               jellyfinPlaybackLimits = JSON.parse(current.jellyfinPlaybackLimits || 'null'),
               customFields = JSON.parse(current.customFields || 'null'),
-              isActive = current.isActive
+              isActive = current.isActive,
+              requireContactVerification = !!current.requireContactVerification
             } = updates;
 
             const performUpdate = () => {
               this.db.run(
                 `UPDATE signup_profiles 
                  SET name = ?, description = ?, jellyfinTier = ?, jellyfinLibraryAccess = ?, 
-                     jellyfinPlaybackLimits = ?, customFields = ?, isActive = ?, updatedAt = ?
+                     jellyfinPlaybackLimits = ?, customFields = ?, isActive = ?, requireContactVerification = ?, updatedAt = ?
                  WHERE id = ?`,
                 [
                   name,
@@ -369,6 +386,7 @@ class SignupProfileManager {
                   JSON.stringify(jellyfinPlaybackLimits),
                   JSON.stringify(customFields),
                   isActive ? 1 : 0,
+                  requireContactVerification ? 1 : 0,
                   now.toISOString(),
                   profileId
                 ],
@@ -389,6 +407,7 @@ class SignupProfileManager {
                     jellyfinPlaybackLimits,
                     customFields,
                     isActive,
+                    requireContactVerification,
                     updatedAt: now
                   });
                 }

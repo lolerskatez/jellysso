@@ -975,6 +975,69 @@ router.get('/password-policy', async (req, res) => {
   }
 });
 
+// POST /api/auth/signup/verify-contact
+// Initiates a contact method verification for a pre-signup user.
+// Returns a verificationId; the user must then confirm with the code they receive via the bot.
+router.post('/signup/verify-contact', criticalLimiter, async (req, res) => {
+  try {
+    const { method, contactId } = req.body;
+    const validMethods = ['discord', 'telegram', 'matrix'];
+    if (!validMethods.includes(method)) {
+      return res.status(400).json({ success: false, error: 'Invalid contact method. Use discord, telegram, or matrix.' });
+    }
+    if (!contactId || typeof contactId !== 'string' || contactId.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Contact ID is required' });
+    }
+
+    const ContactMethodManager = require('../models/ContactMethodManager');
+    const SIGNUP_VERIFY_USER = '__signup__';
+    const verification = await ContactMethodManager.getInstance()
+      .createVerificationRequest(SIGNUP_VERIFY_USER, method, contactId.trim());
+
+    // Store the verificationId in session so only the same session can confirm it
+    if (!req.session.signupPendingVerifications) req.session.signupPendingVerifications = {};
+    req.session.signupPendingVerifications[verification.id] = { method, contactId: contactId.trim() };
+
+    res.json({
+      success: true,
+      verificationId: verification.id,
+      message: `A verification code has been sent to your ${method} account. Enter it below.`
+    });
+  } catch (err) {
+    logger.error('Signup verify-contact error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to initiate verification' });
+  }
+});
+
+// POST /api/auth/signup/confirm-contact
+// Validates the verification code and stores verified status in session.
+router.post('/signup/confirm-contact', criticalLimiter, async (req, res) => {
+  try {
+    const { verificationId, code } = req.body;
+    if (!verificationId || !code) {
+      return res.status(400).json({ success: false, error: 'verificationId and code are required' });
+    }
+
+    // Ensure this verification was initiated by this session
+    const pending = req.session.signupPendingVerifications || {};
+    if (!pending[verificationId]) {
+      return res.status(400).json({ success: false, error: 'Verification not found or expired' });
+    }
+
+    const ContactMethodManager = require('../models/ContactMethodManager');
+    await ContactMethodManager.getInstance().verifyWithCode(verificationId, String(code).trim());
+
+    // Mark as verified in session
+    req.session.signupContactVerified = verificationId;
+    delete req.session.signupPendingVerifications[verificationId];
+
+    res.json({ success: true, message: 'Contact method verified successfully' });
+  } catch (err) {
+    logger.error('Signup confirm-contact error:', err.message);
+    res.status(400).json({ success: false, error: err.message || 'Verification failed' });
+  }
+});
+
 // POST /api/auth/signup — create Jellyfin account via invite
 // Public endpoint; protected by invite code validation + optional CAPTCHA + rate limit.
 // No CSRF required (CSRF middleware exempts this path in server.js).
@@ -1058,6 +1121,20 @@ router.post('/signup', criticalLimiter, async (req, res) => {
       invite = await InviteManager.getInstance().validateInvite(String(inviteCode).trim());
     } catch (inviteErr) {
       return res.status(400).json({ success: false, error: inviteErr.message });
+    }
+
+    // If the signup profile requires contact verification, enforce it
+    if (invite.signupProfileId) {
+      const SignupProfileManager = require('../models/SignupProfileManager');
+      const profile = await SignupProfileManager.getInstance().getProfile(invite.signupProfileId);
+      if (profile && profile.requireContactVerification) {
+        const verifiedId = req.session.signupContactVerified;
+        if (!verifiedId) {
+          return res.status(400).json({ success: false, error: 'This invite requires contact method verification before signup. Please verify your Discord, Telegram, or Matrix account first.' });
+        }
+        // Clear verified flag so it can't be reused
+        delete req.session.signupContactVerified;
+      }
     }
 
     // Create Jellyfin user with admin API key (no user session available)

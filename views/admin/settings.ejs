@@ -307,6 +307,7 @@
           <button class="settings-tab-btn" data-tab="ombi"><i class="fas fa-ticket-alt"></i> Ombi</button>
           <button class="settings-tab-btn" data-tab="sessionEnforcement"><i class="fas fa-users-slash"></i> Stream Enforcement</button>
           <button class="settings-tab-btn" data-tab="referrals"><i class="fas fa-share-alt"></i> Referrals</button>
+          <button class="settings-tab-btn" data-tab="expiry"><i class="fas fa-hourglass-end"></i> Expiry</button>
           <button class="settings-tab-btn" data-tab="branding"><i class="fas fa-paint-brush"></i> Branding</button>
           <button class="settings-tab-btn" data-tab="passwordPolicy"><i class="fas fa-key"></i> Password Policy</button>
           <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
@@ -747,6 +748,58 @@
             <div class="button-group">
               <button type="button" class="btn btn-primary" data-action="save" data-section="referral"><i class="fas fa-save"></i> Save Changes</button>
               <button type="button" class="btn btn-secondary" data-action="reset" data-section="referral"><i class="fas fa-undo"></i> Reset to Defaults</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Expiry Settings -->
+        <div id="expiry" class="settings-panel">
+          <form id="expiryForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-hourglass-end"></i> Account Expiry Behaviour</h3>
+              <p style="color:var(--text-secondary);font-size:.875rem;margin-top:0;">
+                Configure what happens when a user's account reaches its expiry date.
+                Individual expiry dates are set per-user from the Users page.
+              </p>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Expiry Action</div>
+                  <div class="setting-description">What to do when an account expires</div>
+                </div>
+                <div>
+                  <select name="expiryAction">
+                    <option value="disable" <%= settings.expiryAction === 'disable' ? 'selected' : '' %>>Disable account</option>
+                    <option value="delete"  <%= settings.expiryAction === 'delete'  ? 'selected' : '' %>>Delete account immediately</option>
+                    <option value="disable_then_delete" <%= settings.expiryAction === 'disable_then_delete' ? 'selected' : '' %>>Disable, then delete after grace period</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Grace Period (days)</div>
+                  <div class="setting-description">Days after disabling before account is permanently deleted (used with "Disable then delete")</div>
+                </div>
+                <div>
+                  <input type="number" name="expiryGraceDays" value="<%= settings.expiryGraceDays %>" min="0" max="365" style="width:90px;">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Reminder Days Before Expiry</div>
+                  <div class="setting-description">How many days before expiry to send a warning notification to the user</div>
+                </div>
+                <div>
+                  <input type="number" name="expiryReminderDays" value="<%= settings.expiryReminderDays %>" min="1" max="90" style="width:90px;">
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="expiry"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-action="reset" data-section="expiry"><i class="fas fa-undo"></i> Reset to Defaults</button>
             </div>
           </form>
         </div>

@@ -4,6 +4,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const PolicyManager = require('../models/PolicyManager');
 const AuditLogger = require('../models/AuditLogger');
 const SetupManager = require('../models/SetupManager');
+const NotificationManager = require('../models/NotificationManager');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const logger = require('../utils/logger');
@@ -56,6 +57,7 @@ router.post('/bulk-action', requireAuth, requireAdmin, csrfProtection, async (re
             await jellyfin.updateUser(userId, { Policy: { IsDisabled: false } });
             await AuditLogger.log('BULK_USER_ENABLE', req.session.user.Id, `user:${userId}`,
               {}, 'success', req.ip);
+            NotificationManager.getInstance().notifyUserEnabled(userId).catch(e => logger.warn('Notify enable failed:', e.message));
             results.success++;
             break;
 
@@ -64,6 +66,7 @@ router.post('/bulk-action', requireAuth, requireAdmin, csrfProtection, async (re
             await jellyfin.updateUser(userId, { Policy: { IsDisabled: true } });
             await AuditLogger.log('BULK_USER_DISABLE', req.session.user.Id, `user:${userId}`,
               {}, 'success', req.ip);
+            NotificationManager.getInstance().notifyUserDisabled(userId).catch(e => logger.warn('Notify disable failed:', e.message));
             results.success++;
             break;
 
@@ -72,6 +75,7 @@ router.post('/bulk-action', requireAuth, requireAdmin, csrfProtection, async (re
             await jellyfin.deleteUser(userId);
             await AuditLogger.log('BULK_USER_DELETE', req.session.user.Id, `user:${userId}`,
               {}, 'success', req.ip);
+            NotificationManager.getInstance().notifyUserDeleted(userId).catch(e => logger.warn('Notify delete failed:', e.message));
             results.success++;
             break;
 

@@ -628,6 +628,10 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       // Renewal
       renewalEnabled:     rawSettings.renewal_enabled      === 'true',
       renewalWindowDays:  parseInt(rawSettings.renewal_window_days) || 30,
+      // Expiry
+      expiryAction:       rawSettings.expiry_action       || 'disable',
+      expiryGraceDays:    parseInt(rawSettings.expiry_grace_days)    || 0,
+      expiryReminderDays: parseInt(rawSettings.expiry_reminder_days) || 7,
       // Referrals
       referralsEnabled:     rawSettings.referrals_enabled       === 'true',
       maxReferralsPerUser:  parseInt(rawSettings.max_referrals_per_user) || 5,

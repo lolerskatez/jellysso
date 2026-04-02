@@ -151,6 +151,8 @@ router.post('/password', requireAuth, csrfProtection, async (req, res) => {
     await AuditLogger.log('PASSWORD_CHANGE', req.session.user.Id, 'user:password',
       {}, 'success', req.ip);
 
+    NotificationManager.getInstance().notifyPasswordChanged(req.session.user.Id).catch(e => logger.warn('Notify password change failed:', e.message));
+
     res.json({ success: true, message: 'Password updated successfully.' });
   } catch (err) {
     logger.error('Password change error:', err.message);

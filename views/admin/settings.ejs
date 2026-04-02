@@ -537,7 +537,7 @@
                     <div class="setting-description">Embedded in the signup page HTML — safe to expose publicly</div>
                   </div>
                   <div>
-                    <input type="text" name="captchaSiteKey" value="<%= settings.captchaSiteKey %>" placeholder="e.g. 10000000-ffff-ffff-ffff-000000000001">
+                    <input type="text" name="captchaSiteKey" value="<%= settings.captchaSiteKey %>" placeholder="e.g. 10000000-ffff-ffff-ffff-000000000001" autocomplete="off">
                   </div>
                 </div>
 
@@ -563,6 +563,7 @@
         <!-- Jellyseerr Settings -->
         <div id="jellyseerr" class="settings-panel">
           <form id="jellyseerrForm">
+            <input type="text" name="username" autocomplete="username" aria-hidden="true" style="display:none" tabindex="-1" readonly>
             <div class="settings-section">
               <h3><i class="fas fa-film"></i> Jellyseerr Integration</h3>
               <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:12px;">
@@ -619,6 +620,7 @@
         <!-- Ombi Settings -->
         <div id="ombi" class="settings-panel">
           <form id="ombiForm">
+            <input type="text" name="username" autocomplete="username" aria-hidden="true" style="display:none" tabindex="-1" readonly>
             <div class="settings-section">
               <h3><i class="fas fa-ticket-alt"></i> Ombi Integration</h3>
               <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:12px;">

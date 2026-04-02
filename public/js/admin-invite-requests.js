@@ -120,6 +120,8 @@ function openApproveModal(id) {
   loadProfilesIntoSelect();
   document.getElementById('approveModal').classList.add('show');
 }
+
+function closeApproveModal() {
   document.getElementById('approveModal').classList.remove('show');
   pendingRequestId = null;
 }

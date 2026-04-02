@@ -146,6 +146,14 @@ class ScheduledCleanupTasks {
    */
   async cleanupExpiredApiKeys() {
     try {
+      // Guard: table may not exist yet if APIKeyManager hasn't initialized
+      const tableExists = await new Promise((resolve) => {
+        DatabaseManager.db.get(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'`,
+          (err, row) => resolve(!err && !!row)
+        );
+      });
+      if (!tableExists) return;
       const result = await new Promise((resolve, reject) => {
         DatabaseManager.db.run(
           `DELETE FROM api_keys WHERE expires_at < datetime('now')`,
@@ -174,7 +182,7 @@ class ScheduledCleanupTasks {
 
       const result = await new Promise((resolve, reject) => {
         DatabaseManager.db.run(
-          `DELETE FROM webhook_events WHERE timestamp < ?`,
+          `DELETE FROM webhook_events WHERE created_at < ?`,
           [cutoffDate],
           function(err) {
             if (err) reject(err);

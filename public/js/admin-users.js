@@ -484,10 +484,13 @@ const saveChanges = (window.saveChanges = async function() {
     var token = await getCsrfToken();
     if (!token) return;
 
-    var promises = [];
-    var errors   = [];
+    var errors = [];
 
-    // ── Jellyfin account (username / password) ────────────────────
+    // ── Non-policy saves: run in parallel (don't touch the same Jellyfin endpoint) ──
+
+    var parallelTasks = [];
+
+    // Jellyfin account (username / password)
     var newUsername = document.getElementById('editUsername') ? document.getElementById('editUsername').value.trim() : '';
     var newPassword = document.getElementById('editPassword') ? document.getElementById('editPassword').value        : '';
 
@@ -495,7 +498,7 @@ const saveChanges = (window.saveChanges = async function() {
       var accountBody = {};
       if (newUsername) accountBody.username = newUsername;
       if (newPassword) accountBody.password = newPassword;
-      promises.push(
+      parallelTasks.push(
         fetch('/admin/api/users/' + currentEditUserId, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
@@ -506,13 +509,13 @@ const saveChanges = (window.saveChanges = async function() {
       );
     }
 
-    // ── SSO profile ───────────────────────────────────────────────
+    // SSO profile
     var firstName   = document.getElementById('editFirstName')   ? document.getElementById('editFirstName').value.trim()   : '';
     var lastName    = document.getElementById('editLastName')    ? document.getElementById('editLastName').value.trim()    : '';
     var email       = document.getElementById('editEmail')       ? document.getElementById('editEmail').value.trim()       : '';
     var displayName = document.getElementById('editDisplayName') ? document.getElementById('editDisplayName').value.trim() : '';
 
-    promises.push(
+    parallelTasks.push(
       fetch('/admin/api/users/' + currentEditUserId + '/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
@@ -522,7 +525,11 @@ const saveChanges = (window.saveChanges = async function() {
       .then(function(d) { if (!d.success) errors.push('Profile: ' + (d.message || 'Failed')); })
     );
 
-    // ── Account status (enabled + expiry) ─────────────────────────
+    await Promise.all(parallelTasks);
+
+    // ── Policy saves: run sequentially to avoid concurrent Jellyfin policy writes ──
+
+    // Account status (enabled + expiry)
     var enabled     = document.getElementById('editAccountEnabled') ? document.getElementById('editAccountEnabled').checked : true;
     var expiresAtEl = document.getElementById('editExpiresAt');
     var expiresAt   = null;
@@ -530,57 +537,42 @@ const saveChanges = (window.saveChanges = async function() {
       var parsedDate = new Date(expiresAtEl.value);
       if (!isNaN(parsedDate)) expiresAt = parsedDate.toISOString();
     }
+    var r1 = await fetch('/api/policy/admin/user/' + currentEditUserId + '/account-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      body: JSON.stringify({ enabled: enabled, expiresAt: expiresAt })
+    }).then(function(r) { return r.json(); });
+    if (!r1.success) errors.push('Account status: ' + (r1.message || 'Failed'));
 
-    promises.push(
-      fetch('/api/policy/admin/user/' + currentEditUserId + '/account-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-        body: JSON.stringify({ enabled: enabled, expiresAt: expiresAt })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (!d.success) errors.push('Account status: ' + (d.message || 'Failed')); })
-    );
-
-    // ── User Type (Admin) ────────────────────────────────────────
+    // User Type (Admin)
     var userTypeEl = document.getElementById('editUserType');
     var isAdmin = userTypeEl && userTypeEl.value === 'admin';
-    promises.push(
-      fetch('/api/policy/admin/user/' + currentEditUserId + '/admin-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-        body: JSON.stringify({ isAdmin: isAdmin })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (!d.success) errors.push('User type: ' + (d.message || 'Failed')); })
-    );
+    var r2 = await fetch('/api/policy/admin/user/' + currentEditUserId + '/admin-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      body: JSON.stringify({ isAdmin: isAdmin })
+    }).then(function(r) { return r.json(); });
+    if (!r2.success) errors.push('User type: ' + (r2.message || 'Failed'));
 
-    // ── Tier ──────────────────────────────────────────────────────
+    // Tier
     var tier = document.getElementById('editTier') ? document.getElementById('editTier').value : '';
     if (tier) {
-      promises.push(
-        fetch('/api/policy/admin/user/' + currentEditUserId + '/tier', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-          body: JSON.stringify({ tier: tier })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) { if (!d.success) errors.push('Tier: ' + (d.message || 'Failed')); })
-      );
-    }
-
-    // ── Media Downloads ───────────────────────────────────────────
-    var allowDownloads = document.getElementById('editAllowDownloads') ? document.getElementById('editAllowDownloads').checked : true;
-    promises.push(
-      fetch('/api/policy/admin/user/' + currentEditUserId + '/downloads', {
+      var r3 = await fetch('/api/policy/admin/user/' + currentEditUserId + '/tier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-        body: JSON.stringify({ allowed: allowDownloads })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (!d.success) errors.push('Downloads: ' + (d.message || 'Failed')); })
-    );
+        body: JSON.stringify({ tier: tier })
+      }).then(function(r) { return r.json(); });
+      if (!r3.success) errors.push('Tier: ' + (r3.message || 'Failed'));
+    }
 
-    await Promise.all(promises);
+    // Media Downloads
+    var allowDownloads = document.getElementById('editAllowDownloads') ? document.getElementById('editAllowDownloads').checked : true;
+    var r4 = await fetch('/api/policy/admin/user/' + currentEditUserId + '/downloads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+      body: JSON.stringify({ allowed: allowDownloads })
+    }).then(function(r) { return r.json(); });
+    if (!r4.success) errors.push('Downloads: ' + (r4.message || 'Failed'));
 
     if (errors.length > 0) {
       showStatus('Some changes failed: ' + errors.join('; '), 'error');

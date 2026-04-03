@@ -57,24 +57,20 @@ router.get('/', requireAuth, async (req, res) => {
  */
 router.put('/profile', requireAuth, csrfProtection, async (req, res) => {
   try {
-    const { firstName, lastName, displayName, email, jellyfinUsername } = req.body;
+    const { firstName, lastName, displayName, jellyfinUsername } = req.body;
+    // NOTE: email changes go through PUT /email which sends a confirmation link — not handled here.
 
-    // Input validation
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ success: false, message: 'Invalid email address.' });
-    }
+    const userId = req.session.user.Id;
+
     if (displayName && typeof displayName !== 'string') {
       return res.status(400).json({ success: false, message: 'Invalid display name.' });
     }
 
-    const userId = req.session.user.Id;
-
-    // Update local profile
+    // Update local profile (email field intentionally excluded — use PUT /email)
     await UserProfileManager.upsertProfile(userId, {
       firstName: firstName || null,
       lastName:  lastName  || null,
-      displayName: displayName || null,
-      email:     email     || null
+      displayName: displayName || null
     });
 
     // Update Jellyfin username only for non-SSO users

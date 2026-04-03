@@ -54,7 +54,7 @@ const AccountManager = {
     }
 
     // Profile form
-    ['firstName', 'lastName', 'email', 'displayName'].forEach(id => {
+    ['firstName', 'lastName', 'displayName'].forEach(id => {
       const input = document.getElementById(id);
       if (input) {
         input.addEventListener('change', () => {
@@ -65,6 +65,9 @@ const AccountManager = {
     });
     document.getElementById('saveProfileBtn')?.addEventListener('click', () => this.saveProfile());
 
+    // Email change
+    document.getElementById('changeEmailBtn')?.addEventListener('click', () => this.changeEmail());
+
     // Password change
     ['currentPassword', 'newPassword', 'confirmPassword'].forEach(id => {
       const input = document.getElementById(id);
@@ -74,12 +77,6 @@ const AccountManager = {
     });
     document.getElementById('changePasswordBtn')?.addEventListener('click', () => this.changePassword());
     document.getElementById('passwordForm')?.addEventListener('submit', e => e.preventDefault());
-
-    // Email change
-    document.getElementById('email')?.addEventListener('change', () => {
-      document.getElementById('saveProfileBtn').disabled = false;
-    });
-
     // Notifications
     document.getElementById('saveNotificationsBtn')?.addEventListener('click', () => this.saveNotificationPreferences());
     document.querySelectorAll('[data-channel-toggle]').forEach(toggle => {
@@ -158,10 +155,13 @@ const AccountManager = {
         document.getElementById('passwordForm').style.display = 'none';
         document.getElementById('otpCard').style.display = 'block';
         this.loadOTPStatus();
+        // SSO users don't need a password to change their email
+        document.getElementById('emailPasswordGroup')?.style.setProperty('display', 'none');
       } else {
         document.getElementById('passwordWarning').style.display = 'none';
         document.getElementById('passwordForm').style.display = 'block';
         document.getElementById('otpCard').style.display = 'none';
+        document.getElementById('emailPasswordGroup')?.style.setProperty('display', '');
       }
     } catch (err) {
       this.showError('profile', `Failed to load profile: ${err.message}`);
@@ -176,8 +176,8 @@ const AccountManager = {
       const formData = {
         firstName: document.getElementById('firstName').value,
         lastName: document.getElementById('lastName').value,
-        email: document.getElementById('email').value,
         displayName: document.getElementById('displayName').value
+        // email is intentionally omitted — use changeEmail() which sends a confirmation link
       };
 
       const response = await fetch('/api/me/profile', {
@@ -471,6 +471,45 @@ const AccountManager = {
       }
     } catch (err) {
       console.error('Failed to load OTP status:', err);
+    }
+  },
+
+  /**
+   * Request an email address change — sends confirmation link to new address.
+   */
+  async changeEmail() {
+    const newEmail = document.getElementById('newEmailInput')?.value?.trim();
+    const currentPassword = document.getElementById('emailCurrentPassword')?.value || '';
+    const statusEl = document.getElementById('emailStatus');
+    const btn = document.getElementById('changeEmailBtn');
+
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      if (statusEl) { statusEl.className = 'form-status error'; statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Enter a valid email address.'; }
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+    if (statusEl) statusEl.innerHTML = '';
+
+    try {
+      const resp = await fetch('/api/me/email', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.csrfToken },
+        body: JSON.stringify({ newEmail, currentPassword: currentPassword || undefined })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Request failed');
+
+      if (statusEl) {
+        statusEl.className = 'form-status success';
+        statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message}`;
+      }
+      document.getElementById('newEmailInput').value = '';
+      document.getElementById('emailCurrentPassword').value = '';
+    } catch (e) {
+      if (statusEl) { statusEl.className = 'form-status error'; statusEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${e.message}`; }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation'; }
     }
   },
 
@@ -1173,6 +1212,17 @@ const AccountManager = {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   AccountManager.init();
+
+  // Show email confirmed banner if redirected back after clicking confirmation link
+  if (new URLSearchParams(window.location.search).get('emailConfirmed') === '1') {
+    // Navigate to the profile section where the banner lives
+    const profileNav = document.querySelector('[data-section="profile"]');
+    if (profileNav) profileNav.click();
+    const banner = document.getElementById('emailConfirmedBanner');
+    if (banner) banner.style.display = '';
+    // Clean the query param from the URL without reloading
+    history.replaceState(null, '', window.location.pathname);
+  }
 
   // Account deletion button
   document.getElementById('requestDeletionBtn')?.addEventListener('click', () => {

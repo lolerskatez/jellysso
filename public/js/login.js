@@ -85,13 +85,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const result = await response.json();
 
+        if (result.success && result.requireTotp) {
+          // Show TOTP step — credentials verified, 2FA code needed
+          setLoading(false);
+          showTotpStep();
+          return;
+        }
+
         if (result.success) {
           showMessage('Login successful! Redirecting...', 'success');
           setTimeout(() => {
             window.location.href = '/quickconnect';
           }, 1000);
         } else {
-          showMessage(result.message || 'Login failed');
+          showMessage(result.error?.message || result.message || 'Login failed');
           setLoading(false);
           
           // If CSRF error, try to fetch a fresh token for next attempt
@@ -116,6 +123,62 @@ document.addEventListener('DOMContentLoaded', function() {
     usernameField.focus();
   }
 
+  // TOTP submit button
+  const totpSubmitBtn = document.getElementById('totpSubmitBtn');
+  const totpLoading = document.getElementById('totpLoading');
+  const totpText = document.getElementById('totpText');
+  const totpTokenInput = document.getElementById('totpToken');
+
+  if (totpSubmitBtn) {
+    totpSubmitBtn.addEventListener('click', submitTotpCode);
+  }
+  if (totpTokenInput) {
+    totpTokenInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitTotpCode();
+    });
+  }
+
+  async function submitTotpCode() {
+    const token = totpTokenInput?.value?.trim();
+    if (!token || !/^\d{6}$/.test(token)) {
+      showMessage('Enter the 6-digit code from your authenticator app.');
+      return;
+    }
+    messageDiv.classList.add('hidden');
+    totpLoading.classList.remove('hidden');
+    totpText.classList.add('hidden');
+    totpSubmitBtn.disabled = true;
+
+    try {
+      const csrfToken = await getCsrfToken();
+      const response = await fetch('/api/auth/totp-verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify({ token })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showMessage('Verified! Redirecting...', 'success');
+        setTimeout(() => { window.location.href = '/quickconnect'; }, 800);
+      } else {
+        showMessage(result.error?.message || 'Invalid code. Please try again.');
+        totpLoading.classList.add('hidden');
+        totpText.classList.remove('hidden');
+        totpSubmitBtn.disabled = false;
+        if (totpTokenInput) { totpTokenInput.value = ''; totpTokenInput.focus(); }
+      }
+    } catch (err) {
+      showMessage('Network error. Please try again.');
+      totpLoading.classList.add('hidden');
+      totpText.classList.remove('hidden');
+      totpSubmitBtn.disabled = false;
+    }
+  }
+
   // Forgot password modal
   const forgotModal = document.getElementById('forgotPasswordModal');
   const forgotLink = document.querySelector('a[href="#forgotPasswordModal"]');
@@ -137,6 +200,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load announcements on login page
   loadAnnouncements();
+});
+
+const showTotpStep = (window.showTotpStep = function() {
+  const loginForm = document.getElementById('loginForm');
+  const totpStep = document.getElementById('totpStep');
+  const messageDiv = document.getElementById('message');
+  if (loginForm) loginForm.style.display = 'none';
+  if (totpStep) totpStep.style.display = 'block';
+  if (messageDiv) messageDiv.classList.add('hidden');
+  const totpTokenInput = document.getElementById('totpToken');
+  if (totpTokenInput) totpTokenInput.focus();
 });
 
 function closeForgotPassword() {

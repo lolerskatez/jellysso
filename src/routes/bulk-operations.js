@@ -52,25 +52,54 @@ router.post('/bulk-action', requireAuth, requireAdmin, csrfProtection, async (re
     for (const userId of userIds) {
       try {
         switch (action) {
-          case 'enable':
+          case 'enable': {
             // Set user enabled in Jellyfin policy
             await jellyfin.updateUser(userId, { Policy: { IsDisabled: false } });
             await AuditLogger.log('BULK_USER_ENABLE', req.session.user.Id, `user:${userId}`,
               {}, 'success', req.ip);
             NotificationManager.getInstance().notifyUserEnabled(userId).catch(e => logger.warn('Notify enable failed:', e.message));
+            // Apply Discord role if the user has a linked Discord account
+            const enablePrefs = await require('../models/DatabaseManager').queryOne(
+              'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+            ).catch(() => null);
+            if (enablePrefs?.discord_user_id) {
+              require('../adapters/DiscordAdapter').getInstance()
+                .applyRole(enablePrefs.discord_user_id)
+                .catch(e => logger.warn('Discord role apply on enable:', e.message));
+            }
             results.success++;
             break;
+          }
 
-          case 'disable':
+          case 'disable': {
             // Set user disabled in Jellyfin policy
             await jellyfin.updateUser(userId, { Policy: { IsDisabled: true } });
             await AuditLogger.log('BULK_USER_DISABLE', req.session.user.Id, `user:${userId}`,
               {}, 'success', req.ip);
             NotificationManager.getInstance().notifyUserDisabled(userId).catch(e => logger.warn('Notify disable failed:', e.message));
+            // Remove Discord role if the user has a linked Discord account
+            const disablePrefs = await require('../models/DatabaseManager').queryOne(
+              'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+            ).catch(() => null);
+            if (disablePrefs?.discord_user_id) {
+              require('../adapters/DiscordAdapter').getInstance()
+                .removeRole(disablePrefs.discord_user_id)
+                .catch(e => logger.warn('Discord role remove on disable:', e.message));
+            }
             results.success++;
             break;
+          }
 
-          case 'delete':
+          case 'delete': {
+            // Remove Discord role before deletion (while prefs row still exists)
+            const deletePrefs = await require('../models/DatabaseManager').queryOne(
+              'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+            ).catch(() => null);
+            if (deletePrefs?.discord_user_id) {
+              require('../adapters/DiscordAdapter').getInstance()
+                .removeRole(deletePrefs.discord_user_id)
+                .catch(e => logger.warn('Discord role remove on delete:', e.message));
+            }
             // Delete user from Jellyfin
             await jellyfin.deleteUser(userId);
             await AuditLogger.log('BULK_USER_DELETE', req.session.user.Id, `user:${userId}`,
@@ -78,6 +107,7 @@ router.post('/bulk-action', requireAuth, requireAdmin, csrfProtection, async (re
             NotificationManager.getInstance().notifyUserDeleted(userId).catch(e => logger.warn('Notify delete failed:', e.message));
             results.success++;
             break;
+          }
 
           case 'set-tier':
             // Set user tier
@@ -145,6 +175,15 @@ router.post('/bulk-delete', requireAuth, requireAdmin, csrfProtection, async (re
 
     for (const userId of userIds) {
       try {
+        // Remove Discord role before deletion
+        const bulkDelPrefs = await require('../models/DatabaseManager').queryOne(
+          'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+        ).catch(() => null);
+        if (bulkDelPrefs?.discord_user_id) {
+          require('../adapters/DiscordAdapter').getInstance()
+            .removeRole(bulkDelPrefs.discord_user_id)
+            .catch(e => logger.warn('Discord role remove on bulk-delete:', e.message));
+        }
         await jellyfin.deleteUser(userId);
         await AuditLogger.log('USER_DELETED', req.session.user.Id, `user:${userId}`,
           { bulkDelete: true }, 'success', req.ip);

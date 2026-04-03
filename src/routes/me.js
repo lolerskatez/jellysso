@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
 const JellyfinAPI = require('../models/JellyfinAPI');
@@ -7,6 +8,7 @@ const UserProfileManager = require('../models/UserProfileManager');
 const ContactMethodManager = require('../models/ContactMethodManager');
 const InviteManager = require('../models/InviteManager');
 const OTPManager = require('../models/OTPManager');
+const TOTPManager = require('../models/TOTPManager');
 const AuditLogger = require('../models/AuditLogger');
 const NotificationManager = require('../models/NotificationManager');
 const SessionActivityManager = require('../models/SessionActivityManager');
@@ -14,6 +16,7 @@ const DatabaseManager = require('../models/DatabaseManager');
 const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth } = require('../middleware/auth');
+const { getBaseUrl } = require('../utils/urlHelper');
 
 /**
  * GET /api/me
@@ -211,8 +214,8 @@ router.post('/otp', requireAuth, csrfProtection, async (req, res) => {
 
 /**
  * PUT /api/me/email
- * Update user's email address
- * Sends verification email for non-SSO accounts
+ * Request an email address change.
+ * Sends a confirmation link to the NEW address — change only takes effect after clicking it.
  */
 router.put('/email', requireAuth, csrfProtection, async (req, res) => {
   try {
@@ -247,22 +250,97 @@ router.put('/email', requireAuth, csrfProtection, async (req, res) => {
       }
     }
 
-    // Update email in profile
-    const profile = await UserProfileManager.getProfile(userId).catch(() => ({}));
-    await UserProfileManager.upsertProfile(userId, {
-      ...profile,
-      email: newEmail
-    });
+    // Generate a confirmation token (expires in 24 hours)
+    const secret = process.env.JWT_SECRET || 'jellysso-secret';
+    const token = jwt.sign({ userId, newEmail, purpose: 'email_confirm' }, secret, { expiresIn: '24h' });
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-    await AuditLogger.log('EMAIL_CHANGED', userId, 'user:email',
+    // Store pending change
+    await DatabaseManager.run(
+      `INSERT OR REPLACE INTO email_pending_changes (user_id, new_email, token_hash, expires_at, created_at)
+       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [userId, newEmail, tokenHash, expiresAt]
+    );
+
+    // Send confirmation email to the NEW address
+    const baseUrl = getBaseUrl(req, SetupManager.getConfig());
+    const confirmUrl = `${baseUrl}/api/me/confirm-email/${token}`;
+    try {
+      await NotificationManager.getInstance().sendEmailNotification(newEmail, {
+        title: 'Confirm your new email address',
+        subject: 'Confirm your new email address',
+        body: `Hello ${req.session.user.Name},\n\nClick the link below to confirm your new email address. This link expires in 24 hours.\n\n${confirmUrl}\n\nIf you did not request this change, you can safely ignore this email.`,
+        format: 'text'
+      });
+    } catch (emailErr) {
+      logger.warn('Failed to send email confirmation:', emailErr.message);
+      // Don't fail the request — return the link so admin can manually provide it
+    }
+
+    await AuditLogger.log('EMAIL_CHANGE_REQUESTED', userId, 'user:email',
       { newEmail }, 'success', req.ip);
 
-    res.json({ success: true, message: 'Email updated successfully.' });
+    res.json({ success: true, message: 'A confirmation link has been sent to your new email address. Please check your inbox.' });
   } catch (err) {
     logger.error('Email change error:', err.message);
     await AuditLogger.log('EMAIL_CHANGE_ERROR', req.session.user?.Id, 'user:email',
       { error: err.message }, 'failure', req.ip);
-    res.status(500).json({ success: false, message: err.message || 'Failed to update email.' });
+    res.status(500).json({ success: false, message: err.message || 'Failed to request email change.' });
+  }
+});
+
+/**
+ * GET /api/me/confirm-email/:token
+ * Apply a pending email change after the user clicks the confirmation link.
+ */
+router.get('/confirm-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const secret = process.env.JWT_SECRET || 'jellysso-secret';
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, secret);
+    } catch {
+      return res.status(400).render('error', { message: 'Confirmation link is invalid or has expired.', code: 400 });
+    }
+
+    if (decoded.purpose !== 'email_confirm') {
+      return res.status(400).render('error', { message: 'Invalid confirmation link.', code: 400 });
+    }
+
+    const { userId, newEmail } = decoded;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Verify pending change in DB
+    const pending = await DatabaseManager.queryOne(
+      `SELECT * FROM email_pending_changes WHERE user_id = ? AND token_hash = ? AND expires_at > datetime('now')`,
+      [userId, tokenHash]
+    );
+    if (!pending) {
+      return res.status(400).render('error', { message: 'Confirmation link is invalid or has expired.', code: 400 });
+    }
+
+    // Check uniqueness again at confirmation time
+    const existingProfile = await UserProfileManager.getProfileByEmail(newEmail).catch(() => null);
+    if (existingProfile && existingProfile.user_id !== userId) {
+      await DatabaseManager.run('DELETE FROM email_pending_changes WHERE user_id = ?', [userId]);
+      return res.status(409).render('error', { message: 'That email address is now in use by another account.', code: 409 });
+    }
+
+    // Apply the change
+    const profile = await UserProfileManager.getProfile(userId).catch(() => ({}));
+    await UserProfileManager.upsertProfile(userId, { ...profile, email: newEmail });
+    await DatabaseManager.run('DELETE FROM email_pending_changes WHERE user_id = ?', [userId]);
+
+    await AuditLogger.log('EMAIL_CHANGED', userId, 'user:email', { newEmail }, 'success', req.ip);
+
+    // Redirect to account page with a success flag
+    res.redirect('/account?emailConfirmed=1');
+  } catch (err) {
+    logger.error('Email confirm error:', err.message);
+    res.status(500).render('error', { message: 'An error occurred confirming your email.', code: 500 });
   }
 });
 
@@ -531,6 +609,108 @@ router.get('/referral', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('Referral link error:', err.message);
     res.status(500).json({ success: false, message: err.message || 'Failed to get referral link.' });
+  }
+});
+
+// ============================================================================
+// 2FA / TOTP endpoints
+// ============================================================================
+
+/**
+ * GET /api/me/totp
+ * Get current TOTP status for the authenticated user.
+ */
+router.get('/totp', requireAuth, async (req, res) => {
+  try {
+    const totpEnabled = await DatabaseManager.getSetting('totp_enabled');
+    if (totpEnabled !== 'true') {
+      return res.json({ success: true, enabled: false, featureDisabled: true });
+    }
+    const status = await TOTPManager.getInstance().getStatus(req.session.user.Id);
+    res.json({ success: true, ...status });
+  } catch (err) {
+    logger.error('TOTP status error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * POST /api/me/totp/setup
+ * Begin TOTP setup — generates a secret and returns a QR code data URL.
+ * Does NOT activate TOTP yet; user must confirm via /api/me/totp/confirm.
+ */
+router.post('/totp/setup', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const config = SetupManager.getConfig();
+    const issuer = config.appName || 'JellySSO';
+    const { secret, qrDataUrl, otpauthUrl } = await TOTPManager.getInstance()
+      .beginSetup(req.session.user.Id, req.session.user.Name, issuer);
+
+    await AuditLogger.log('TOTP_SETUP_STARTED', req.session.user.Id, 'user:totp', {}, 'success', req.ip);
+
+    res.json({ success: true, secret, qrDataUrl, otpauthUrl });
+  } catch (err) {
+    logger.error('TOTP setup error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * POST /api/me/totp/confirm
+ * Confirm TOTP setup by submitting the first code from the authenticator app.
+ * Body: { token: '123456' }
+ */
+router.post('/totp/confirm', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token || !/^\d{6}$/.test(String(token).trim())) {
+      return res.status(400).json({ success: false, message: 'Invalid TOTP code format' });
+    }
+
+    const activated = await TOTPManager.getInstance().confirmSetup(req.session.user.Id, String(token).trim());
+    if (!activated) {
+      return res.status(400).json({ success: false, message: 'Invalid code. Please check your authenticator app and try again.' });
+    }
+
+    await AuditLogger.log('TOTP_ENABLED', req.session.user.Id, 'user:totp', {}, 'success', req.ip);
+    res.json({ success: true, message: 'Two-factor authentication enabled successfully.' });
+  } catch (err) {
+    logger.error('TOTP confirm error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * DELETE /api/me/totp
+ * Disable TOTP for the current user.
+ * Requires the current password to confirm intent (non-SSO only).
+ */
+router.delete('/totp', requireAuth, csrfProtection, async (req, res) => {
+  try {
+    const userId = req.session.user.Id;
+
+    // Require current password verification for non-SSO accounts
+    if (req.session.authMethod !== 'oidc') {
+      const { currentPassword } = req.body;
+      if (!currentPassword) {
+        return res.status(400).json({ success: false, message: 'Current password required to disable 2FA.' });
+      }
+      try {
+        const config = SetupManager.getConfig();
+        const verifyApi = new JellyfinAPI(config.jellyfinUrl);
+        await verifyApi.authenticateByName(req.session.user.Name, currentPassword);
+      } catch {
+        await AuditLogger.log('TOTP_DISABLE_WRONG_PASSWORD', userId, 'user:totp', {}, 'failure', req.ip);
+        return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+      }
+    }
+
+    await TOTPManager.getInstance().disable(userId);
+    await AuditLogger.log('TOTP_DISABLED', userId, 'user:totp', {}, 'success', req.ip);
+    res.json({ success: true, message: 'Two-factor authentication disabled.' });
+  } catch (err) {
+    logger.error('TOTP disable error:', err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

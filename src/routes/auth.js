@@ -6,6 +6,7 @@ const JellyfinAPI = require('../models/JellyfinAPI');
 const AuditLogger = require('../models/AuditLogger');
 const TokenManager = require('../models/TokenManager');
 const PolicyManager = require('../models/PolicyManager');
+const TOTPManager = require('../models/TOTPManager');
 const DatabaseManager = require('../models/DatabaseManager');
 const { getInstance: getAccountLockoutManager } = require('../models/AccountLockoutManager');
 const { csrfProtection } = require('../middleware/csrf');
@@ -113,6 +114,21 @@ router.post('/login', requireSetupComplete, criticalLimiter, async (req, res) =>
         logger.warn('Could not sync admin status', { error: err.message })
       );
     }
+
+    // Check if 2FA / TOTP is required for this user
+    const totpEnabled = await TOTPManager.getInstance().isEnabled(authResult.User.Id).catch(() => false);
+    if (totpEnabled) {
+      // Store pending auth data in session — NOT a full authenticated session yet
+      req.session.pendingTotp = {
+        user:        authResult.User,
+        accessToken: authResult.AccessToken,
+        createdAt:   Date.now()
+      };
+      if (isAjax) {
+        return res.json({ success: true, requireTotp: true });
+      }
+      return res.redirect('/login?totp=1');
+    }
     
     // Use secure session rotation on login
     SessionRotation.rotateSessionOnLogin(req, res, authResult.User, authResult.AccessToken, (err, sessionId) => {
@@ -214,6 +230,47 @@ router.post('/logout', (req, res) => {
     res.clearCookie('connect.sid', { path: '/' });
     res.json({ success: true });
   });
+});
+
+// Complete login after TOTP verification
+router.post('/totp-verify', criticalLimiter, async (req, res) => {
+  const pending = req.session.pendingTotp;
+  if (!pending) {
+    return res.status(400).json({ success: false, error: { code: 'NO_PENDING_AUTH', message: 'No pending authentication' } });
+  }
+
+  // Expire pending TOTP sessions after 5 minutes
+  if (Date.now() - (pending.createdAt || 0) > 5 * 60 * 1000) {
+    delete req.session.pendingTotp;
+    return res.status(401).json({ success: false, error: { code: 'TOTP_EXPIRED', message: 'Authentication session expired. Please log in again.' } });
+  }
+
+  const { token } = req.body;
+  if (!token || typeof token !== 'string' || !/^\d{6}$/.test(token.trim())) {
+    return res.status(400).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid TOTP code format' } });
+  }
+
+  try {
+    const valid = await TOTPManager.getInstance().verify(pending.user.Id, token.trim());
+    if (!valid) {
+      await AuditLogger.log('TOTP_VERIFY_FAILED', pending.user.Id, `user:${pending.user.Name}`,
+        {}, 'failure', req.ip);
+      return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid authenticator code' } });
+    }
+
+    // Complete login
+    delete req.session.pendingTotp;
+    SessionRotation.rotateSessionOnLogin(req, res, pending.user, pending.accessToken, (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, error: { code: 'SESSION_ERROR', message: 'Failed to create session' } });
+      }
+      AuditLogger.logSuccessfulLogin(pending.user.Name, req.ip);
+      res.json({ success: true, user: pending.user });
+    });
+  } catch (err) {
+    logger.error('TOTP verify error:', err.message);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'TOTP verification failed' } });
+  }
 });
 
 // Check authentication status

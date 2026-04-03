@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const ContactMethodManager = require('../models/ContactMethodManager');
+const JellyseerrManager = require('../models/JellyseerrManager');
 const AuditLogger = require('../models/AuditLogger');
 const logger = require('../utils/logger');
 const { csrfProtection } = require('../middleware/csrf');
 const { requireAuth } = require('../middleware/auth');
+const DatabaseManager = require('../models/DatabaseManager');
 
 const contactManager = ContactMethodManager.getInstance();
 
@@ -60,6 +62,24 @@ router.post('/', csrfProtection, requireAuth, async (req, res) => {
     // Validate contactId
     if (!contactId || typeof contactId !== 'string' || contactId.trim().length === 0) {
       return res.status(400).json({ success: false, error: 'Contact ID is required' });
+    }
+
+    // Unique contact enforcement — check if this ID is already in use by another user
+    const enforceUnique = await DatabaseManager.getSetting(`${method}_require_unique`);
+    if (enforceUnique === 'true') {
+      const col = method === 'discord' ? 'discord_user_id' : method === 'telegram' ? 'telegram_chat_id' : null;
+      if (col) {
+        const existing = await DatabaseManager.queryOne(
+          `SELECT user_id FROM user_notification_preferences WHERE ${col} = ? AND user_id != ?`,
+          [contactId.trim(), userId]
+        );
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            error: `This ${method} account is already linked to another JellySSO account.`
+          });
+        }
+      }
     }
 
     // Add the contact method
@@ -137,6 +157,24 @@ router.post('/verify', csrfProtection, requireAuth, async (req, res) => {
       userId,
       method: result.method,
       ip: req.ip
+    });
+
+    // Sync contact methods to Jellyseerr if connected
+    setImmediate(async () => {
+      try {
+        const prefs = await DatabaseManager.queryOne(
+          `SELECT discord_user_id, telegram_chat_id FROM user_notification_preferences WHERE user_id = ?`,
+          [userId]
+        );
+        if (prefs) {
+          await JellyseerrManager.getInstance().syncContactMethods(userId, {
+            discordId: prefs.discord_user_id || undefined,
+            telegramChatId: prefs.telegram_chat_id || undefined
+          });
+        }
+      } catch (e) {
+        logger.warn('Jellyseerr contact sync failed:', e.message);
+      }
     });
 
     res.json({

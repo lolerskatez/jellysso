@@ -148,6 +148,63 @@ class JellyseerrManager {
       return { success: false, reason: msg };
     }
   }
-}
+
+  /**
+   * Sync contact notification settings (Discord / Telegram) for a Jellyseerr user.
+   * Finds the Jellyseerr user by Jellyfin user ID, then PATCHes their notification settings.
+   *
+   * @param {string} jellyfinUserId
+   * @param {{ discordId?: string, telegramChatId?: number|string }} contactData
+   */
+  async syncContactMethods(jellyfinUserId, { discordId, telegramChatId } = {}) {
+    const { url, apiKey, syncEnabled } = await this._getSettings();
+    if (!syncEnabled || !url || !apiKey) return { success: false, reason: 'disabled' };
+    if (!discordId && !telegramChatId) return { success: false, reason: 'no contact data' };
+
+    try {
+      const client = this._client(url, apiKey);
+
+      // Locate Jellyseerr user who maps to this Jellyfin user
+      let jellyseerrUserId = null;
+      let skip = 0;
+      const take = 100;
+      while (true) {
+        const resp = await client.get('/api/v1/user', { params: { take, skip } });
+        const results = resp.data?.results || [];
+        if (!results.length) break;
+        const match = results.find(u => u.jellyfinUserId === jellyfinUserId);
+        if (match) { jellyseerrUserId = match.id; break; }
+        const total = resp.data?.pageInfo?.results || results.length;
+        skip += take;
+        if (skip >= total) break;
+      }
+
+      if (!jellyseerrUserId) {
+        logger.info(`Jellyseerr: user ${jellyfinUserId} not found, skipping contact sync`);
+        return { success: false, reason: 'user not in jellyseerr' };
+      }
+
+      // Build the notification settings payload
+      // Jellyseerr notification types: see https://docs.overseerr.dev/api-reference/user#user-notification-settings
+      const notifSettings = { notificationTypes: {} };
+      if (discordId) {
+        notifSettings.discordId = String(discordId);
+        // Enable Discord channel notifications (type 4 = Discord in Jellyseerr/Overseerr)
+        notifSettings.notificationTypes.discord = 4095; // all notification types
+      }
+      if (telegramChatId) {
+        notifSettings.telegramChatId = String(telegramChatId);
+        notifSettings.notificationTypes.telegram = 4095;
+      }
+
+      await client.post(`/api/v1/user/${jellyseerrUserId}/settings/notifications`, notifSettings);
+      logger.info(`Jellyseerr: synced contact methods for user ${jellyfinUserId}`);
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || '';
+      logger.warn(`Jellyseerr: failed to sync contact methods for ${jellyfinUserId}: ${msg}`);
+      return { success: false, reason: msg };
+    }
+  }
 
 module.exports = JellyseerrManager;

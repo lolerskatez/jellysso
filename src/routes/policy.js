@@ -250,6 +250,26 @@ router.post('/admin/user/:userId/account-status', requireAuth, requireAdmin, csr
     await AuditLogger.log('ADMIN_ACCOUNT_STATUS_CHANGED', req.session.user.Id, `admin:user:${userId}`,
       { enabled, expiresAt: expiresAt ?? 'unchanged' }, 'success', req.ip);
 
+    // Apply or remove Discord role based on account status
+    setImmediate(async () => {
+      try {
+        const DatabaseManager = require('../models/DatabaseManager');
+        const prefs = await DatabaseManager.queryOne(
+          'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+        );
+        if (prefs?.discord_user_id) {
+          const DiscordAdapter = require('../adapters/DiscordAdapter');
+          if (enabled) {
+            DiscordAdapter.getInstance().applyRole(prefs.discord_user_id).catch(e => logger.warn('Discord role apply on enable:', e.message));
+          } else {
+            DiscordAdapter.getInstance().removeRole(prefs.discord_user_id).catch(e => logger.warn('Discord role remove on disable:', e.message));
+          }
+        }
+      } catch (e) {
+        logger.warn('Discord role sync on status change failed:', e.message);
+      }
+    });
+
     res.json({ success: true, ...result, expiresAt: expiresAt !== undefined ? expiresAt : undefined });
   } catch (error) {
     logger.error('Error updating account status:', error.message);

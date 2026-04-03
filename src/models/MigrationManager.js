@@ -150,6 +150,31 @@ const MIGRATIONS = [
        )`,
       'CREATE INDEX IF NOT EXISTS idx_invite_requests_status ON invite_requests(status)'
     ]
+  },
+  {
+    version: 12,
+    name: 'create_user_totp',
+    sqls: [
+      `CREATE TABLE IF NOT EXISTS user_totp (
+         user_id    TEXT    PRIMARY KEY,
+         secret     TEXT    NOT NULL,
+         enabled    INTEGER NOT NULL DEFAULT 0,
+         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       )`
+    ]
+  },
+  {
+    version: 13,
+    name: 'create_email_pending_changes',
+    sqls: [
+      `CREATE TABLE IF NOT EXISTS email_pending_changes (
+         user_id    TEXT    PRIMARY KEY,
+         new_email  TEXT    NOT NULL,
+         token_hash TEXT    NOT NULL,
+         expires_at DATETIME NOT NULL,
+         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       )`
+    ]
   }
 ];
 

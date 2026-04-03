@@ -29,6 +29,7 @@ const AccountManager = {
     await this.loadSessions();
     await this.loadNotificationPreferences();
     await this.loadReferral();
+    await this.loadTotpStatus();
   },
 
   /**
@@ -89,6 +90,12 @@ const AccountManager = {
     document.getElementById('notificationDigest')?.addEventListener('change', () => {
       document.getElementById('saveNotificationsBtn').disabled = false;
     });
+
+    // TOTP / 2FA
+    document.getElementById('totpSetupBtn')?.addEventListener('click', () => this.startTotpSetup());
+    document.getElementById('totpConfirmBtn')?.addEventListener('click', () => this.confirmTotpSetup());
+    document.getElementById('totpCancelBtn')?.addEventListener('click', () => this.loadTotpStatus());
+    document.getElementById('totpDisableBtn')?.addEventListener('click', () => this.disableTotp());
 
     // Generate password (SSO)
     document.getElementById('generatePasswordBtn')?.addEventListener('click', () => this.generateOTP());
@@ -1038,6 +1045,128 @@ const AccountManager = {
     if (userAgent.includes('Edge')) return '🌐 Edge';
     if (userAgent.includes('Mobile')) return '📱 Mobile';
     return '💻 Other Device';
+  },
+
+  // ─── TOTP / 2FA ────────────────────────────────────────────────────────────
+
+  _totpSetTotpMsg(msg, isError = false) {
+    const el = document.getElementById('totpStatusMsg');
+    if (!el) return;
+    el.className = 'form-status ' + (isError ? 'error' : 'success');
+    el.innerHTML = isError
+      ? `<i class="fas fa-exclamation-circle"></i> ${msg}`
+      : `<i class="fas fa-check-circle"></i> ${msg}`;
+    if (!isError) setTimeout(() => { el.innerHTML = ''; }, 5000);
+  },
+
+  async loadTotpStatus() {
+    try {
+      const resp = await fetch('/api/me/totp', { headers: { Accept: 'application/json' } });
+      if (!resp.ok) { document.getElementById('totpCard')?.style.setProperty('display', 'none'); return; }
+      const data = await resp.json();
+
+      const card = document.getElementById('totpCard');
+      const disabled = document.getElementById('totpDisabledView');
+      const setup   = document.getElementById('totpSetupView');
+      const enabled = document.getElementById('totpEnabledView');
+
+      if (!card) return;
+      // Hide if feature is globally disabled for this server
+      if (data.featureDisabled) { card.style.display = 'none'; return; }
+      card.style.display = '';
+
+      disabled?.style.setProperty('display', data.enabled ? 'none' : '');
+      enabled?.style.setProperty('display', data.enabled ? '' : 'none');
+      setup?.style.setProperty('display', 'none');
+    } catch (e) {
+      console.warn('TOTP status check failed:', e.message);
+    }
+  },
+
+  async startTotpSetup() {
+    const btn = document.getElementById('totpSetupBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...'; }
+    try {
+      const resp = await fetch('/api/me/totp/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': this.csrfToken }
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Setup failed');
+
+      const qr    = document.getElementById('totpQrImage');
+      const secret = document.getElementById('totpSecretKey');
+      if (qr) qr.src = data.qrDataUrl || '';
+      if (secret) secret.textContent = data.secret || '';
+
+      document.getElementById('totpDisabledView')?.style.setProperty('display', 'none');
+      document.getElementById('totpSetupView')?.style.setProperty('display', '');
+      document.getElementById('totpConfirmCode')?.focus();
+    } catch (e) {
+      this._totpSetTotpMsg(e.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-qrcode"></i> Set Up 2FA'; }
+    }
+  },
+
+  async confirmTotpSetup() {
+    const token = document.getElementById('totpConfirmCode')?.value?.trim();
+    if (!token || token.length !== 6) {
+      this._totpSetTotpMsg('Enter the 6-digit code from your authenticator app.', true);
+      return;
+    }
+    const btn = document.getElementById('totpConfirmBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; }
+    try {
+      const resp = await fetch('/api/me/totp/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': this.csrfToken },
+        body: JSON.stringify({ token })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Code did not match');
+
+      this._totpSetTotpMsg('Two-factor authentication enabled successfully.');
+      await this.loadTotpStatus();
+    } catch (e) {
+      this._totpSetTotpMsg(e.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Activate 2FA'; }
+      const codeInput = document.getElementById('totpConfirmCode');
+      if (codeInput) codeInput.value = '';
+    }
+  },
+
+  async disableTotp() {
+    if (!confirm('Are you sure you want to disable two-factor authentication? Your account will be less secure.')) return;
+
+    // For non-SSO accounts the server requires the current password to confirm intent
+    const authMethodEl = document.getElementById('authMethod');
+    const isOidc = authMethodEl?.value?.includes('OIDC');
+    let currentPassword = null;
+    if (!isOidc) {
+      currentPassword = prompt('Enter your current password to confirm:');
+      if (currentPassword === null) return; // user cancelled
+    }
+
+    const btn = document.getElementById('totpDisableBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...'; }
+    try {
+      const resp = await fetch('/api/me/totp', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': this.csrfToken },
+        body: currentPassword ? JSON.stringify({ currentPassword }) : undefined
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Failed to disable 2FA');
+
+      this._totpSetTotpMsg('Two-factor authentication has been disabled.');
+      await this.loadTotpStatus();
+    } catch (e) {
+      this._totpSetTotpMsg(e.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash-alt"></i> Disable 2FA'; }
+    }
   }
 };
 

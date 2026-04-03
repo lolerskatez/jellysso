@@ -312,6 +312,9 @@
           <button class="settings-tab-btn" data-tab="passwordPolicy"><i class="fas fa-key"></i> Password Policy</button>
           <button class="settings-tab-btn" data-tab="logging"><i class="fas fa-file-alt"></i> Logging</button>
           <button class="settings-tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Maintenance</button>
+          <button class="settings-tab-btn" data-tab="discord"><i class="fab fa-discord"></i> Discord</button>
+          <button class="settings-tab-btn" data-tab="contacts"><i class="fas fa-address-book"></i> Contacts</button>
+          <button class="settings-tab-btn" data-tab="twofa"><i class="fas fa-lock"></i> 2FA / TOTP</button>
         </div>
 
         <!-- Application Settings -->
@@ -1087,6 +1090,112 @@
             </div>
           </form>
         </div>
+
+        <!-- Discord Settings -->
+        <div id="discord" class="settings-panel">
+          <form id="discordForm">
+            <div class="settings-section">
+              <h3><i class="fab fa-discord"></i> Discord Bot Settings</h3>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Discord Server ID</div>
+                  <div class="setting-description">The Guild/Server ID where the bot is installed (right-click server → Copy ID).</div>
+                </div>
+                <input type="text" name="discordServerId" class="form-control" value="<%= settings.discordServerId || '' %>" placeholder="123456789012345678" style="max-width:260px;">
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Member Role ID</div>
+                  <div class="setting-description">Role automatically assigned to users on account creation and removed on disable/delete. Leave blank to disable role management.</div>
+                </div>
+                <input type="text" name="discordRoleId" class="form-control" value="<%= settings.discordRoleId || '' %>" placeholder="Role ID" style="max-width:260px;">
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="discord"><i class="fas fa-save"></i> Save Discord Settings</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Contact Enforcement Settings -->
+        <div id="contacts" class="settings-panel">
+          <form id="contactsForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-address-book"></i> Contact Method Enforcement</h3>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require Unique Discord Account</div>
+                  <div class="setting-description">Prevent the same Discord user ID from being linked to multiple JellySSO accounts.</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.discordRequireUnique ? 'active' : '' %>" data-name="discordRequireUnique"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require Unique Telegram Account</div>
+                  <div class="setting-description">Prevent the same Telegram chat ID from being linked to multiple JellySSO accounts.</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.telegramRequireUnique ? 'active' : '' %>" data-name="telegramRequireUnique"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="contacts"><i class="fas fa-save"></i> Save Contact Settings</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 2FA / TOTP Settings -->
+        <div id="twofa" class="settings-panel">
+          <form id="twofaForm">
+            <div class="settings-section">
+              <h3><i class="fas fa-lock"></i> Two-Factor Authentication</h3>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Allow Users to Enable 2FA</div>
+                  <div class="setting-description">When enabled, users can set up TOTP-based two-factor authentication from their account settings.</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.totpEnabled ? 'active' : '' %>" data-name="totpEnabled"></div>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-label">Require 2FA for All Users</div>
+                  <div class="setting-description">Force all users to set up 2FA before they can log in. Admins can disable 2FA for individual users below.</div>
+                </div>
+                <div>
+                  <div class="toggle-switch <%= settings.totpRequired ? 'active' : '' %>" data-name="totpRequired"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="button" class="btn btn-primary" data-action="save" data-section="twofa"><i class="fas fa-save"></i> Save 2FA Settings</button>
+            </div>
+          </form>
+
+          <div class="settings-section" style="margin-top: var(--spacing-xl);">
+            <h3><i class="fas fa-user-shield"></i> Admin: Reset User 2FA</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">Enter a Jellyfin user ID to remove their TOTP secret, allowing them to set it up again or log in without 2FA.</p>
+            <div style="display:flex; gap: var(--spacing-md); align-items:center; flex-wrap:wrap;">
+              <input type="text" class="form-control" id="totpResetUserId" placeholder="Jellyfin User ID" style="max-width:320px;">
+              <button type="button" class="btn btn-danger" id="totpResetBtn"><i class="fas fa-trash-alt"></i> Reset 2FA</button>
+            </div>
+            <div id="totpResetMsg" style="margin-top:var(--spacing-sm);display:none;"></div>
+          </div>
+        </div>
+
       </div>
     </main>
   </div>

@@ -389,6 +389,16 @@ router.delete('/users/:userId', requireAuth, requireAdmin, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
+    // Remove Discord role before deletion (while prefs row still exists)
+    const delPrefs = await DatabaseManager.queryOne(
+      'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+    ).catch(() => null);
+    if (delPrefs?.discord_user_id) {
+      const DiscordAdapter = require('../adapters/DiscordAdapter');
+      DiscordAdapter.getInstance().removeRole(delPrefs.discord_user_id)
+        .catch(e => appLogger.warn('Discord role remove on admin delete:', e.message));
+    }
+
     // Delete the user from Jellyfin
     await jellyfin.deleteUser(userId);
 
@@ -452,10 +462,21 @@ router.delete('/api/users/:userId', requireAuth, requireAdmin, async (req, res) 
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     
+    // Remove Discord role before deletion (while prefs row still exists)
+    const delPrefs2 = await DatabaseManager.queryOne(
+      'SELECT discord_user_id FROM user_notification_preferences WHERE user_id = ?', [userId]
+    ).catch(() => null);
+    if (delPrefs2?.discord_user_id) {
+      const DiscordAdapter = require('../adapters/DiscordAdapter');
+      DiscordAdapter.getInstance().removeRole(delPrefs2.discord_user_id)
+        .catch(e => appLogger.warn('Discord role remove on admin delete (alt):', e.message));
+    }
+
     // Delete the user from Jellyfin
     await jellyfin.deleteUser(userId);
 
     // Remove from Jellyseerr (fire-and-forget)
+    const JellyseerrManager = require('../models/JellyseerrManager');
     JellyseerrManager.getInstance().removeUser(userId).catch(e =>
       appLogger.warn('Jellyseerr remove failed on user delete (alt path):', e.message)
     );
@@ -649,7 +670,16 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
       logToFile:         rawSettings.log_to_file        !== 'false',
       logRetention:      rawSettings.log_retention      ?? 30,
       auditLogging:      rawSettings.audit_logging      !== 'false',
-      auditLogRetention: rawSettings.audit_log_retention ?? 90
+      auditLogRetention: rawSettings.audit_log_retention ?? 90,
+      // Discord
+      discordServerId:   rawSettings.discord_server_id  || '',
+      discordRoleId:     rawSettings.discord_role_id    || '',
+      // Contact enforcement
+      discordRequireUnique:  rawSettings.discord_require_unique  === 'true',
+      telegramRequireUnique: rawSettings.telegram_require_unique === 'true',
+      // 2FA / TOTP
+      totpEnabled:  rawSettings.totp_enabled  !== 'false',
+      totpRequired: rawSettings.totp_required === 'true'
     });
 
     res.render('admin/settings', {
@@ -670,6 +700,30 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
   } catch (error) {
     appLogger.error('Settings error:', error);
     res.status(500).render('error', { message: 'Error loading settings', code: 500 });
+  }
+});
+
+// API: Admin reset a user's TOTP secret
+router.delete('/api/users/:userId/totp', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+    const TOTPManager = require('../models/TOTPManager');
+    await TOTPManager.getInstance().disable(userId.trim());
+    await AuditLogger.log({
+      action: 'ADMIN_TOTP_RESET',
+      userId: req.session.user?.Id || 'admin',
+      resource: `user:${userId}`,
+      details: { targetUser: userId },
+      status: 'success',
+      ip: req.ip
+    });
+    res.json({ success: true, message: '2FA has been removed for that user.' });
+  } catch (err) {
+    appLogger.error('TOTP reset error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -1712,6 +1766,22 @@ router.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
       if (s.passwordRequireUppercase !== undefined) await DatabaseManager.setSetting('password_require_uppercase', String(s.passwordRequireUppercase));
       if (s.passwordRequireNumbers   !== undefined) await DatabaseManager.setSetting('password_require_numbers',   String(s.passwordRequireNumbers));
       if (s.passwordRequireSpecial   !== undefined) await DatabaseManager.setSetting('password_require_special',   String(s.passwordRequireSpecial));
+
+    } else if (section === 'discord') {
+      if (s.discordServerId !== undefined) await DatabaseManager.setSetting('discord_server_id', String(s.discordServerId).trim());
+      if (s.discordRoleId   !== undefined) {
+        await DatabaseManager.setSetting('discord_role_id', String(s.discordRoleId).trim());
+        // Update cached role in adapter immediately
+        require('../adapters/DiscordAdapter').getInstance().setRoleId(String(s.discordRoleId).trim() || null);
+      }
+
+    } else if (section === 'contacts') {
+      if (s.discordRequireUnique  !== undefined) await DatabaseManager.setSetting('discord_require_unique',  String(s.discordRequireUnique));
+      if (s.telegramRequireUnique !== undefined) await DatabaseManager.setSetting('telegram_require_unique', String(s.telegramRequireUnique));
+
+    } else if (section === 'twofa') {
+      if (s.totpEnabled  !== undefined) await DatabaseManager.setSetting('totp_enabled',  String(s.totpEnabled));
+      if (s.totpRequired !== undefined) await DatabaseManager.setSetting('totp_required', String(s.totpRequired));
 
     } else if (section === 'maintenance') {
       // Parse HH:MM time strings into hour integers

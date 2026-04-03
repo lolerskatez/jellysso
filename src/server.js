@@ -557,7 +557,7 @@ app.get('/login', async (req, res) => {
     logger.error('OIDC config error:', err);
   }
   
-  res.render('login', { csrfToken, errorMessage, oidcEnabled, oidcProviderName });
+  res.render('login', { csrfToken, errorMessage, oidcEnabled, oidcProviderName, requireTotp: req.query.totp === '1' });
 });
 
 app.get('/auth/reset-password', async (req, res) => {

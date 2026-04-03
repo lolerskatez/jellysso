@@ -250,6 +250,33 @@ document.addEventListener('DOMContentLoaded', function() {
   // Test connection buttons
   document.getElementById('testJellyseerrBtn')?.addEventListener('click', testJellyseerrConnection);
   document.getElementById('testOmbiBtn')?.addEventListener('click', testOmbiConnection);
+
+  // Admin 2FA reset button
+  document.getElementById('totpResetBtn')?.addEventListener('click', async function () {
+    const userId = document.getElementById('totpResetUserId')?.value?.trim();
+    const msgEl  = document.getElementById('totpResetMsg');
+    if (!userId) { showNotification('Enter a Jellyfin user ID', 'error'); return; }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    try {
+      this.disabled = true;
+      const resp = await fetch(`/admin/api/users/${encodeURIComponent(userId)}/totp`, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': csrfToken }
+      });
+      const data = await resp.json();
+      showNotification(data.message || (data.success ? '2FA reset successfully' : 'Reset failed'), data.success ? 'success' : 'error');
+      if (data.success && msgEl) {
+        msgEl.textContent = `2FA removed for user ${userId}`;
+        msgEl.style.color = 'var(--success)';
+        msgEl.style.display = '';
+      }
+    } catch (e) {
+      showNotification('Error resetting 2FA: ' + e.message, 'error');
+    } finally {
+      this.disabled = false;
+    }
+  });
 });
 
 // Load maintenance history from audit logs

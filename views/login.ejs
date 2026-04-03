@@ -315,6 +315,45 @@
           </button>
         </form>
 
+        <!-- TOTP step — shown after successful password auth when 2FA is required -->
+        <div id="totpStep" style="display:none;">
+          <div style="text-align:center; margin-bottom: var(--spacing-lg);">
+            <i class="fas fa-shield-alt" style="font-size:2rem; color: var(--primary);"></i>
+            <h3 style="margin: var(--spacing-sm) 0 var(--spacing-xs);">Two-Factor Authentication</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin:0;">
+              Enter the 6-digit code from your authenticator app.
+            </p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="totpToken">Authenticator Code</label>
+            <input
+              type="text"
+              id="totpToken"
+              class="form-control"
+              placeholder="000000"
+              maxlength="6"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              style="text-align:center; font-size:1.5rem; letter-spacing:0.5rem;"
+            >
+          </div>
+          <button type="button" class="login-btn" id="totpSubmitBtn">
+            <span id="totpLoading" class="hidden">
+              <div class="spinner"></div>
+              Verifying...
+            </span>
+            <span id="totpText">
+              <i class="fas fa-check"></i>
+              Verify
+            </span>
+          </button>
+          <div style="text-align:center; margin-top: var(--spacing-md);">
+            <a href="/login" style="font-size: 0.875rem; color: var(--gray-500);">
+              <i class="fas fa-arrow-left"></i> Back to login
+            </a>
+          </div>
+        </div>
+
         <% if (typeof oidcEnabled !== 'undefined' && oidcEnabled) { %>
         <div class="login-options">
           <span>or continue with</span>
@@ -369,5 +408,12 @@
   </div>
 
   <script src="/js/login.js"></script>
+  <% if (typeof requireTotp !== 'undefined' && requireTotp) { %>
+  <script nonce="<%= nonce %>">
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof showTotpStep === 'function') showTotpStep();
+    });
+  </script>
+  <% } %>
 </body>
 </html>

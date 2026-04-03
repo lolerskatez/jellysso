@@ -68,77 +68,136 @@ class TelegramAdapter {
    * Setup Telegram command handlers
    */
   setupCommandHandlers() {
-    // Handle /start command
+    // Handle /start command — welcome and show current link status
     this.bot.start(async (ctx) => {
-      await ctx.reply(
-        '👋 Welcome to JellySSO Bot!\n\n' +
-        'To link your Telegram account with JellySSO, use:\n' +
-        '`/verify YOUR_CODE_HERE`\n\n' +
-        'You can find your verification code in JellySSO Account Settings.',
-        { parse_mode: 'Markdown' }
-      );
+      const chatId = ctx.chat.id;
+      // Check if this Telegram chat is already linked
+      const existing = await DatabaseManager.queryOne(
+        `SELECT user_id FROM user_notification_preferences WHERE telegram_chat_id = ? AND telegram_verified = 1`,
+        [String(chatId)]
+      ).catch(() => null);
+
+      if (existing) {
+        await ctx.reply(
+          '✅ Your Telegram account is already linked to JellySSO.\n\n' +
+          'You will receive notifications here. Use `/help` for available commands.',
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        await ctx.reply(
+          '👋 *Welcome to JellySSO Bot!*\n\n' +
+          'To link your Telegram account, use:\n' +
+          '`/link YOUR_CODE_HERE`\n\n' +
+          'You can find your verification code in JellySSO Account Settings → Contact Methods.',
+          { parse_mode: 'Markdown' }
+        );
+      }
     });
 
-    // Handle /verify command
+    // /link <code> — primary linking command
+    this.bot.command('link', async (ctx) => {
+      await this._handleLinkCommand(ctx);
+    });
+
+    // /pin <code> — alias for /link (matches Discord /pin convention)
+    this.bot.command('pin', async (ctx) => {
+      await this._handleLinkCommand(ctx);
+    });
+
+    // /verify <code> — legacy alias kept for backwards compatibility
     this.bot.command('verify', async (ctx) => {
-      try {
-        const args = ctx.message.text.split(' ');
-        const code = args[1];
+      await this._handleLinkCommand(ctx);
+    });
 
-        if (!code) {
-          await ctx.reply('Usage: `/verify <code>`', { parse_mode: 'Markdown' });
-          return;
-        }
-
-        // Validate code format
-        if (!/^[A-Z0-9]{12}$/.test(code)) {
-          await ctx.reply('❌ Invalid verification code format');
-          return;
-        }
-
-        // Check if code exists and is valid
-        const verification = this.verificationCodes[code];
-        if (!verification) {
-          await ctx.reply('❌ Verification code not found or expired');
-          return;
-        }
-
-        // Check if code is expired (10 minutes)
-        if (Date.now() - verification.createdAt > 600000) {
-          delete this.verificationCodes[code];
-          await ctx.reply('❌ Verification code expired');
-          return;
-        }
-
-        // Link user Telegram ID to JellySSO user
-        await this.linkUserTelegramAccount(verification.userId, ctx.chat.id);
-
-        // Cleanup code
-        delete this.verificationCodes[code];
-
-        // Confirm to user
-        await ctx.reply(
-          '✅ Your Telegram account has been linked successfully!\n' +
-          'You will now receive notifications here.'
-        );
-
-        logger.info(`Telegram account linked for user ${verification.userId}`);
-      } catch (err) {
-        logger.error('Telegram verification error:', err.message);
-        await ctx.reply('❌ An error occurred during verification');
+    // /lang <code> — set preferred language (stored for future i18n)
+    this.bot.command('lang', async (ctx) => {
+      const args = ctx.message.text.split(' ');
+      const code = (args[1] || 'en').toLowerCase().slice(0, 5);
+      const chatId = ctx.chat.id;
+      const linked = await DatabaseManager.queryOne(
+        `SELECT user_id FROM user_notification_preferences WHERE telegram_chat_id = ?`,
+        [String(chatId)]
+      ).catch(() => null);
+      if (linked) {
+        await DatabaseManager.run(
+          `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+          [`user_lang_${linked.user_id}`, code]
+        ).catch(() => {});
       }
+      await ctx.reply(`🌐 Language preference set to \`${code}\`. (Full i18n support coming soon.)`, { parse_mode: 'Markdown' });
     });
 
     // Handle /help command
     this.bot.command('help', async (ctx) => {
       await ctx.reply(
-        '🆘 JellySSO Telegram Bot Help\n\n' +
-        '/start - Welcome message\n' +
-        '/verify <code> - Link your Telegram account\n' +
-        '/help - This help message',
-        { parse_mode: 'Markdown' }
+        '🆘 *JellySSO Telegram Bot Help*\n\n' +
+        '/start — Welcome & link status\n' +
+        '/link \\<code\\> — Link your Telegram account\n' +
+        '/pin \\<code\\> — Alias for /link\n' +
+        '/lang \\<code\\> — Set language (e.g. en, de, fr)\n' +
+        '/help — This help message',
+        { parse_mode: 'MarkdownV2' }
       );
     });
+  }
+
+  /**
+   * Shared handler for /link, /pin, /verify commands
+   */
+  async _handleLinkCommand(ctx) {
+    try {
+      const args = ctx.message.text.split(' ');
+      const code = args[1];
+
+      if (!code) {
+        await ctx.reply(
+          'Usage: `/link <code>`\n\nGet your code from Account Settings → Contact Methods.',
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+
+      if (!/^[A-Z0-9]{12}$/.test(code)) {
+        await ctx.reply('❌ Invalid verification code format. Codes are 12 characters (A–Z, 0–9).');
+        return;
+      }
+
+      // Check DB-stored codes (used by ContactMethodManager)
+      const dbRow = await DatabaseManager.queryOne(
+        `SELECT user_id FROM telegram_verification_codes WHERE code = ? AND expires_at > datetime('now')`,
+        [code]
+      ).catch(() => null);
+
+      if (dbRow) {
+        await this.linkUserTelegramAccount(dbRow.user_id, ctx.chat.id);
+        await DatabaseManager.run('DELETE FROM telegram_verification_codes WHERE code = ?', [code]).catch(() => {});
+        await ctx.reply('✅ Your Telegram account has been linked successfully!\nYou will now receive notifications here.');
+        logger.info(`Telegram account linked for user ${dbRow.user_id} (via DB code)`);
+        return;
+      }
+
+      // Fallback: in-memory codes
+      const verification = this.verificationCodes[code];
+      if (!verification) {
+        await ctx.reply('❌ Verification code not found or expired. Generate a new one in Account Settings.');
+        return;
+      }
+
+      if (Date.now() - verification.createdAt > 600000) {
+        delete this.verificationCodes[code];
+        await ctx.reply('❌ Verification code expired. Please generate a new one.');
+        return;
+      }
+
+      await this.linkUserTelegramAccount(verification.userId, ctx.chat.id);
+      delete this.verificationCodes[code];
+
+      await ctx.reply('✅ Your Telegram account has been linked successfully!\nYou will now receive notifications here.');
+      logger.info(`Telegram account linked for user ${verification.userId}`);
+    } catch (err) {
+      logger.error('Telegram link error:', err.message);
+      await ctx.reply('❌ An error occurred during verification. Please try again.');
+    }
   }
 
   /**

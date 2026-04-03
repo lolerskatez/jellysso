@@ -587,7 +587,7 @@ router.get('/referral', requireAuth, async (req, res) => {
   try {
     const referralsEnabled = await DatabaseManager.getSetting('referrals_enabled').catch(() => null);
     if (referralsEnabled !== 'true') {
-      return res.status(403).json({ success: false, message: 'Referrals are not enabled on this server.' });
+      return res.json({ success: true, enabled: false });
     }
 
     const userId = req.session.user.Id;

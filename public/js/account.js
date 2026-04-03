@@ -1017,7 +1017,7 @@ const AccountManager = {
       if (!response.ok) return;
 
       const data = await response.json();
-      if (!data.success) return;
+      if (!data.success || data.enabled === false) return;
 
       const referralCard = document.getElementById('referralCard');
       const referralLink = document.getElementById('referralLink');

@@ -206,5 +206,6 @@ class JellyseerrManager {
       return { success: false, reason: msg };
     }
   }
+}
 
 module.exports = JellyseerrManager;

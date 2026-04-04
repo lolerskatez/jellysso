@@ -5,7 +5,7 @@
 
 const DatabaseManager = require('./DatabaseManager');
 const logger = require('../utils/logger');
-const CONSTANTS = require('../config/constants');
+const CONSTANTS = require('../utils/constants');
 
 class ScheduledCleanupTasks {
   constructor() {

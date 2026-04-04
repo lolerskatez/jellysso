@@ -5,7 +5,7 @@
 
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
-const { RATE_LIMIT } = require('../config/constants');
+const { RATE_LIMIT } = require('../utils/constants');
 
 /**
  * Critical endpoints (login, password change, 2FA setup)

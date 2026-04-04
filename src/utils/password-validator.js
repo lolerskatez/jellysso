@@ -3,7 +3,7 @@
  * Enforces complexity requirements and checks against common passwords
  */
 
-const CONSTANTS = require('../config/constants');
+const CONSTANTS = require('./constants');
 const logger = require('../utils/logger');
 
 // Common passwords to reject

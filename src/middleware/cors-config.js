@@ -2,7 +2,7 @@
  * Secure CORS configuration with origin whitelist
  */
 
-const CONSTANTS = require('../config/constants');
+const CONSTANTS = require('../utils/constants');
 
 const corsOptions = {
   origin: function (origin, callback) {

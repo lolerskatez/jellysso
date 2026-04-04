@@ -5,7 +5,7 @@
 
 const JellyfinAPI = require('../models/JellyfinAPI');
 const logger = require('../utils/logger');
-const CONSTANTS = require('../config/constants');
+const CONSTANTS = require('../utils/constants');
 
 class JellyfinService {
   constructor(baseURL, apiKey = null) {

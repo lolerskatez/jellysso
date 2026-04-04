@@ -23,7 +23,7 @@ const { sanitizationMiddleware } = require('./utils/sanitizer');
 const SessionTimeoutManager = require('./utils/sessionTimeoutManager');
 const { AccountLockoutManager } = require('./models/AccountLockoutManager');
 const SecurityAlertManager = require('./models/SecurityAlertManager');
-const CONSTANTS = require('./config/constants');
+const CONSTANTS = require('./utils/constants');
 const crypto = require('crypto');
 require('dotenv').config();
 const logger = require('./utils/logger');

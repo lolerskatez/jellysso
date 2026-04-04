@@ -4,7 +4,7 @@
  */
 
 const logger = require('../utils/logger');
-const CONSTANTS = require('../config/constants');
+const CONSTANTS = require('../utils/constants');
 
 class StateManager {
   constructor() {

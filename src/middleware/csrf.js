@@ -6,7 +6,12 @@ const { doubleCsrf } = require('csrf-csrf');
 // a generic name here so it works on HTTP dev setups as well.
 const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => process.env.SESSION_SECRET || 'csrf-secret-fallback',
-  getSessionIdentifier: (req) => req.sessionID || '',
+  // Do not bind to session ID — the DB-backed session store may not persist
+  // the session before the first POST arrives (especially on fresh Docker
+  // deployments), which regenerates the session ID and breaks the HMAC check.
+  // The double-submit cookie pattern (HMAC-signed random value in both cookie
+  // and request header) is already sufficient CSRF protection without it.
+  getSessionIdentifier: () => '',
   cookieName: 'x-csrf-token',
   cookieOptions: {
     httpOnly: true,

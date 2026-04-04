@@ -14,6 +14,8 @@ class SessionStore extends session.Store {
       cleanupInterval: options.cleanupInterval || 60 * 60 * 1000, // cleanup every hour
       ...options
     };
+    // Pending set() calls that arrived before the DB was ready
+    this._pendingWrites = [];
 
     this.initializeTable();
     this.startCleanupInterval();
@@ -48,6 +50,15 @@ class SessionStore extends session.Store {
           logger.error('Error creating index on sessions table:', err.message);
         }
       });
+
+      // Flush any set() calls that arrived before the DB was ready
+      if (this._pendingWrites && this._pendingWrites.length > 0) {
+        logger.info(`SessionStore: flushing ${this._pendingWrites.length} pending session write(s)`);
+        for (const { sid, sess, callback } of this._pendingWrites) {
+          this.set(sid, sess, callback);
+        }
+        this._pendingWrites = [];
+      }
     });
   }
 
@@ -85,7 +96,10 @@ class SessionStore extends session.Store {
     callback = callback || function() {};
 
     if (!DatabaseManager.db || !DatabaseManager.isReady) {
-      return callback(null);
+      // Queue the write — will be flushed once the DB becomes ready
+      logger.debug('SessionStore: DB not ready, queuing session write for', sid.substring(0, 10));
+      this._pendingWrites.push({ sid, sess, callback });
+      return;
     }
 
     const expiresAt = new Date(Date.now() + this.options.expirationTime);

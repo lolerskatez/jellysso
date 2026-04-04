@@ -183,9 +183,9 @@ const sessionStore = new SessionStore({
 const sessionTimeoutManager = new SessionTimeoutManager(sessionStore);
 
 // Session configuration for reverse proxy scenarios (cloudflared, nginx, etc.)
-// NOTE: Even though we're behind HTTPS via cloudflared, cloudflared may not forward
-// X-Forwarded-Proto correctly. Setting secure: false is safe because TLS is terminated
-// at cloudflared - the user's connection is still secure.
+// 'auto' lets express-session set the Secure flag dynamically based on the
+// detected connection protocol (respects trust proxy / X-Forwarded-Proto).
+// This avoids the silent cookie-drop when the proxy→app hop is plain HTTP.
 app.use(session({
   store: sessionStore,
   secret: sessionSecret,
@@ -193,7 +193,7 @@ app.use(session({
   saveUninitialized: false,
   proxy: true, // Trust the reverse proxy
   cookie: {
-    secure: isProduction, // true in production (behind cloudflared/nginx with HTTPS)
+    secure: 'auto', // Set Secure flag when connection is HTTPS (via proxy or direct)
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'
